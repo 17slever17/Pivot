@@ -68,6 +68,9 @@ export interface RuntimeSubagent {
   readonly usage: SubagentUsage | null;
   readonly progress: string | null;
   readonly lastToolName: string | null;
+  readonly lastIntent: string | null;
+  readonly currentToolArgs: string | null;
+  readonly currentToolStartMs: number | null;
   readonly result: string | null;
   readonly error: string | null;
   readonly outputFile: string | null;
@@ -237,6 +240,9 @@ interface MutableAgent {
   usage: SubagentUsage | null;
   progress: string | null;
   lastToolName: string | null;
+  lastIntent: string | null;
+  currentToolArgs: string | null;
+  currentToolStartMs: number | null;
   result: string | null;
   error: string | null;
   outputFile: string | null;
@@ -291,6 +297,9 @@ function getOrCreate(
     usage: null,
     progress: null,
     lastToolName: null,
+    lastIntent: null,
+    currentToolArgs: null,
+    currentToolStartMs: null,
     result: null,
     error: null,
     outputFile: null,
@@ -530,6 +539,18 @@ export function foldSubagentActivities(
           if (!summary) {
             agent.recentActivity = appendActivity(agent.recentActivity, at, `▸ ${lastToolName}`);
           }
+        }
+        const lastIntent = asString(payload.lastIntent);
+        if (lastIntent) {
+          agent.lastIntent = bounded(lastIntent);
+          if (!summary) {
+            agent.recentActivity = appendActivity(agent.recentActivity, at, lastIntent);
+          }
+        }
+        if (payload.usageSnapshot !== true) {
+          const currentToolArgs = asString(payload.currentToolArgs);
+          agent.currentToolArgs = currentToolArgs ? bounded(currentToolArgs) : null;
+          agent.currentToolStartMs = asCount(payload.currentToolStartMs) ?? null;
         }
         const error = asString(payload.error);
         if (error) agent.error = bounded(error);

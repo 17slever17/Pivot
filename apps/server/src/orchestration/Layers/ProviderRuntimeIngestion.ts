@@ -642,6 +642,9 @@ export function runtimeEventToActivities(
         event.payload.typedUsage === undefined ||
         event.payload.summary !== undefined ||
         event.payload.lastToolName !== undefined ||
+        event.payload.lastIntent !== undefined ||
+        event.payload.currentToolArgs !== undefined ||
+        event.payload.currentToolStartMs !== undefined ||
         event.payload.status !== undefined ||
         event.payload.error !== undefined;
       return [
@@ -668,6 +671,15 @@ export function runtimeEventToActivities(
                     : {}),
                   ...(event.payload.lastToolName
                     ? { lastToolName: event.payload.lastToolName }
+                    : {}),
+                  ...(event.payload.lastIntent
+                    ? { lastIntent: truncateDetail(event.payload.lastIntent) }
+                    : {}),
+                  ...(event.payload.currentToolArgs
+                    ? { currentToolArgs: truncateDetail(event.payload.currentToolArgs, 240) }
+                    : {}),
+                  ...(event.payload.currentToolStartMs !== undefined
+                    ? { currentToolStartMs: event.payload.currentToolStartMs }
                     : {}),
                   ...(event.payload.status ? { status: event.payload.status } : {}),
                   ...(event.payload.error ? { error: event.payload.error } : {}),
