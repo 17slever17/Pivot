@@ -1,6 +1,6 @@
-Catalogs: 14
-Known exact translations: 2981
-Files with candidate unmapped UI strings: 223
+Catalogs: 15
+Known exact translations: 3176
+Files with candidate unmapped UI strings: 204
 
 ## apps/web/src/appearanceFonts.ts (26)
 - !Number.isFinite(advance) || advance
@@ -109,9 +109,6 @@ Files with candidate unmapped UI strings: 223
 - cloud account cleanup
 - Promise
 
-## apps/web/src/cloud/primaryCloudLinkState.ts (1)
-- Could not read T3 Connect link state.
-
 ## apps/web/src/cloud/publicConfig.ts (2)
 - CloudPublicConfigMissingError
 - T3CODE_CLERK_JWT_TEMPLATE
@@ -218,9 +215,8 @@ Files with candidate unmapped UI strings: 223
 ## apps/web/src/components/ProviderUpdateLaunchNotification.logic.ts (1)
 - (providers: ReadonlyArray
 
-## apps/web/src/components/PullRequestThreadDialog.tsx (4)
+## apps/web/src/components/PullRequestThreadDialog.tsx (3)
 - Enter
-- Preparing local...
 - Promise
 - Worktree
 
@@ -271,12 +267,6 @@ Files with candidate unmapped UI strings: 223
 
 ## apps/web/src/components/SplashScreen.tsx (1)
 - Piπot
-
-## apps/web/src/components/ThreadTerminalDrawer.tsx (1)
-- Unable to initialize libghostty-vt
-
-## apps/web/src/components/auth/PairingRouteSurface.tsx (1)
-- The environment
 
 ## apps/web/src/components/capabilities/CapabilitiesSettingsPanel.tsx (1)
 - modelRoles.default
@@ -346,9 +336,6 @@ Files with candidate unmapped UI strings: 223
 - Enter
 - Escape
 
-## apps/web/src/components/chat/ModelPickerSidebar.tsx (1)
-- Codex Personal — Unavailable.
-
 ## apps/web/src/components/chat/OpenInPicker.tsx (22)
 - Antigravity
 - Aqua
@@ -400,11 +387,6 @@ Files with candidate unmapped UI strings: 223
 
 ## apps/web/src/components/composerInlineTokenPaste.ts (1)
 - token.type === "mention" && token.end
-
-## apps/web/src/components/desktopUpdate.logic.ts (3)
-- This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Download the available update to switch to the native Apple Silicon build.
-- This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Restart to install the downloaded Apple Silicon build.
-- This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.
 
 ## apps/web/src/components/diffs/DiffCommentAnnotation.tsx (1)
 - Escape
@@ -504,18 +486,10 @@ Files with candidate unmapped UI strings: 223
 - ): Promise
 - Promise
 
-## apps/web/src/components/pullRequest/PullRequestDetailPanel.tsx (11)
+## apps/web/src/components/pullRequest/PullRequestDetailPanel.tsx (3)
 - Enter
 - Escape
 - new Set
-- The host refused it. A rebase stops at the first commit that does not apply cleanly; updating with a merge commit may still work.
-- The host refused it. Check that this repository allows auto-merge, that you have write access, and that there is something left for it to wait on.
-- The host refused it. Check that you have write access to this repository.
-- The host refused it. Check that you have write access, and that the branch still exists.
-- The host refused it. Check that you have write access, and that the merge has not already happened.
-- The host refused it. Check that you have write access, or that you opened it.
-- The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting.
-- The host refused the new title.
 
 ## apps/web/src/components/pullRequest/PullRequestListEmptyState.tsx (4)
 - M10 58h100
@@ -530,17 +504,8 @@ Files with candidate unmapped UI strings: 223
 - Escape
 - Promise
 
-## apps/web/src/components/pullRequest/PullRequestReviewerPicker.tsx (1)
-- The host refused it. Check that you have write access on this repository, and that they still have access to it.
-
-## apps/web/src/components/pullRequest/PullRequestSummaryTab.tsx (4)
+## apps/web/src/components/pullRequest/PullRequestSummaryTab.tsx (1)
 - CHANGES_REQUESTED
-- Could not post the comment
-- Could not save the comment
-- Could not save the description
-
-## apps/web/src/components/pullRequest/PullRequestTimelineTab.tsx (1)
-- Could not save the comment
 
 ## apps/web/src/components/pullRequest/pullRequestDetail.logic.ts (20)
 - Answer the question asked in this message. Do not change any code, and do not check anything out unless asked to.
@@ -572,15 +537,9 @@ Files with candidate unmapped UI strings: 223
 - Cargo.lock
 - Gemfile.lock
 
-## apps/web/src/components/pullRequest/pullRequestLinkContextMenu.ts (3)
-- Could not copy the link
-- Could not open the link
-- Open on host
-
-## apps/web/src/components/pullRequest/pullRequestList.logic.ts (4)
+## apps/web/src/components/pullRequest/pullRequestList.logic.ts (3)
 - needs design
 - needs,triage
-- Others
 - Some
 
 ## apps/web/src/components/pullRequest/pullRequestMarkdown.logic.ts (1)
@@ -594,183 +553,77 @@ Files with candidate unmapped UI strings: 223
 - ArrowUp
 - Enter
 
-## apps/web/src/components/settings/AddProviderInstanceDialog.tsx (7)
+## apps/web/src/components/settings/AddProviderInstanceDialog.tsx (5)
 - ACP Registry
-- e.g. Work
 - Gemini
 - Github Copilot
-- Instance ID must be 64 characters or fewer.
 - Pi Agent
 - Work
 
-## apps/web/src/components/settings/ConnectionsSettings.tsx (55)
-- Clipboard copy is unavailable here. Manually copy this code into another client.
-- Clipboard copy is unavailable here. Open or manually copy this full pairing URL on the device you want to connect.
-- Clipboard copy is unavailable here. Open or manually copy this hosted app link on the device you want to connect.
+## apps/web/src/components/settings/ConnectionsSettings.tsx (7)
 - Couldn
-- Enter a backend host and pairing code.
-- Enter a port from 1 to 65535.
-- Failed to add backend.
-- Failed to configure Tailscale HTTPS.
-- Failed to connect backend.
-- Failed to create pairing URL.
-- Failed to disable Tailscale HTTPS.
-- Failed to remove backend.
-- Failed to revoke client access.
-- Failed to revoke other clients.
-- Failed to revoke pairing link.
-- Failed to update network exposure.
-- Failed to update WSL backend.
-- No new SSH hosts were discovered.
-- Open it in the browser on the device you want to connect.
-- Open it in the client you want to pair to this environment.
-- Opens the hosted app, no install needed
-- Other paired clients will need a new pairing link before reconnecting.
 - PAIRCODE
-- Pairing link — scan to open on another device
-- Pairing links and client-session management require the access:write scope for this backend.
-- Paste it into another client to finish pairing.
-- Piπot will restart and bring the Windows backend back up alongside WSL.
-- Piπot will restart and limit this environment back to this machine.
-- Piπot will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL.
-- Piπot will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted.
-- Piπot will restart to expose this environment over the network.
 - Promise
-- Re-enable the Windows backend?
 - Reachable at
 - Removing…
-- Revoked 1 other client
-- Run the WSL backend alongside the Windows one, or stop the Windows backend and use only WSL? You can change this later from Settings.
-- Send activity from this environment to your mobile clients for push notifications and Live Activities. Works without a T3 Connect tunnel.
-- Set up Tailscale HTTPS?
-- Showing the full value instead.
 - SshConnectionProfile
-- Start the WSL backend
 - Stop the Windows backend and run only the WSL backend. Useful if you develop entirely inside WSL and don
-- The environment is saved and will reconnect on app startup.
-- The managed tunnel was removed. Agent activity publishing stays on.
-- This backend is already configured for remote access. Network exposure changes must be made where the server is launched.
-- This backend is only reachable on this machine. Restart it with a non-loopback host to enable remote pairing.
-- This environment is available through T3 Connect.
-- This environment is no longer available through T3 Connect.
-- This environment will stop publishing agent activity.
-- Turn off WSL and switch back to Windows?
-- Use local SSH config, agent, and tunnels for the backend.
-- Use Tailscale Serve to expose this backend through a MagicDNS HTTPS URL.
-- WSL is no longer available, so the Windows backend is running instead. Switch off the WSL backend to clear this preference.
-- Your session does not have permission to manage T3 Connect access.
 
-## apps/web/src/components/settings/DiagnosticsSettings.tsx (7)
+## apps/web/src/components/settings/DiagnosticsSettings.tsx (3)
 - = 1024 && unitIndex
 - SIGINT
 - SIGKILL
-- Spans at or above the configured slow-span threshold.
-- The process is not a child of the T3 Server. It might already have exited.
-- Total CPU across live child processes of the current server process. The desktop shell and other parent processes are not included.
-- Total resident memory across live child processes of the current server process. The desktop shell and other parent processes are not included.
 
-## apps/web/src/components/settings/FontFamilyPicker.tsx (3)
+## apps/web/src/components/settings/FontFamilyPicker.tsx (1)
 - Menlo
-- No fonts found.
-- Search fonts…
 
-## apps/web/src/components/settings/KeybindingsSettings.tsx (7)
+## apps/web/src/components/settings/KeybindingsSettings.tsx (4)
 - Ctrl
 - Escape
 - INPUT
 - TEXTAREA
-- The keybinding was not removed.
-- The keybinding was not saved.
-- The keybindings file was not opened.
 
 ## apps/web/src/components/settings/ModelSlugPicker.tsx (1)
 - provider/model
 
-## apps/web/src/components/settings/ProjectFaviconPickerDialog.tsx (5)
-- Indexing project files…
+## apps/web/src/components/settings/ProjectFaviconPickerDialog.tsx (1)
 - No image files found.
-- No matching image files.
-- Search image files…
-- Searching project files…
 
-## apps/web/src/components/settings/ProjectSettingsPanel.tsx (26)
-- A t3.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values.
-- Add a project from the sidebar to configure it here.
-- Another script change is still saving. Try again.
+## apps/web/src/components/settings/ProjectSettingsPanel.tsx (6)
 - Choose a project icon file
-- Deletes the project entry and its threads. Files on disk are not touched.
 - Enter
 - Escape
-- Failed to remove keybinding
-- Failed to save keybinding
-- Failed to save scripts
-- Failed to update default model
-- Failed to update new-thread workspace
-- Failed to update project icon
-- How this checkout joins project groups in the sidebar. Changing it can move you to a different project group.
-- New threads in this project start with this model. Applies to every checkout in this group.
-- New-thread workspace
-- Other entries in this grouped project are unaffected.
 - project default model
 - project icon
 - project workspace default
-- Remove this project everywhere
-- Removes this checkout and its threads from the project group. Files on disk are not touched.
-- The shared name for this project group in the sidebar and thread lists.
-- This project is no longer available.
-- Unavailable project
-- Where new threads in this project start. Overrides t3.json and the global default; applies to every checkout in this group.
 
-## apps/web/src/components/settings/ProviderAccentColorPicker.tsx (1)
-- Custom hex accent color
-
-## apps/web/src/components/settings/ProviderInstanceCard.tsx (7)
-- Click to hide email
-- Click to reveal email
-- Run it in a terminal when you are ready to update.
-- Stored secret - enter a new value to replace
-- Toggle account email visibility
-- Used to distinguish this instance in picker rails and model lists.
+## apps/web/src/components/settings/ProviderInstanceCard.tsx (1)
 - VARIABLE_NAME
 
-## apps/web/src/components/settings/ProviderModelsSection.tsx (7)
+## apps/web/src/components/settings/ProviderModelsSection.tsx (1)
 - Enter
-- Enter a model slug.
-- Hide from picker
-- Move down
-- Move up
-- That custom model is already saved.
-- That model is already built in.
 
-## apps/web/src/components/settings/ProviderSettingsPanel.tsx (5)
-- Decrease provider health check interval
-- Increase provider health check interval
+## apps/web/src/components/settings/ProviderSettingsPanel.tsx (1)
 - provider health check interval
-- Provider health check interval in seconds
-- The provider update command could not be started.
 
-## apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx (6)
+## apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx (4)
 - = 1_024 && unitIndex
 - Available when this page runs inside the desktop app.
-- Refresh telemetry snapshot
 - SIGINT
 - SIGKILL
-- The resource monitor retry failed.
 
-## apps/web/src/components/settings/SettingsFontPreviews.tsx (2)
-- Terminal font preview
+## apps/web/src/components/settings/SettingsFontPreviews.tsx (1)
 - Use $frontend-design to fix the flaky test in
 
 ## apps/web/src/components/settings/SettingsPanels.logic.ts (2)
 - Local trace file
 - Terminal logs only
 
-## apps/web/src/components/settings/SettingsPanels.tsx (29)
+## apps/web/src/components/settings/SettingsPanels.tsx (24)
 - = size.min && parsed
 - add project base directory
 - archive confirmation
 - background activity
-- Creates the worktree from the latest matching branch on origin instead of your local branch.
 - delete confirmation
 - diff whitespace changes
 - Enter
@@ -778,23 +631,19 @@ Files with candidate unmapped UI strings: 223
 - Escape
 - font smoothing
 - glass opacity
-- It is significantly slower than the default buffered output and hurts the reading experience. This switch exists only for backwards compatibility.
 - Leave empty to use
 - Menlo
 - new threads
 - new worktrees start from origin
-- Only the box you write prompts in. Mono works well here.
 - project grouping
 - provider update checks
 - Render text with thinner grayscale anti-aliasing instead of macOS
-- Terminal output, independent from code blocks and diffs.
 - text generation model
 - time format
 - Timeline plans
 - Timeline thinking
 - Timeline tool calls
 - word wrapping
-- Wrap code, tables, diffs, and file previews by default
 
 ## apps/web/src/components/settings/SettingsSidebarNav.tsx (6)
 - ArrowDown
@@ -804,11 +653,8 @@ Files with candidate unmapped UI strings: 223
 - INPUT
 - TEXTAREA
 
-## apps/web/src/components/settings/SourceControlSettings.tsx (4)
-- Could not scan the server environment
+## apps/web/src/components/settings/SourceControlSettings.tsx (1)
 - fetch interval
-- Install Git on the server, add optional hosting integrations or credentials your workspace needs, then rescan.
-- Rescan Git and hosting integrations
 
 ## apps/web/src/components/settings/SourceControlWritingSettings.tsx (4)
 - change request templates
@@ -823,30 +669,17 @@ Files with candidate unmapped UI strings: 223
 - ArrowRight
 - ArrowUp
 
-## apps/web/src/components/settings/ThemeEditorHost.tsx (1)
-- Browser storage is unavailable, so the change was not kept.
-
-## apps/web/src/components/settings/ThemeEditorPanel.tsx (10)
+## apps/web/src/components/settings/ThemeEditorPanel.tsx (3)
 - Cancel and clear the selection
-- Close the theme editor
-- Could not create the theme.
-- Could not save the theme.
 - Escape
-- Expand the theme editor
 - M7 1 1 7M7 4.5 4.5 7
-- Minimize the theme editor
-- Pick a color from the app
-- Theme saved, but it could not be made active. Try again.
 
-## apps/web/src/components/settings/ThemeImportDialog.tsx (8)
+## apps/web/src/components/settings/ThemeImportDialog.tsx (5)
 - Aurora
 - could not install
-- Could not read that file. Paste the JSON below instead.
 - Name (1)
 - not a theme file
 - Promise
-- That theme file is invalid.
-- Theme added, but it could not be selected. Try again.
 
 ## apps/web/src/components/settings/ThemePreviewCircles.tsx (1)
 - Piπot
@@ -859,30 +692,16 @@ Files with candidate unmapped UI strings: 223
 - Tokyo Night
 - try dracula, nord, catppuccin...
 
-## apps/web/src/components/settings/ThemeSettings.tsx (10)
+## apps/web/src/components/settings/ThemeSettings.tsx (3)
 - ): ReadonlyArray
-- Couldn’t remove theme
-- Couldn’t save theme selection
 - Escape
-- Follow the system appearance
-- Light and dark theme variants
 - ReadonlyArray
-- Select the variants you want to remove. You can restore them by importing the extension again.
-- Use the first variants for light and dark
-- You can bring it back anytime by importing its JSON file.
-
-## apps/web/src/components/settings/providerStatus.ts (4)
-- The provider failed its startup checks.
-- The provider is installed, but the server could not fully verify it.
-- This provider is installed but disabled for new sessions in Piπot.
-- Waiting for the server to report installation and authentication details.
 
 ## apps/web/src/components/settings/settingsLayout.tsx (1)
 - SECTION
 
-## apps/web/src/components/settings/settingsSearch.ts (2)
+## apps/web/src/components/settings/settingsSearch.ts (1)
 - NFKD
-- Source control
 
 ## apps/web/src/components/settings/themeInspector.ts (2)
 - messageSurface
@@ -1018,8 +837,7 @@ Files with candidate unmapped UI strings: 223
 - Transcript context:
 - USER
 
-## apps/web/src/hooks/useCommitOnBlur.ts (2)
-- e.g. Work
+## apps/web/src/hooks/useCommitOnBlur.ts (1)
 - Enter
 
 ## apps/web/src/hooks/useCopyToClipboard.ts (2)
@@ -1033,10 +851,6 @@ Files with candidate unmapped UI strings: 223
 
 ## apps/web/src/hooks/useNowMinute.ts (1)
 - YYYY-MM-DDTHH:MM
-
-## apps/web/src/hooks/useResizableWidth.ts (2)
-- Could not persist panel width.
-- Could not read persisted panel width.
 
 ## apps/web/src/hooks/useTheme.ts (2)
 - DesktopThemeSyncError
@@ -1094,9 +908,6 @@ Files with candidate unmapped UI strings: 223
 - Requested visual changes:
 - Targets:
 - The attached screenshot is the annotated preview crop.
-
-## apps/web/src/lib/projectScriptKeybindings.ts (1)
-- Invalid keybinding.
 
 ## apps/web/src/lib/resourceTelemetryState.ts (1)
 - Promise
@@ -1164,9 +975,6 @@ Files with candidate unmapped UI strings: 223
 
 ## apps/web/src/modelSelection.ts (1)
 - ; readonly modelOrder: ReadonlyArray
-
-## apps/web/src/observability/clientTracing.ts (1)
-- Failed to configure client tracing exporter
 
 ## apps/web/src/openVsxThemes.ts (51)
 - ): Record
@@ -1242,10 +1050,6 @@ Files with candidate unmapped UI strings: 223
 ## apps/web/src/providerSkillPresentation.ts (1)
 - Personal
 
-## apps/web/src/providerUpdateDismissal.ts (2)
-- Could not persist provider-update dismissals.
-- Could not read provider-update dismissals.
-
 ## apps/web/src/reviewCommentContext.ts (2)
 - 0 && extensionIndex
 - \s*([\s\S]*?)
@@ -1281,53 +1085,31 @@ Files with candidate unmapped UI strings: 223
 - Option
 - Shift
 
-## apps/web/src/state/desktopNetworkAccess.ts (6)
-- Desktop network access is unavailable.
+## apps/web/src/state/desktopNetworkAccess.ts (3)
 - DesktopAdvertisedEndpointsLoadError
 - DesktopNetworkAccessUnavailableError
 - DesktopServerExposureStateLoadError
-- Failed to load advertised desktop endpoints.
-- Failed to load desktop server exposure state.
 
-## apps/web/src/state/desktopSshHosts.ts (4)
-- Desktop SSH host discovery is unavailable.
+## apps/web/src/state/desktopSshHosts.ts (2)
 - DesktopSshDiscoveryError
 - DesktopSshDiscoveryUnavailableError
-- Failed to discover SSH hosts.
 
 ## apps/web/src/state/desktopUpdate.ts (1)
 - DesktopUpdateStateReadError
 
-## apps/web/src/state/desktopWslState.ts (4)
-- Desktop WSL state is unavailable.
+## apps/web/src/state/desktopWslState.ts (2)
 - DesktopWslStateLoadError
 - DesktopWslStateUnavailableError
-- Failed to load WSL state.
 
 ## apps/web/src/state/pullRequests.ts (1)
 - Atom.Atom
 
-## apps/web/src/state/queries.ts (1)
-- Failed to load refs.
-
-## apps/web/src/state/query.ts (1)
-- The environment request failed.
-
-## apps/web/src/state/reviewRuns.ts (2)
+## apps/web/src/state/reviewRuns.ts (1)
 - Maximum update depth exceeded
-- The review could not be completed.
 
-## apps/web/src/state/sourceControlActions.ts (7)
+## apps/web/src/state/sourceControlActions.ts (2)
 - , AtomCommandFailure
-- Initializing repository
-- Preparing pull request thread
 - Promise
-- Publishing repository
-- Pulling latest changes
-- Running source control action
-
-## apps/web/src/state/usage.ts (1)
-- This environment could not report usage.
 
 ## apps/web/src/state/use-atom-command.ts (1)
 - Promise
@@ -1529,42 +1311,27 @@ Files with candidate unmapped UI strings: 223
 ## apps/web/src/test/reactHookHarness.ts (1)
 - T)): [T, Dispatch
 
-## apps/web/src/themePalette.ts (22)
+## apps/web/src/themePalette.ts (12)
 - #71717b
 - #8b5f90
 - #968d9f
 - ): ReadonlyArray
 - 0 && value.trim().length
 - = -0.0001 && channel
-- Add at least one color role to the theme file.
 - Ember
 - Grove
 - Iris
 - Ocean
 - T3 Chat
-- That theme collection is invalid.
-- Theme collections need a valid id and label.
-- Theme colors must be objects.
-- Theme files must contain a JSON object.
-- Theme files need a colors object.
-- Theme files need a name (48 characters or fewer).
-- Theme ids may only contain lowercase letters, numbers, and hyphens.
-- Theme variants must be an object.
 - ThemeLibraryStorageError
-- Your installed themes changed while this package was downloading. Try again.
 
 ## apps/web/src/timestampFormat.ts (2)
 - = 11 && lastTwo
 - Expires in 4m 12s
 
-## apps/web/src/versionSkew.ts (2)
-- Could not persist version-mismatch dismissals.
-- Could not read version-mismatch dismissals.
-
-## apps/web/src/vscodeThemeImport.ts (5)
+## apps/web/src/vscodeThemeImport.ts (4)
 - Dracula
 - Grove Dark
 - Grove Light
-- Theme files must contain a JSON object.
 - VS Code theme
 
