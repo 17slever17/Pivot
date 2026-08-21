@@ -1,0 +1,80 @@
+        errors="replace",
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else "unknown"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Apply Russian UI localization to the 17slever17/Pivot fork."
+    )
+    parser.add_argument("--repo", default=r"C:\DevProjects\pivot-ru")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow patching target files that already have local modifications.",
+    )
+    args = parser.parse_args()
+
+    repo = Path(args.repo).expanduser().resolve()
+    if not (repo / ".git").exists():
+        raise PatchError(f"Not a Git repository: {repo}")
+
+    targets = [
+        "packages/contracts/src/settings.ts",
+        "packages/contracts/src/settings.test.ts",
+        "apps/web/src/i18n.ts",
+        "apps/web/src/i18n.test.ts",
+        "apps/web/src/routes/__root.tsx",
+        "apps/web/src/routes/_chat.index.tsx",
+        "apps/web/src/components/settings/SettingsPanels.tsx",
+        "apps/web/src/components/settings/SettingsSidebarNav.tsx",
+        "apps/web/src/components/settings/OmpLoginSection.tsx",
+        "apps/web/src/components/sidebar/SidebarChrome.tsx",
+        "apps/web/src/components/sidebar/SidebarSettledDock.tsx",
+        "apps/web/src/components/Sidebar.tsx",
+        "apps/web/src/components/RightPanelTabs.tsx",
+    ]
+    ensure_clean(repo, targets, args.force)
+
+    # Build every edit in memory first. If one anchor does not match, nothing is written.
+    patch_contracts(repo)
+    add_i18n_files(repo)
+    patch_root(repo)
+    patch_home(repo)
+    patch_settings_panels(repo)
+    patch_settings_nav(repo)
+    patch_sidebar_chrome(repo)
+    patch_omp_login(repo)
+    patch_sidebar(repo)
+    patch_settled_dock(repo)
+    patch_right_panel(repo)
+
+    changed = commit_files(repo)
+    rc, check_output = diff_check(repo)
+
+    print(f"\nPivot Russian localization applied to: {repo}")
+    print(f"Base HEAD: {current_head(repo)}")
+    print("\nChanged files:")
+    for rel in changed:
+        print(f"  {rel}")
+
+    print(f"\ngit diff --check: {'OK' if rc == 0 else 'FAILED'}")
+    if check_output:
+        print(check_output)
+
+    print(
+        "\nTargeted verification:\n"
+        "  pnpm exec vp test run packages/contracts/src/settings.test.ts apps/web/src/i18n.test.ts\n"
+        "\nThen inspect:\n"
+        "  git diff --stat\n"
+        "  git diff\n"
+    )
+    return rc
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except PatchError as exc:
+        print(f"\nERROR: {exc}\n", file=sys.stderr)
+        raise SystemExit(2)
