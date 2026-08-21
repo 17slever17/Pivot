@@ -1,0 +1,202 @@
+         '                                  project: project.displayName,\n'
+         '                                })}\n',
+         "project settings"),
+        ('                          aria-label="New project"\n',
+         '                          aria-label={t("sidebar.newProject")}\n',
+         "new project aria"),
+        ('                    <TooltipPopup side="right">New project</TooltipPopup>\n',
+         '                    <TooltipPopup side="right">{t("sidebar.newProject")}</TooltipPopup>\n',
+         "new project tooltip"),
+        ('                  aria-label="Thread search results"\n',
+         '                  aria-label={t("sidebar.searchResults")}\n',
+         "search results aria"),
+        ('                No threads found\n',
+         '                {t("sidebar.noSearchResults")}\n',
+         "no search results"),
+        ('                                {snoozedShelfExpanded\n'
+         '                                  ? "Snoozed"\n'
+         '                                  : `Snoozed (${snoozedThreads.length})`}\n',
+         '                                {snoozedShelfExpanded\n'
+         '                                  ? t("sidebar.snoozed")\n'
+         '                                  : `${t("sidebar.snoozed")} (${snoozedThreads.length})`}\n',
+         "snoozed shelf"),
+        ('                  <span>No projects yet</span>\n',
+         '                  <span>{t("sidebar.noProjects")}</span>\n',
+         "no projects"),
+        ('                    Add project\n',
+         '                    {t("sidebar.addProject")}\n',
+         "add project"),
+        ('                `No threads in ${scopedProjectGroup.displayName} yet`\n',
+         '                t("sidebar.noThreadsInProject", { project: scopedProjectGroup.displayName })\n',
+         "no threads in project"),
+        ('                "No threads yet"\n',
+         '                t("sidebar.noThreads")\n',
+         "no threads"),
+    ]
+    for old, new, label in replacements:
+        text = replace_once(text, old, new, f"Sidebar.tsx: {label}")
+    save(rel, text)
+
+
+def patch_settled_dock(repo: Path) -> None:
+    rel = "apps/web/src/components/sidebar/SidebarSettledDock.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { TooltipProvider } from "../ui/tooltip";\n',
+        'import { useTranslation } from "../../i18n";\n',
+        "SidebarSettledDock.tsx: i18n import",
+    )
+    text = replace_once(
+        text,
+        'export function SidebarSettledDock(props: SidebarSettledDockProps) {\n'
+        '  return (\n',
+        'export function SidebarSettledDock(props: SidebarSettledDockProps) {\n'
+        '  const { t } = useTranslation();\n'
+        '  return (\n',
+        "SidebarSettledDock.tsx: hook",
+    )
+    text = replace_once(
+        text,
+        '          {props.expanded ? "Settled" : `Settled (${props.settled.length})`}\n',
+        '          {props.expanded\n'
+        '            ? t("sidebar.settled")\n'
+        '            : `${t("sidebar.settled")} (${props.settled.length})`}\n',
+        "SidebarSettledDock.tsx: label",
+    )
+    text = replace_once(
+        text,
+        '              Show {Math.min(props.hiddenCount, SETTLED_DOCK_PAGE_COUNT)} more\n',
+        '              {t("sidebar.showMore", {\n'
+        '                count: Math.min(props.hiddenCount, SETTLED_DOCK_PAGE_COUNT),\n'
+        '              })}\n',
+        "SidebarSettledDock.tsx: show more",
+    )
+    save(rel, text)
+
+
+def patch_right_panel(repo: Path) -> None:
+    rel = "apps/web/src/components/RightPanelTabs.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { useTheme } from "~/hooks/useTheme";\n',
+        'import { useTranslation } from "~/i18n";\n',
+        "RightPanelTabs.tsx: i18n import",
+    )
+    text = replace_once(
+        text,
+        '}) {\n'
+        '  // -1 means no highlight: it only appears on hover or arrow use.\n',
+        '}) {\n'
+        '  const { t } = useTranslation();\n'
+        '  // -1 means no highlight: it only appears on hover or arrow use.\n',
+        "RightPanelTabs.tsx: empty state hook",
+    )
+    action_replacements = [
+        ('      label: "Browser",\n      description: "Open a local app or URL.",',
+         '      label: t("rightPanel.browser"),\n      description: t("rightPanel.openBrowser"),'),
+        ('      label: "Terminal",\n      description: "Start a shell in this workspace.",',
+         '      label: t("rightPanel.terminal"),\n      description: t("rightPanel.openTerminal"),'),
+        ('      label: "Files",\n      description: "Browse and read workspace files.",',
+         '      label: t("rightPanel.files"),\n      description: t("rightPanel.openFiles"),'),
+        ('      label: "Diff",\n      description: "Review changes in this thread.",',
+         '      label: t("rightPanel.diff"),\n      description: t("rightPanel.openDiff"),'),
+        ('      label: "Pull request",\n      description: "Open this branch\'s pull request.",',
+         '      label: t("rightPanel.pullRequest"),\n      description: t("rightPanel.openPullRequest"),'),
+        ('      label: "Agents",\n      description: "Follow subagents and workflows.",',
+         '      label: t("rightPanel.agents"),\n      description: t("rightPanel.openAgents"),'),
+    ]
+    for idx, (old, new) in enumerate(action_replacements, start=1):
+        text = replace_once(text, old, new, f"RightPanelTabs.tsx: action {idx}")
+    text = replace_once(
+        text,
+        '      aria-label="Open a surface"\n',
+        '      aria-label={t("rightPanel.openSurface")}\n',
+        "RightPanelTabs.tsx: launcher aria",
+    )
+    text = replace_once(
+        text,
+        '          <h3 className="font-medium text-foreground text-sm">Open a surface</h3>\n'
+        '          <p className="mt-1 text-muted-foreground text-xs">\n'
+        '            Choose what to show in the right panel.\n'
+        '          </p>\n',
+        '          <h3 className="font-medium text-foreground text-sm">{t("rightPanel.openSurface")}</h3>\n'
+        '          <p className="mt-1 text-muted-foreground text-xs">\n'
+        '            {t("rightPanel.chooseSurface")}\n'
+        '          </p>\n',
+        "RightPanelTabs.tsx: launcher heading",
+    )
+    # Menu labels on non-empty panels. Technical Diff/Pull request remain unchanged via catalog.
+    text = replace_once(
+        text,
+        'export function RightPanelTabs(props: RightPanelTabsProps) {\n',
+        'export function RightPanelTabs(props: RightPanelTabsProps) {\n'
+        '  const { t } = useTranslation();\n',
+        "RightPanelTabs.tsx: main hook",
+    )
+    for old, new, label in [
+        ('                  aria-label="Add panel surface"\n',
+         '                  aria-label={t("rightPanel.addSurface")}\n',
+         "add surface aria"),
+        ('                    Browser\n',
+         '                    {t("rightPanel.browser")}\n',
+         "browser menu"),
+        ('                    Terminal\n',
+         '                    {t("rightPanel.terminal")}\n',
+         "terminal menu"),
+        ('                    Files\n',
+         '                    {t("rightPanel.files")}\n',
+         "files menu"),
+        ('                    Diff\n',
+         '                    {t("rightPanel.diff")}\n',
+         "diff menu"),
+        ('                    Pull request\n',
+         '                    {t("rightPanel.pullRequest")}\n',
+         "PR menu"),
+        ('                    Agents\n',
+         '                    {t("rightPanel.agents")}\n',
+         "agents menu"),
+    ]:
+        text = replace_once(text, old, new, f"RightPanelTabs.tsx: {label}")
+    save(rel, text)
+
+
+def commit_files(repo: Path) -> list[str]:
+    changed: list[str] = []
+    for rel, content in STAGED.items():
+        path = repo / rel
+        old = read(path)
+        if old != content:
+            path.write_text(content, encoding="utf-8", newline="\n")
+            changed.append(rel)
+    for rel, content in NEW_FILES.items():
+        path = repo / rel
+        if path.exists():
+            current = read(path)
+            if current != content:
+                raise PatchError(f"Refusing to overwrite existing file after staging: {path}")
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8", newline="\n")
+        changed.append(rel)
+    return changed
+
+
+def diff_check(repo: Path) -> tuple[int, str]:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "diff", "--check"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return proc.returncode, (proc.stdout + proc.stderr).strip()
+
+
+def current_head(repo: Path) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
