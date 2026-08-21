@@ -1,0 +1,194 @@
+name: Final i18n audit
+
+on:
+  pull_request:
+    branches:
+      - test/ru-i18n-omp-telemetry
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.head_ref == 'test/ru-i18n-omp-telemetry-direct'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Localize native desktop menu and build final audit
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if old in text:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"Expected one match in {path}, found {count}: {old!r}")
+                  p.write_text(text.replace(old, new, 1), encoding="utf-8")
+                  return
+              if new in text:
+                  return
+              raise SystemExit(f"Missing anchor in {path}: {old!r}")
+
+          menu = "apps/desktop/src/window/DesktopApplicationMenu.ts"
+          for old, new in [
+              ('title: "You\'re up to date!"', 'title: "Установлена последняя версия"'),
+              ('message: `Piπot ${updateState.currentVersion} is currently the newest version available.`', 'message: `Piπot ${updateState.currentVersion} — самая новая доступная версия.`'),
+              ('title: "Update check failed"', 'title: "Не удалось проверить обновления"'),
+              ('message: "Could not check for updates."', 'message: "Не удалось проверить наличие обновлений."'),
+              ('detail: updateState.message ?? "An unknown error occurred. Please try again later."', 'detail: updateState.message ?? "Произошла неизвестная ошибка. Повторите попытку позже."'),
+              ('title: "Updates unavailable"', 'title: "Обновления недоступны"'),
+              ('message: "Automatic updates are not available right now."', 'message: "Автоматические обновления сейчас недоступны."'),
+              ('label: "Check for Updates..."', 'label: "Проверить обновления..."'),
+              ('label: "Settings..."', 'label: "Настройки..."'),
+              ('label: "File"', 'label: "Файл"'),
+              ('{ role: "editMenu" },', '{ role: "editMenu", label: "Правка" },'),
+              ('label: "View"', 'label: "Вид"'),
+              ('{ role: "reload" },', '{ role: "reload", label: "Перезагрузить" },'),
+              ('{ role: "forceReload" },', '{ role: "forceReload", label: "Принудительно перезагрузить" },'),
+              ('{ role: "toggleDevTools" },', '{ role: "toggleDevTools", label: "Инструменты разработчика" },'),
+              ('{ label: "Actual Size", accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },', '{ label: "Фактический размер", accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },'),
+              ('{ label: "Zoom In", accelerator: "CmdOrCtrl+=", click: zoomClick("in") },', '{ label: "Увеличить", accelerator: "CmdOrCtrl+=", click: zoomClick("in") },'),
+              ('label: "Zoom In",\n            accelerator: "CmdOrCtrl+Plus",', 'label: "Увеличить",\n            accelerator: "CmdOrCtrl+Plus",'),
+              ('{ label: "Zoom Out", accelerator: "CmdOrCtrl+-", click: zoomClick("out") },', '{ label: "Уменьшить", accelerator: "CmdOrCtrl+-", click: zoomClick("out") },'),
+              ('{ role: "togglefullscreen" },', '{ role: "togglefullscreen", label: "Полноэкранный режим" },'),
+              ('{ role: "windowMenu" },', '{ role: "windowMenu", label: "Окно" },'),
+              ('role: "help",\n        submenu:', 'role: "help",\n        label: "Справка",\n        submenu:'),
+          ]:
+              replace_once(menu, old, new)
+
+          test = "apps/desktop/src/window/DesktopApplicationMenu.test.ts"
+          for old, new in [
+              ('item.label === "File"', 'item.label === "Файл"'),
+              ('item.label === "Settings..."', 'item.label === "Настройки..."'),
+              ('item.label === "View"', 'item.label === "Вид"'),
+              ('item.label === "Zoom In"', 'item.label === "Увеличить"'),
+          ]:
+              replace_once(test, old, new)
+
+          runtime = "apps/web/src/components/settings/SettingsRuntimeLocalization.tsx"
+          replace_once(
+              runtime,
+              'const TRANSLATED_ATTRIBUTES = ["aria-label", "placeholder", "title", "aria-description"] as const;',
+              'const TRANSLATED_ATTRIBUTES = ["aria-label", "aria-description", "aria-valuetext", "alt", "placeholder", "title"] as const;',
+          )
+
+          src = Path("apps/web/src")
+          catalogs = [Path("apps/web/src/components/settings/SettingsRuntimeLocalization.tsx"), *sorted(Path("apps/web/src/i18n").glob("runtimeRu*.ts"))]
+          key_re = re.compile(r'^\s*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z][A-Za-z0-9 ]*))\s*:', re.M)
+          known = set()
+          for catalog in catalogs:
+              text = catalog.read_text(encoding="utf-8")
+              for match in key_re.finditer(text):
+                  raw = match.group(1) or match.group(2)
+                  if raw:
+                      known.add(raw.replace('\\"', '"'))
+
+          candidate_patterns = [
+              re.compile(r'>([^<>{}\n]*[A-Za-z][^<>{}\n]*)<'),
+              re.compile(r'\b(?:title|description|placeholder|aria-label|ariaLabel|label|tooltipText|revealTooltip|hideTooltip|emptyLabel|actionLabel)\s*=\s*["\']([^"\']+)["\']'),
+              re.compile(r'\b(?:title|description|placeholder|label|hint|message|tooltip|emptyLabel|actionLabel)\s*:\s*["\']([^"\']+)["\']'),
+          ]
+          skip_exact = {
+              "Windows", "Linux", "macOS", "GitHub", "GitLab", "Bitbucket", "Azure DevOps", "Git", "Jujutsu", "omp",
+              "SSH", "HTTPS", "HTTP", "URL", "OAuth", "T3 Connect", "Diff", "Pull Request", "PR", "Worktree",
+              "Codex", "Claude Code", "Anthropic", "Cursor", "OpenCode Go", "Gemini", "Github Copilot", "Pi Agent",
+              "VS Code", "VS Code Insiders", "VSCodium", "Zed", "Explorer", "Finder", "Menlo",
+          }
+          skip_fragments = (
+              "className", "data-", "@t3tools/", "~/", "../", "./", "http://", "https://", "var(--", "calc(",
+              "M0 ", "M1 ", "M2 ", "M3 ", "M4 ", "M5 ", "M6 ", "M7 ", "M8 ", "M9 ", "M10 ", "M11 ", "M12 ",
+          )
+          candidates = {}
+          for path in src.rglob("*"):
+              if path.suffix not in {".ts", ".tsx"} or ".test." in path.name or ".spec." in path.name or path.name.startswith("runtimeRu"):
+                  continue
+              if path.name in {"routeTree.gen.ts", "SettingsRuntimeLocalization.tsx"}:
+                  continue
+              text = path.read_text(encoding="utf-8", errors="replace")
+              found = set()
+              for pattern in candidate_patterns:
+                  for match in pattern.finditer(text):
+                      value = re.sub(r"\s+", " ", match.group(1)).strip()
+                      if not value or value in known or value in skip_exact or len(value) < 3 or len(value) > 220:
+                          continue
+                      if not re.search(r"[A-Za-z]", value) or any(fragment in value for fragment in skip_fragments):
+                          continue
+                      if re.fullmatch(r"[a-z0-9_.:/-]+", value):
+                          continue
+                      found.add(value)
+              if found:
+                  candidates[str(path)] = sorted(found, key=str.lower)
+
+          hybrid = []
+          entry_re = re.compile(r'(?:^|\n)\s*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z][A-Za-z0-9 ]*))\s*:\s*"((?:[^"\\]|\\.)*)"', re.M)
+          allowed_ascii = re.compile(r'^(?:Piπot|Pivot|Git|GitHub|GitLab|Bitbucket|SSH|WSL|URL|HTTP|HTTPS|API|CLI|CPU|GPU|RAM|VRAM|PID|MCP|ACP|JSON|YAML|TOML|CSS|HTML|PR|Diff|PowerShell|Windows|macOS|Linux|omp|Codex|Claude|Anthropic|Cursor|OpenCode|T3|VS Code|Node\.js|npm|pnpm|Vite)(?:[ .:+/_-].*)?$', re.I)
+          for catalog in catalogs[1:]:
+              text = catalog.read_text(encoding="utf-8")
+              for match in entry_re.finditer(text):
+                  key = match.group(1) or match.group(2) or ""
+                  value = match.group(3)
+                  has_ascii = bool(re.search(r"[A-Za-z]", value))
+                  has_cyr = bool(re.search(r"[А-Яа-яЁё]", value))
+                  if has_ascii and (has_cyr or (value == key and not allowed_ascii.fullmatch(value))):
+                      hybrid.append((str(catalog), key, value))
+
+          desktop_patterns = [
+              re.compile(r'\b(?:label|title|message|detail)\s*:\s*"([^"\n]+)"'),
+              re.compile(r'buttons\s*:\s*\["([^"\n]+)"'),
+          ]
+          desktop_candidates = {}
+          for path in Path("apps/desktop/src").rglob("*.ts"):
+              if ".test." in path.name or ".spec." in path.name:
+                  continue
+              text = path.read_text(encoding="utf-8", errors="replace")
+              found = set()
+              for pattern in desktop_patterns:
+                  for match in pattern.finditer(text):
+                      value = match.group(1).strip()
+                      if re.search(r"[A-Za-z]", value) and value not in skip_exact and not re.fullmatch(r"[a-z0-9_.:/-]+", value):
+                          found.add(value)
+              if found:
+                  desktop_candidates[str(path)] = sorted(found, key=str.lower)
+
+          out = []
+          out.append(f"Known translations: {len(known)}")
+          out.append(f"Web files with unmapped candidates: {len(candidates)}")
+          out.append(f"Hybrid/equal-English translation values: {len(hybrid)}")
+          out.append(f"Desktop files with native-string candidates: {len(desktop_candidates)}")
+          out.append("")
+          out.append("# HYBRID TRANSLATIONS")
+          for path, key, value in hybrid:
+              out.append(f"{path} | {key} => {value}")
+          out.append("")
+          out.append("# WEB UNMAPPED CANDIDATES")
+          for path, values in sorted(candidates.items()):
+              out.append(f"## {path}")
+              out.extend(f"- {v}" for v in values)
+          out.append("")
+          out.append("# DESKTOP NATIVE CANDIDATES")
+          for path, values in sorted(desktop_candidates.items()):
+              out.append(f"## {path}")
+              out.extend(f"- {v}" for v in values)
+          Path("i18n-final-audit.txt").write_text("\n".join(out) + "\n", encoding="utf-8")
+          PY
+      - name: Commit native localization and audit report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src/window/DesktopApplicationMenu.ts \
+            apps/desktop/src/window/DesktopApplicationMenu.test.ts \
+            apps/web/src/components/settings/SettingsRuntimeLocalization.tsx \
+            i18n-final-audit.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "feat(i18n): localize native desktop menu and audit final coverage"
+          git push --no-verify origin HEAD:${{ github.head_ref }}
