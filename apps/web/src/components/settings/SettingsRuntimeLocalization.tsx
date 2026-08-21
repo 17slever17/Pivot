@@ -108,7 +108,7 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   ],
 ];
 
-const TRANSLATED_ATTRIBUTES = ["aria-label", "placeholder", "title", "aria-description"] as const;
+const TRANSLATED_ATTRIBUTES = ["aria-label", "aria-description", "aria-valuetext", "alt", "placeholder", "title"] as const;
 
 const NEVER_TRANSLATE_SELECTOR = [
   "pre",
