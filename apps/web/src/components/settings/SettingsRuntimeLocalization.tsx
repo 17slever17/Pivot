@@ -2,7 +2,11 @@ import { useEffect } from "react";
 
 import { useClientSettings } from "../../hooks/useSettings";
 import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
+import { RU_CHAT_EXTRA } from "../../i18n/runtimeRuChatExtra";
 import { RU_COMMON } from "../../i18n/runtimeRuCommon";
+import { RU_CONNECTIONS_EXTRA } from "../../i18n/runtimeRuConnectionsExtra";
+import { RU_PULL_REQUESTS } from "../../i18n/runtimeRuPullRequests";
+import { RU_REMAINING } from "../../i18n/runtimeRuRemaining";
 import { RU_SETTINGS } from "../../i18n/runtimeRuSettings";
 import { RU_SURFACES } from "../../i18n/runtimeRuSurfaces";
 
@@ -11,6 +15,10 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_SETTINGS,
   ...RU_CAPABILITIES,
   ...RU_SURFACES,
+  ...RU_CHAT_EXTRA,
+  ...RU_CONNECTIONS_EXTRA,
+  ...RU_PULL_REQUESTS,
+  ...RU_REMAINING,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
@@ -52,6 +60,18 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+) files? changed$/, (count) => `Изменено файлов: ${count}`],
   [/^(\d+) comments?$/, (count) => `Комментариев: ${count}`],
   [/^(\d+) commits?$/, (count) => `Commits: ${count}`],
+  [/^Worked for (.+)$/, (duration) => `Работал ${duration}`],
+  [/^Working for (.+)$/, (duration) => `Работает ${duration}`],
+  [/^(.+) is not authenticated on this server\. Sign in or configure credentials using (.+) tool on the server host to enable change request features\.$/, (name, tool) => `${name} не авторизован на этом сервере. Войдите или настройте учётные данные через ${tool} на хосте сервера, чтобы включить функции change request.`],
+  [/^(.+): show (\d+) scopes?$/, (label, count) => `${label}: показать scopes (${count})`],
+  [/^(\d+) scopes?$/, (count) => `${count} scopes`],
+  [/^(.+) · (.+)$/, (left, right) => {
+    const translatedLeft = STATIC_TRANSLATIONS[left] ?? left;
+    const translatedRight = STATIC_TRANSLATIONS[right] ?? right;
+    return translatedLeft === left && translatedRight === right
+      ? `${left} · ${right}`
+      : `${translatedLeft} · ${translatedRight}`;
+  }],
 ];
 
 const TRANSLATED_ATTRIBUTES = [
@@ -106,7 +126,9 @@ function translateValue(value: string): string | null {
   if (direct !== undefined) return direct;
   for (const [pattern, render] of DYNAMIC_TRANSLATIONS) {
     const match = normalized.match(pattern);
-    if (match) return render(...match.slice(1));
+    if (!match) continue;
+    const translated = render(...match.slice(1));
+    if (translated !== normalized) return translated;
   }
   return null;
 }
