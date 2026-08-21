@@ -80,11 +80,11 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   "No saved remote environments": "Нет сохранённых удалённых окружений",
   "Click “Add environment” to pair another environment.":
     "Нажмите «Добавить окружение», чтобы подключить другое окружение.",
-  "Connect": "Подключить",
+  Connect: "Подключить",
   "Connecting…": "Подключение…",
-  "Disconnect": "Отключить",
+  Disconnect: "Отключить",
   "Disconnecting…": "Отключение…",
-  "Remove": "Удалить",
+  Remove: "Удалить",
   "Removing…": "Удаление…",
   "Set as default": "Сделать основным",
   Default: "По умолчанию",
@@ -187,7 +187,8 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   "Retry monitor": "Перезапустить монитор",
   "Waiting for collector health.": "Ожидание состояния сборщика.",
   "Waiting for the native process monitor.": "Ожидание нативного монитора процессов.",
-  "No retained process samples in this window.": "В этом интервале нет сохранённых сэмплов процессов.",
+  "No retained process samples in this window.":
+    "В этом интервале нет сохранённых сэмплов процессов.",
   "No instrumented application I/O has been recorded yet.":
     "Инструментированный I/O приложения пока не зафиксирован.",
   "No reported errors": "Ошибок не зарегистрировано",
