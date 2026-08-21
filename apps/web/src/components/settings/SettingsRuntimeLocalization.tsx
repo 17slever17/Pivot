@@ -1,206 +1,16 @@
 import { useEffect } from "react";
 
 import { useClientSettings } from "../../hooks/useSettings";
+import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
+import { RU_COMMON } from "../../i18n/runtimeRuCommon";
+import { RU_SETTINGS } from "../../i18n/runtimeRuSettings";
+import { RU_SURFACES } from "../../i18n/runtimeRuSurfaces";
 
 const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
-  Settings: "Настройки",
-  General: "Основные",
-  Appearance: "Оформление",
-  Notifications: "Уведомления",
-  Keybindings: "Горячие клавиши",
-  Providers: "Провайдеры",
-  "Source Control": "Контроль версий",
-  Connections: "Подключения",
-  Archive: "Архив",
-  Diagnostics: "Диагностика",
-  "Restore defaults": "Сбросить настройки",
-
-  Language: "Язык",
-  "Project grouping": "Группировка проектов",
-  "Auto-settle inactive threads": "Автоматически завершать неактивные чаты",
-  "Days of inactivity before auto-settle": "Дней неактивности до автозавершения",
-  "Time format": "Формат времени",
-  "System default": "Системный",
-  "Hide whitespace changes": "Скрывать изменения пробелов",
-  "Provider update checks": "Проверять обновления провайдеров",
-  "Background activity": "Фоновая активность",
-  Balanced: "Сбалансированный",
-  Performance: "Производительность",
-  "Battery saver": "Экономия батареи",
-  Advanced: "Расширенные",
-  "New threads": "Новые чаты",
-  Local: "Локально",
-  "New worktree": "Новый worktree",
-  "Add project starts in": "Начальная папка добавления проекта",
-  "Archive confirmation": "Подтверждение архивации",
-  "Delete confirmation": "Подтверждение удаления",
-  "Text generation model": "Модель генерации текста",
-  Timeline: "Таймлайн",
-  About: "О программе",
-  "View diagnostics": "Открыть диагностику",
-  "Legacy features": "Устаревшие функции",
-  Done: "Готово",
-  "Reset all": "Сбросить всё",
-
-  "Choose how Piπot looks. Use a built-in theme or make your own.":
-    "Выберите внешний вид Piπot: встроенную тему или собственную.",
-  "Color scheme": "Цветовая схема",
-  System: "Системная",
-  Light: "Светлая",
-  Dark: "Тёмная",
-  Themes: "Темы",
-  "Create theme": "Создать тему",
-  "Import theme": "Импортировать тему",
-  "Glass opacity": "Прозрачность стекла",
-  "Environment identification": "Обозначение окружения",
-  Artwork: "Изображение",
-  Pill: "Метка",
-  None: "Нет",
-  Typography: "Типографика",
-  "Interface font": "Шрифт интерфейса",
-  "Prompt font": "Шрифт поля ввода",
-  "Monospace font": "Моноширинный шрифт",
-  "Code font": "Шрифт кода",
-  "Terminal font": "Шрифт терминала",
-  "Word wrap": "Перенос строк",
-  "Interface font size": "Размер шрифта интерфейса",
-  "Prompt font size": "Размер шрифта поля ввода",
-  "Code font size": "Размер шрифта кода",
-  "Terminal font size": "Размер шрифта терминала",
-
-  "This environment": "Это окружение",
-  "Network access": "Сетевой доступ",
-  "Limited to this machine.": "Доступно только на этом компьютере.",
-  "Tailscale HTTPS": "Tailscale HTTPS",
-  "WSL backend": "Backend WSL",
-  Off: "Выкл.",
-  On: "Вкл.",
-  "Remote environments": "Удалённые окружения",
-  "Add environment": "Добавить окружение",
-  "No saved remote environments": "Нет сохранённых удалённых окружений",
-  "Click “Add environment” to pair another environment.":
-    "Нажмите «Добавить окружение», чтобы подключить другое окружение.",
-  Connect: "Подключить",
-  "Connecting…": "Подключение…",
-  Disconnect: "Отключить",
-  "Disconnecting…": "Отключение…",
-  Remove: "Удалить",
-  "Removing…": "Удаление…",
-  "Set as default": "Сделать основным",
-  Default: "По умолчанию",
-  Setup: "Настроить",
-  Disable: "Отключить",
-  "Server update available": "Доступно обновление сервера",
-  Retry: "Повторить",
-  Update: "Обновить",
-  "Managed above": "Управляется выше",
-  "Publish agent activity": "Публиковать активность агента",
-
-  Command: "Команда",
-  Keybinding: "Сочетание",
-  When: "Когда",
-  Status: "Статус",
-  Edit: "Изменить",
-  Save: "Сохранить",
-  Saving: "Сохранение",
-  "Press shortcut": "Нажмите сочетание",
-  Unassigned: "Не назначено",
-  Always: "Всегда",
-  "Reset to default": "Сбросить",
-  Cancel: "Отмена",
-  Condition: "Условие",
-  Group: "Группа",
-  "Add keybinding": "Добавить сочетание",
-  "Open keybindings.json": "Открыть keybindings.json",
-  "No keybindings match your search.": "Поиск не нашёл сочетаний клавиш.",
-
-  "Resource monitor": "Монитор ресурсов",
-  "T3 system footprint": "Ресурсы системы T3",
-  "Current CPU": "Текущая загрузка CPU",
-  "Resident memory": "Резидентная память",
-  "Process count": "Количество процессов",
-  "Read throughput": "Скорость чтения",
-  "Write throughput": "Скорость записи",
-  "CPU speed limit": "Ограничение скорости CPU",
-  "Backend + agents": "Backend + агенты",
-  Desktop: "Desktop",
-  "Monitor overhead": "Нагрузка монитора",
-  "Host & collection": "Хост и сбор данных",
-  "Host state": "Состояние хоста",
-  "Power source": "Источник питания",
-  "External power": "Внешнее питание",
-  Battery: "Батарея",
-  "Low power mode": "Энергосбережение",
-  Enabled: "Включено",
-  Disabled: "Выключено",
-  Idle: "Простой",
-  Active: "Активно",
-  Session: "Сеанс",
-  Suspended: "Приостановлен",
-  Locked: "Заблокирован",
-  Unlocked: "Разблокирован",
-  Thermal: "Температурное состояние",
-  Unknown: "Неизвестно",
-  "Collection health": "Состояние сбора",
-  "Native process monitor": "Нативный монитор процессов",
-  "Electron main process": "Основной процесс Electron",
-  "Collection time": "Время сбора",
-  "Process scan": "Сканирование процессов",
-  Inaccessible: "Недоступно",
-  Sidecar: "Sidecar",
-  Restarts: "Перезапуски",
-  "Resource timeline": "История ресурсов",
-  "Live process tree": "Дерево процессов",
-  "Instrumented application I/O": "Инструментированный I/O приложения",
-  Process: "Процесс",
-  Category: "Категория",
-  Memory: "Память",
-  Read: "Чтение",
-  Write: "Запись",
-  Samples: "Сэмплы",
-  Component: "Компонент",
-  Operation: "Операция",
-  "Logical Read": "Логическое чтение",
-  "Logical Write": "Логическая запись",
-  Count: "Количество",
-  Time: "Время",
-  "Live Processes": "Активные процессы",
-  "Child Processes": "Дочерние процессы",
-  "Server PID": "PID сервера",
-  "Resource History": "История ресурсов",
-  "CPU Time": "Время CPU",
-  Interval: "Интервал",
-  Processes: "Процессы",
-  "Trace Diagnostics": "Диагностика трассировки",
-  Spans: "Спаны",
-  Failures: "Ошибки",
-  "Slow Spans": "Медленные спаны",
-  "Parse Errors": "Ошибки разбора",
-  "Latest Failures": "Последние ошибки",
-  "Most Common Failures": "Самые частые ошибки",
-  "Slowest Spans": "Самые медленные спаны",
-  Cause: "Причина",
-  Duration: "Длительность",
-  Ended: "Завершено",
-  "Last Seen": "Последний раз",
-  "Open logs folder": "Открыть папку логов",
-  "Retry monitor": "Перезапустить монитор",
-  "Waiting for collector health.": "Ожидание состояния сборщика.",
-  "Waiting for the native process monitor.": "Ожидание нативного монитора процессов.",
-  "No retained process samples in this window.":
-    "В этом интервале нет сохранённых сэмплов процессов.",
-  "No instrumented application I/O has been recorded yet.":
-    "Инструментированный I/O приложения пока не зафиксирован.",
-  "No reported errors": "Ошибок не зарегистрировано",
-  "Desktop only": "Только desktop",
-  Unavailable: "Недоступно",
-  Healthy: "Исправно",
-  Degraded: "Деградация",
-  Starting: "Запуск",
-
-  "Search settings": "Поиск по настройкам",
-  "Clear settings search": "Очистить поиск по настройкам",
-  "No settings found": "Настройки не найдены",
+  ...RU_COMMON,
+  ...RU_SETTINGS,
+  ...RU_CAPABILITIES,
+  ...RU_SURFACES,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
@@ -209,7 +19,8 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+) process$/, (count) => `${count} процесс`],
   [/^(\d+) starts · (\d+) exits$/, (starts, exits) => `${starts} запусков · ${exits} завершений`],
   [/^Sampling every (.+)$/, (interval) => `Опрос каждые ${interval}`],
-  [/^Updated (.+)$/, (when) => `Обновлено ${when.replace(/ ago$/, " назад")}`],
+  [/^Updated (.+)$/, (when) => `Обновлено ${translateRelativeTime(when)}`],
+  [/^Checked (.+)$/, (when) => `Проверено ${translateRelativeTime(when)}`],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
@@ -220,30 +31,106 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^Keybinding for (.+)$/, (name) => `Сочетание для ${name}`],
   [/^Actions for (.+)$/, (name) => `Действия для ${name}`],
   [/^Edit when clause for (.+)$/, (name) => `Изменить условие для ${name}`],
+  [/^What should we build in (.+)\?$/, (project) => `Что будем делать в ${project}?`],
+  [/^(\d+) omp config settings are available to edit\.$/, (count) => `Доступно ${count} настроек omp для редактирования.`],
+  [/^Archived (.+) · Created (.+)$/, (archived, created) => `Архивирован ${translateRelativeTime(archived)} · Создан ${translateRelativeTime(created)}`],
+  [/^Support for (.+) is coming soon\.$/, (name) => `Поддержка ${name} появится позже.`],
+  [/^Not available on this server: (.+)$/, (hint) => `Недоступно на этом сервере: ${hint}`],
+  [/^Could not verify (.+)\.$/, (name) => `Не удалось проверить ${name}.`],
+  [/^Toggle (.+) details$/, (name) => `Показать или скрыть подробности ${name}`],
+  [/^(.+) availability$/, (name) => `Доступность ${name}`],
+  [/^Waiting for (.+)'s configuration\.$/, (name) => `Ожидание конфигурации ${name}.`],
+  [/^Available - (.+)$/, (detail) => `Доступно — ${detail}`],
+  [/^Available — (.+)$/, (detail) => `Доступно — ${detail}`],
+  [/^Conflicts with (.+)\. The most recent matching binding wins when both conditions can apply\.$/, (binding) => `Конфликтует с ${binding}. Если подходят оба условия, используется более поздняя привязка.`],
+  [/^Preview (.+)$/, (name) => `Предпросмотр ${name}`],
+  [/^Remove attachment (.+)$/, (name) => `Удалить вложение ${name}`],
+  [/^Open (.+) in editor$/, (name) => `Открыть ${name} в редакторе`],
+  [/^Copy (.+) path$/, (name) => `Копировать путь ${name}`],
+  [/^New thread in (.+)$/, (project) => `Новый чат в ${project}`],
+  [/^(\d+) selected$/, (count) => `Выбрано: ${count}`],
+  [/^(\d+) files? changed$/, (count) => `Изменено файлов: ${count}`],
+  [/^(\d+) comments?$/, (count) => `Комментариев: ${count}`],
+  [/^(\d+) commits?$/, (count) => `Commits: ${count}`],
 ];
 
-const TRANSLATED_ATTRIBUTES = ["aria-label", "placeholder", "title"] as const;
+const TRANSLATED_ATTRIBUTES = [
+  "aria-label",
+  "placeholder",
+  "title",
+  "aria-description",
+] as const;
+
+const NEVER_TRANSLATE_SELECTOR = [
+  "pre",
+  "code",
+  "kbd",
+  "samp",
+  "textarea",
+  "[contenteditable='true']",
+  "[data-i18n-skip]",
+  ".xterm",
+  ".monaco-editor",
+  ".cm-editor",
+].join(",");
+
+const MARKDOWN_INTERACTIVE_SELECTOR = [
+  "button",
+  "summary",
+  "[role='button']",
+  "[role='menuitem']",
+  "[role='option']",
+  "[role='tab']",
+].join(",");
+
 const originalText = new WeakMap<Text, string>();
 const lastTranslatedText = new WeakMap<Text, string>();
 const originalAttributes = new WeakMap<Element, Map<string, string>>();
 const lastTranslatedAttributes = new WeakMap<Element, Map<string, string>>();
 
+function normalizeValue(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function translateRelativeTime(value: string): string {
+  const normalized = normalizeValue(value);
+  if (normalized === "just now") return "только что";
+  if (normalized === "now") return "сейчас";
+  if (normalized.endsWith(" ago")) return `${normalized.slice(0, -4)} назад`;
+  return normalized;
+}
+
 function translateValue(value: string): string | null {
-  const direct = STATIC_TRANSLATIONS[value];
+  const normalized = normalizeValue(value);
+  const direct = STATIC_TRANSLATIONS[normalized];
   if (direct !== undefined) return direct;
   for (const [pattern, render] of DYNAMIC_TRANSLATIONS) {
-    const match = value.match(pattern);
+    const match = normalized.match(pattern);
     if (match) return render(...match.slice(1));
   }
   return null;
 }
 
+function isInsideNeverTranslate(node: Node): boolean {
+  const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  return element?.closest(NEVER_TRANSLATE_SELECTOR) !== null;
+}
+
+function isProtectedMarkdownText(node: Text): boolean {
+  const parent = node.parentElement;
+  if (!parent) return false;
+  const markdown = parent.closest(".chat-markdown");
+  if (!markdown) return false;
+  return parent.closest(MARKDOWN_INTERACTIVE_SELECTOR) === null;
+}
+
 function translateTextNode(node: Text): void {
+  if (isInsideNeverTranslate(node) || isProtectedMarkdownText(node)) return;
   const raw = node.nodeValue ?? "";
   const trimmed = raw.trim();
   if (!trimmed) return;
   const translated = translateValue(trimmed);
-  if (translated === null || translated === trimmed) return;
+  if (translated === null || translated === normalizeValue(trimmed)) return;
 
   if (lastTranslatedText.get(node) !== raw) {
     originalText.set(node, raw);
@@ -255,13 +142,14 @@ function translateTextNode(node: Text): void {
 }
 
 function translateAttributes(element: Element): void {
+  if (element.matches(NEVER_TRANSLATE_SELECTOR) || element.closest("[data-i18n-skip]")) return;
   let originals = originalAttributes.get(element);
   let lastTranslations = lastTranslatedAttributes.get(element);
   for (const attribute of TRANSLATED_ATTRIBUTES) {
     const raw = element.getAttribute(attribute);
     if (!raw) continue;
-    const translated = translateValue(raw.trim());
-    if (translated === null || translated === raw) continue;
+    const translated = translateValue(raw);
+    if (translated === null || translated === normalizeValue(raw)) continue;
 
     originals ??= new Map<string, string>();
     lastTranslations ??= new Map<string, string>();
@@ -281,6 +169,7 @@ function translateSubtree(root: Node): void {
     return;
   }
   if (!(root instanceof Element)) return;
+  if (root.matches(NEVER_TRANSLATE_SELECTOR)) return;
   translateAttributes(root);
   for (const child of root.childNodes) translateSubtree(child);
 }
