@@ -30,6 +30,7 @@ import {
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
+import { useTranslation } from "../../i18n";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   isElectron,
@@ -79,9 +80,10 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
 });
 
 function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
+  const { t } = useTranslation();
   return (
     <Link
-      aria-label="Go to threads"
+      aria-label={t("nav.goToThreads")}
       className={cn(
         "sidebar-brand relative z-10 ml-[var(--workspace-titlebar-content-left)] h-7 w-fit min-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2",
         onBackdrop ? "text-white" : "text-foreground",
@@ -121,6 +123,7 @@ function PiMark() {
 }
 
 export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
   const currentFooterPage = useLocation({
@@ -172,7 +175,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
           <SidebarMenuItem className="min-w-0 flex-1">
             <SidebarMenuButton onClick={handleBackClick}>
               <ArrowLeftIcon />
-              <span>Back</span>
+              <span>{t("nav.back")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ) : (
@@ -182,7 +185,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
                 <TooltipTrigger
                   render={
                     <SidebarMenuButton
-                      aria-label="Settings"
+                      aria-label={t("nav.settings")}
                       onClick={handleSettingsClick}
                       size="icon"
                     >
@@ -190,7 +193,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
                     </SidebarMenuButton>
                   }
                 />
-                <TooltipPopup side="top">Settings</TooltipPopup>
+                <TooltipPopup side="top">{t("nav.settings")}</TooltipPopup>
               </Tooltip>
             </SidebarMenuItem>
             {pullRequestsSupported ? (
@@ -215,12 +218,16 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <SidebarMenuButton aria-label="Usage" onClick={handleUsageClick} size="icon">
+                    <SidebarMenuButton
+                      aria-label={t("nav.usage")}
+                      onClick={handleUsageClick}
+                      size="icon"
+                    >
                       <ChartNoAxesColumnIcon />
                     </SidebarMenuButton>
                   }
                 />
-                <TooltipPopup side="top">Usage</TooltipPopup>
+                <TooltipPopup side="top">{t("nav.usage")}</TooltipPopup>
               </Tooltip>
             </SidebarMenuItem>
           </>

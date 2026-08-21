@@ -12,11 +12,13 @@ import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { Button } from "../ui/button";
 import { stackedThreadToast, toastManager } from "../ui/toast";
+import { useTranslation } from "../../i18n";
 
 export function OmpLoginSection(props: {
   readonly environmentId: EnvironmentId;
   readonly instanceId: ProviderInstanceId;
 }) {
+  const { t } = useTranslation();
   const listLoginProviders = useAtomCommand(serverEnvironment.ompListLoginProviders, {
     label: "omp-list-login-providers",
   });
@@ -42,8 +44,8 @@ export function OmpLoginSection(props: {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not load omp login providers",
-          description: "Check that omp is installed and try again.",
+          title: t("omp.loadFailed"),
+          description: t("omp.checkInstalled"),
         }),
       );
       return;
@@ -66,16 +68,15 @@ export function OmpLoginSection(props: {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: `Login failed for ${providerId}`,
-          description:
-            "Complete login in the browser opened on the server host, or run omp login there.",
+          title: t("omp.loginFailed", { provider: providerId }),
+          description: t("omp.loginFailedDescription"),
         }),
       );
       return;
     }
     toastManager.add({
       type: "success",
-      title: `Signed in to ${providerId}`,
+      title: t("omp.signedInTo", { provider: providerId }),
     });
     await refreshProviders({
       environmentId: props.environmentId,
@@ -87,7 +88,7 @@ export function OmpLoginSection(props: {
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-foreground">omp accounts</span>
+        <span className="text-xs font-medium text-foreground">{t("omp.accounts")}</span>
         <Button
           type="button"
           size="sm"
@@ -96,20 +97,17 @@ export function OmpLoginSection(props: {
           disabled={loading || loggingInId !== null}
           onClick={() => void reload()}
         >
-          Refresh
+          {t("omp.refresh")}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Login opens in a browser on the machine running the T3 server. OAuth callbacks stay on that
-        host.
-      </p>
+      <p className="text-xs text-muted-foreground">{t("omp.loginDescription")}</p>
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <LoaderIcon className="size-3.5 animate-spin" />
-          Loading login providers…
+          {t("omp.loadingProviders")}
         </div>
       ) : providers.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No login providers reported by omp.</p>
+        <p className="text-xs text-muted-foreground">{t("omp.noProviders")}</p>
       ) : (
         <ul className="grid max-h-64 gap-1.5 overflow-y-auto">
           {providers.map((provider) => (
@@ -120,8 +118,8 @@ export function OmpLoginSection(props: {
               <div className="min-w-0">
                 <div className="truncate text-xs font-medium text-foreground">{provider.name}</div>
                 <div className="truncate text-[11px] text-muted-foreground">
-                  {provider.authenticated ? "Signed in" : "Not signed in"}
-                  {provider.available ? "" : " · unavailable"}
+                  {provider.authenticated ? t("omp.signedIn") : t("omp.notSignedIn")}
+                  {provider.available ? "" : ` · ${t("omp.unavailable")}`}
                 </div>
               </div>
               <Button
@@ -135,9 +133,9 @@ export function OmpLoginSection(props: {
                 {loggingInId === provider.id ? (
                   <LoaderIcon className="size-3.5 animate-spin" />
                 ) : provider.authenticated ? (
-                  "Re-login"
+                  t("omp.relogin")
                 ) : (
-                  "Login"
+                  t("omp.login")
                 )}
               </Button>
             </li>

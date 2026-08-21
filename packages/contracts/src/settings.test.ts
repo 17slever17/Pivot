@@ -17,6 +17,19 @@ const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 
+describe("ClientSettings display language", () => {
+  it("defaults to Russian and accepts supported languages", () => {
+    expect(decodeClientSettings({}).displayLanguage).toBe("ru");
+    expect(decodeClientSettingsPatch({ displayLanguage: "en" }).displayLanguage).toBe("en");
+    expect(decodeClientSettingsPatch({ displayLanguage: "ru" }).displayLanguage).toBe("ru");
+  });
+
+  it("rejects unsupported display languages", () => {
+    expect(() => decodeClientSettings({ displayLanguage: "de" })).toThrow();
+    expect(() => decodeClientSettingsPatch({ displayLanguage: "de" })).toThrow();
+  });
+});
+
 describe("ClientSettings word wrap", () => {
   it("defaults word wrap on", () => {
     expect(decodeClientSettings({}).wordWrap).toBe(true);
