@@ -10,64 +10,19 @@ permissions:
 
 jobs:
   polish:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           ref: test/ru-i18n-omp-telemetry-direct
-      - name: Apply final localization polish
+      - name: Localize remaining native desktop strings
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          def replace_once(path: str, old: str, new: str) -> None:
-              p = Path(path)
-              text = p.read_text(encoding="utf-8")
-              if old in text:
-                  count = text.count(old)
-                  if count != 1:
-                      raise SystemExit(f"Expected one match in {path}, found {count}: {old[:100]!r}")
-                  p.write_text(text.replace(old, new, 1), encoding="utf-8")
-                  return
-              if new in text:
-                  return
-              raise SystemExit(f"Missing anchor in {path}: {old[:100]!r}")
-
-          runtime = "apps/web/src/components/settings/SettingsRuntimeLocalization.tsx"
-          replace_once(
-              runtime,
-              'import { RU_CONNECTIONS_EXTRA } from "../../i18n/runtimeRuConnectionsExtra";\n',
-              'import { RU_CONNECTIONS_EXTRA } from "../../i18n/runtimeRuConnectionsExtra";\nimport { RU_FINAL_POLISH } from "../../i18n/runtimeRuFinalPolish";\n',
-          )
-          replace_once(
-              runtime,
-              '  ...RU_AUDIT_EXTRA_H,\n};',
-              '  ...RU_AUDIT_EXTRA_H,\n  ...RU_FINAL_POLISH,\n};',
-          )
-          replace_once(
-              runtime,
-              '  [/^Reachable at (.+)$/, (address) => `Доступно по адресу ${address}`],\n',
-              '''  [/^Reachable at (.+)$/, (address) => `Доступно по адресу ${address}`],
-  [
-    /^Exposed on all interfaces\\. Pairing links use (.+)\\.$/,
-    (host) => `Доступно на всех сетевых интерфейсах. Ссылки подключения используют ${host}.`,
-  ],
-  [/^Conflicts with (.+)$/, (branch) => `Конфликтует с ${branch}`],
-  [
-    /^Reset (.+) to default$/,
-    (name) => `Восстановить значение по умолчанию: ${STATIC_TRANSLATIONS[name] ?? name}`,
-  ],
-  [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
-  [/^(\\d+) of (\\d+) failing$/, (count, total) => `Не пройдено проверок: ${count} из ${total}`],
-  [/^(\\d+) of (\\d+) running$/, (count, total) => `Выполняется проверок: ${count} из ${total}`],
-  [/^(\\d+) of (\\d+) passing$/, (count, total) => `Пройдено проверок: ${count} из ${total}`],
-''',
-          )
-
-          window_path = Path("apps/desktop/src/window/DesktopWindow.ts")
-          text = window_path.read_text(encoding="utf-8")
+          path = Path("apps/desktop/src/window/DesktopWindow.ts")
+          text = path.read_text(encoding="utf-8")
           replacements = {
               '<div class="label">Connecting to WSL…</div>': '<div class="label">Подключение к WSL…</div>',
               'menuTemplate.push({ label: "No suggestions", enabled: false });': 'menuTemplate.push({ label: "Нет вариантов", enabled: false });',
@@ -78,53 +33,24 @@ jobs:
               '{ role: "paste", enabled: params.editFlags.canPaste },': '{ role: "paste", label: "Вставить", enabled: params.editFlags.canPaste },',
               '{ role: "selectAll", enabled: params.editFlags.canSelectAll },': '{ role: "selectAll", label: "Выделить всё", enabled: params.editFlags.canSelectAll },',
           }
+          changed = False
           for old, new in replacements.items():
               if old in text:
                   text = text.replace(old, new)
+                  changed = True
               elif new not in text:
                   raise SystemExit(f"Missing DesktopWindow anchor: {old!r}")
-          window_path.write_text(text, encoding="utf-8")
-
-          preload = Path("apps/desktop/src/preload.ts")
-          text = preload.read_text(encoding="utf-8")
-          old = ': "SSH authentication cancelled.";'
-          new = ': "SSH-аутентификация отменена.";'
-          if old in text:
-              text = text.replace(old, new, 1)
-          elif new not in text:
-              raise SystemExit("Missing preload SSH cancellation anchor")
-          preload.write_text(text, encoding="utf-8")
-
-          menu = Path("apps/desktop/src/window/DesktopApplicationMenu.ts")
-          text = menu.read_text(encoding="utf-8")
-          text = text.replace('buttons: ["OK"]', 'buttons: ["ОК"]')
-          app_menu_replacements = {
-              '{ role: "about" },': '{ role: "about", label: `О ${appName}` },',
-              '{ role: "services" },': '{ role: "services", label: "Службы" },',
-              '{ role: "hide" },': '{ role: "hide", label: `Скрыть ${appName}` },',
-              '{ role: "hideOthers" },': '{ role: "hideOthers", label: "Скрыть остальные" },',
-              '{ role: "unhide" },': '{ role: "unhide", label: "Показать все" },',
-              '{ role: "quit" },': '{ role: "quit", label: `Выйти из ${appName}` },',
-              '{ role: environment.platform === "darwin" ? "close" : "quit" },': '{\n            role: environment.platform === "darwin" ? "close" : "quit",\n            label: environment.platform === "darwin" ? "Закрыть окно" : "Выйти",\n          },',
-          }
-          for old, new in app_menu_replacements.items():
-              if old in text:
-                  text = text.replace(old, new, 1)
-              elif new not in text:
-                  raise SystemExit(f"Missing DesktopApplicationMenu anchor: {old!r}")
-          menu.write_text(text, encoding="utf-8")
+          if changed:
+              path.write_text(text, encoding="utf-8")
           PY
-      - name: Commit polish
+      - name: Commit native localization
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/web/src/components/settings/SettingsRuntimeLocalization.tsx \
-            apps/desktop/src/window/DesktopWindow.ts \
-            apps/desktop/src/window/DesktopApplicationMenu.ts \
-            apps/desktop/src/preload.ts
-          if git diff --cached --quiet; then
+          if git diff --quiet; then
             exit 0
           fi
-          git commit -m "feat(i18n): finish native and dynamic Russian UI coverage"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/desktop/src/window/DesktopWindow.ts
+          git commit -m "feat(i18n): localize native desktop context menu and splash"
           git push --no-verify origin HEAD:test/ru-i18n-omp-telemetry-direct
