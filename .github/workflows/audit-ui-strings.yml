@@ -1,15 +1,16 @@
 name: Audit UI strings
 
 on:
-  push:
+  pull_request:
     branches:
-      - test/ru-i18n-omp-telemetry-direct
+      - test/ru-i18n-omp-telemetry
 
 permissions:
   contents: read
 
 jobs:
   audit:
+    if: github.head_ref == 'test/ru-i18n-omp-telemetry-direct'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
