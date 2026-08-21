@@ -8,6 +8,13 @@ on:
       - .github/ru-i18n-parts/**
       - .github/ru-i18n-test.txt
       - .github/workflows/ru-i18n-apply.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/ru-i18n-parts/**
+      - .github/ru-i18n-test.txt
+      - .github/workflows/ru-i18n-apply.yml
 
 permissions:
   contents: write
