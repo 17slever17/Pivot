@@ -76,6 +76,9 @@ describe("foldSubagentActivities", () => {
       activity("task.progress", {
         taskId: "task-1",
         lastToolName: "Read",
+        lastIntent: "Comparing validation tails",
+        currentToolArgs: "src/auth.ts",
+        currentToolStartMs: 1_700_000_000_000,
         typedUsage: { totalTokens: 1200, toolUses: 3 },
       }),
       activity("task.completed", {
@@ -92,6 +95,9 @@ describe("foldSubagentActivities", () => {
     expect(agent.status).toBe("completed");
     expect(agent.result).toBe("Found 2 issues");
     expect(agent.usage?.totalTokens).toBe(5000);
+    expect(agent.lastIntent).toBe("Comparing validation tails");
+    expect(agent.currentToolArgs).toBe("src/auth.ts");
+    expect(agent.currentToolStartMs).toBe(1_700_000_000_000);
     expect(agent.activationCount).toBe(1);
     expect(agent.completedAt).not.toBeNull();
   });

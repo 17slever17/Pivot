@@ -633,6 +633,12 @@ const TaskProgressPayload = Schema.Struct({
   usage: Schema.optional(Schema.Unknown),
   typedUsage: Schema.optional(RuntimeTaskUsage),
   lastToolName: Schema.optional(TrimmedNonEmptyStringSchema),
+  /** Most recent human-readable intent reported by the subagent. */
+  lastIntent: Schema.optional(TrimmedNonEmptyStringSchema),
+  /** Compact arguments for the currently running OMP tool. */
+  currentToolArgs: Schema.optional(TrimmedNonEmptyStringSchema),
+  /** Epoch-millisecond start time for the currently running OMP tool. */
+  currentToolStartMs: Schema.optional(NonNegativeInt),
   /** Present on synthesized member/child progress rows that carry state. */
   status: Schema.optional(RuntimeTaskStatus),
   error: Schema.optional(TrimmedNonEmptyStringSchema),

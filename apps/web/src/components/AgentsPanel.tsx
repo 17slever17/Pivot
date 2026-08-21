@@ -154,23 +154,48 @@ function AgentElapsed({ agent }: { agent: RuntimeSubagent }) {
  * settled rows lead with the outcome. Errors are the only inline previews on
  * failed rows because they explain a red row at a glance.
  */
-function agentActivityText(agent: RuntimeSubagent): string | null {
+type AgentActivityFields = Pick<
+  RuntimeSubagent,
+  | "status"
+  | "progress"
+  | "lastToolName"
+  | "lastIntent"
+  | "currentToolArgs"
+  | "currentToolStartMs"
+  | "result"
+  | "error"
+>;
+
+function currentToolActivityText(agent: AgentActivityFields, nowMs: number): string | null {
+  if (!agent.lastToolName) {
+    return null;
+  }
+  const args = agent.currentToolArgs?.replace(/\s+/g, " ").trim();
+  const tool = args ? `▸ ${agent.lastToolName} ${args}` : `▸ ${agent.lastToolName}`;
+  if (agent.currentToolStartMs === null) {
+    return tool;
+  }
+  const elapsed = formatElapsedSeconds(
+    (Math.max(agent.currentToolStartMs, nowMs) - agent.currentToolStartMs) / 1000,
+  );
+  return `${tool} · ${elapsed}`;
+}
+
+export function formatAgentActivityText(
+  agent: AgentActivityFields,
+  nowMs = Date.now(),
+): string | null {
   const live =
     agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
+  const tool = currentToolActivityText(agent, nowMs);
   if (live) {
-    return (
-      agent.progress ??
-      (agent.lastToolName ? `▸ ${agent.lastToolName}` : null) ??
-      agent.result ??
-      agent.error
-    );
+    const intent = agent.lastIntent ?? agent.progress;
+    if (intent && tool) {
+      return `${intent} · ${tool}`;
+    }
+    return intent ?? tool ?? agent.result ?? agent.error;
   }
-  return (
-    agent.error ??
-    agent.result ??
-    agent.progress ??
-    (agent.lastToolName ? `▸ ${agent.lastToolName}` : null)
-  );
+  return agent.error ?? agent.result ?? agent.lastIntent ?? agent.progress ?? tool;
 }
 
 /** Flat agent status line; click opens the nested omp transcript pane. */
@@ -184,7 +209,7 @@ function AgentRow({
   onSelect?: (agent: RuntimeSubagent) => void;
 }) {
   const visuals = STATUS_VISUALS[agent.status];
-  const activity = agentActivityText(agent);
+  const activity = formatAgentActivityText(agent);
   const modelLabel = formatSubagentModelLabel(agent.model, agent.effort);
   const role =
     agent.role?.trim().toLocaleLowerCase() === agent.title.trim().toLocaleLowerCase()
