@@ -44,6 +44,22 @@ jobs:
       - name: Apply localization
         run: python "$RUNNER_TEMP/apply_pivot_ru_i18n.py" --repo "$GITHUB_WORKSPACE"
 
+      - name: Update desktop client settings fixture
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("apps/desktop/src/settings/DesktopClientSettings.test.ts")
+          text = path.read_text(encoding="utf-8")
+          old = '  diffIgnoreWhitespace: true,\n  environmentIdentificationMode: "artwork",\n'
+          new = '  diffIgnoreWhitespace: true,\n  displayLanguage: "ru",\n  environmentIdentificationMode: "artwork",\n'
+          if new not in text:
+              if text.count(old) != 1:
+                  raise SystemExit("DesktopClientSettings fixture anchor did not match exactly once")
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
       - name: Run targeted tests
         run: vp test run packages/contracts/src/settings.test.ts apps/web/src/i18n.test.ts
 
