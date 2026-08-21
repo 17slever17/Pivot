@@ -2,6 +2,7 @@ import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/model
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 
+import { translate } from "../../i18n";
 import { SidebarSettledDock, type SidebarSettledDockProps } from "./SidebarSettledDock";
 
 function renderDock(props: Partial<SidebarSettledDockProps> = {}) {
@@ -30,7 +31,7 @@ describe("SidebarSettledDock", () => {
 
     expect(markup).toContain('data-testid="sidebar-settled-dock"');
     expect(markup).toContain('data-testid="sidebar-settled-dock-toggle"');
-    expect(markup).toContain("Settled (3)");
+    expect(markup).toContain(`${translate("ru", "sidebar.settled")} (3)`);
     expect(markup).toContain('aria-expanded="false"');
     expect(markup).not.toContain("sidebar-settled-dock-rows");
     expect(markup).not.toContain("sidebar-settled-dock-show-more");
@@ -44,7 +45,7 @@ describe("SidebarSettledDock", () => {
     expect(markup).toContain('data-testid="sidebar-settled-dock-rows"');
     expect(markup).toContain('data-testid="settled-row-t-1"');
     expect(markup).toContain('data-testid="sidebar-settled-dock-show-more"');
-    expect(markup).toContain("Show 25 more");
+    expect(markup).toContain(translate("ru", "sidebar.showMore", { count: 25 }));
   });
 
   it("omits the show-more action when every settled row is visible", () => {
