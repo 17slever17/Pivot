@@ -61,6 +61,10 @@ describe("runtimeEventToActivities task progress", () => {
         taskId: RuntimeTaskId.make("agent-2"),
         description: "Agent two",
         summary: "Inspecting the panel",
+        lastToolName: "bash",
+        lastIntent: "Comparing validation tails",
+        currentToolArgs: "python eval.py --split val",
+        currentToolStartMs: 1_700_000_000_000,
         typedUsage: { totalTokens: 4_200, toolUses: 7 },
         status: "running",
       },
@@ -75,6 +79,10 @@ describe("runtimeEventToActivities task progress", () => {
       "task-usage:thread-1:agent-2",
     ]);
     expect(progressPayload.summary).toBe("Inspecting the panel");
+    expect(progressPayload.lastToolName).toBe("bash");
+    expect(progressPayload.lastIntent).toBe("Comparing validation tails");
+    expect(progressPayload.currentToolArgs).toBe("python eval.py --split val");
+    expect(progressPayload.currentToolStartMs).toBe(1_700_000_000_000);
     expect(progressPayload.status).toBe("running");
     expect(progressPayload).not.toHaveProperty("typedUsage");
     expect(usagePayload.typedUsage).toEqual({ totalTokens: 4_200, toolUses: 7 });
