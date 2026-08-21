@@ -1,0 +1,238 @@
+    expect(() => decodeClientSettings({ displayLanguage: "de" })).toThrow();
+    expect(() => decodeClientSettingsPatch({ displayLanguage: "de" })).toThrow();
+  });
+});
+
+'''
+    if 'describe("ClientSettings display language"' not in text:
+        text = replace_once(
+            text,
+            'describe("ClientSettings word wrap", () => {\n',
+            test_block + 'describe("ClientSettings word wrap", () => {\n',
+            "settings.test.ts: display language tests",
+        )
+    save(rel, text)
+
+
+def add_i18n_files(repo: Path) -> None:
+    for rel, content in [
+        ("apps/web/src/i18n.ts", I18N_TS),
+        ("apps/web/src/i18n.test.ts", I18N_TEST_TS),
+    ]:
+        path = repo / rel
+        if path.exists():
+            current = read(path)
+            marker = '"settings.language.russian"' if rel.endswith("i18n.ts") else 'describe("i18n"'
+            if marker not in current:
+                raise PatchError(f"Refusing to overwrite unrelated existing file: {path}")
+            STAGED[rel] = current
+        else:
+            NEW_FILES[rel] = content
+
+
+def patch_root(repo: Path) -> None:
+    rel = "apps/web/src/routes/__root.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { useClientSettings } from "../hooks/useSettings";\n',
+        'import { useTranslation } from "../i18n";\n',
+        "__root.tsx: i18n import",
+    )
+    text = replace_once(
+        text,
+        '  const primaryEnvironmentAuthenticated = authGateState.status === "authenticated";\n\n'
+        '  useEffect(() => {\n',
+        '  const primaryEnvironmentAuthenticated = authGateState.status === "authenticated";\n'
+        '  const displayLanguage = useClientSettings((settings) => settings.displayLanguage);\n\n'
+        '  useEffect(() => {\n'
+        '    document.documentElement.lang = displayLanguage;\n'
+        '  }, [displayLanguage]);\n\n'
+        '  useEffect(() => {\n',
+        "__root.tsx: html lang sync",
+    )
+    text = replace_once(
+        text,
+        'function RootRouteErrorView({ error, reset }: ErrorComponentProps) {\n'
+        '  const message = errorMessage(error);\n',
+        'function RootRouteErrorView({ error, reset }: ErrorComponentProps) {\n'
+        '  const { t } = useTranslation();\n'
+        '  const message = errorMessage(error, t("root.unexpectedError"));\n',
+        "__root.tsx: error translation hook",
+    )
+    text = replace_once(
+        text,
+        '          Something went wrong.\n',
+        '          {t("root.somethingWentWrong")}\n',
+        "__root.tsx: error heading",
+    )
+    text = replace_once(
+        text,
+        '            Try again\n',
+        '            {t("root.tryAgain")}\n',
+        "__root.tsx: retry",
+    )
+    text = replace_once(
+        text,
+        '            Reload app\n',
+        '            {t("root.reload")}\n',
+        "__root.tsx: reload",
+    )
+    text = replace_once(
+        text,
+        '            <span className="group-open:hidden">Show error details</span>\n'
+        '            <span className="hidden group-open:inline">Hide error details</span>\n',
+        '            <span className="group-open:hidden">{t("root.showError")}</span>\n'
+        '            <span className="hidden group-open:inline">{t("root.hideError")}</span>\n',
+        "__root.tsx: error details",
+    )
+    text = replace_once(
+        text,
+        'function errorMessage(error: unknown): string {\n',
+        'function errorMessage(error: unknown, fallback: string): string {\n',
+        "__root.tsx: errorMessage signature",
+    )
+    text = replace_once(
+        text,
+        '  return "An unexpected router error occurred.";\n',
+        '  return fallback;\n',
+        "__root.tsx: fallback error",
+    )
+    save(rel, text)
+
+
+def patch_home(repo: Path) -> None:
+    rel = "apps/web/src/routes/_chat.index.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";\n',
+        'import { useTranslation } from "~/i18n";\n',
+        "_chat.index.tsx: i18n import",
+    )
+    text = replace_once(
+        text,
+        'function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {\n'
+        '  return (\n',
+        'function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {\n'
+        '  const { t } = useTranslation();\n'
+        '  return (\n',
+        "_chat.index.tsx: DraftStartError hook",
+    )
+    text = replace_once(
+        text,
+        '<EmptyTitle className="text-foreground text-xl">Couldn’t start a new thread</EmptyTitle>',
+        '<EmptyTitle className="text-foreground text-xl">{t("home.threadStartError")}</EmptyTitle>',
+        "_chat.index.tsx: error title",
+    )
+    text = replace_once(
+        text,
+        '            The project is still available. Try opening the draft again.\n',
+        '            {t("home.threadStartErrorDescription")}\n',
+        "_chat.index.tsx: error description",
+    )
+    text = replace_once(
+        text,
+        '              Try again\n',
+        '              {t("home.tryAgain")}\n',
+        "_chat.index.tsx: retry",
+    )
+    text = replace_once(
+        text,
+        'function NoProjectsHero() {\n'
+        '  const openAddProject = useCallback(() => openCommandPalette({ open: "add-project" }), []);\n',
+        'function NoProjectsHero() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const openAddProject = useCallback(() => openCommandPalette({ open: "add-project" }), []);\n',
+        "_chat.index.tsx: NoProjectsHero hook",
+    )
+    text = replace_once(
+        text,
+        '                What should we work on?\n',
+        '                {t("home.start")}\n',
+        "_chat.index.tsx: home title",
+    )
+    text = replace_once(
+        text,
+        '                Add a project to start your first thread.\n',
+        '                {t("home.startDescription")}\n',
+        "_chat.index.tsx: home description",
+    )
+    text = replace_once(
+        text,
+        '                  Add project\n',
+        '                  {t("home.addProject")}\n',
+        "_chat.index.tsx: add project",
+    )
+    text = replace_once(
+        text,
+        'function HostedStaticOnboardingState() {\n'
+        '  const cloudEnabled = hasCloudPublicConfig();\n',
+        'function HostedStaticOnboardingState() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const cloudEnabled = hasCloudPublicConfig();\n',
+        "_chat.index.tsx: onboarding hook",
+    )
+    text = replace_once(
+        text,
+        '                Connect an environment to get started\n',
+        '                {t("home.connect")}\n',
+        "_chat.index.tsx: connect title",
+    )
+    text = replace_once(
+        text,
+        '                {cloudEnabled\n'
+        '                  ? "Sign in to T3 Connect to connect a linked environment through its managed tunnel, or add a reachable backend manually."\n'
+        '                  : "Add a reachable backend manually to start working from this browser."}\n',
+        '                {cloudEnabled ? t("home.connectCloud") : t("home.connectManual")}\n',
+        "_chat.index.tsx: connect description",
+    )
+    text = replace_once(
+        text,
+        '                  {cloudEnabled ? "Open Connections" : "Add environment"}\n',
+        '                  {cloudEnabled ? t("home.openConnections") : t("home.addEnvironment")}\n',
+        "_chat.index.tsx: connect action",
+    )
+    save(rel, text)
+
+
+def patch_settings_panels(repo: Path) -> None:
+    rel = "apps/web/src/components/settings/SettingsPanels.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { ProjectFavicon } from "../ProjectFavicon";\n',
+        'import { useTranslation } from "../../i18n";\n',
+        "SettingsPanels.tsx: i18n import",
+    )
+
+    text = replace_once(
+        text,
+        'export function AppearanceSettingsPanel() {\n'
+        '  const {\n',
+        'export function AppearanceSettingsPanel() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const {\n',
+        "SettingsPanels.tsx: Appearance hook",
+    )
+    text = replace_once(
+        text,
+        '      <SettingsSection id="appearance" title="Appearance">\n',
+        '      <SettingsSection id="appearance" title={t("settings.appearance")}>\n',
+        "SettingsPanels.tsx: Appearance title",
+    )
+
+    text = replace_once(
+        text,
+        'function WordWrapRow() {\n'
+        '  const settings = usePrimarySettings();\n',
+        'function WordWrapRow() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const settings = usePrimarySettings();\n',
+        "SettingsPanels.tsx: WordWrap hook",
+    )
+    text = replace_once(
+        text,
+        '    <SettingsRow\n'
+        '      {...searchableSetting("word-wrap")}\n'
+        '      description="Wrap long lines in code blocks, tables, diffs, and file previews by default."\n',
