@@ -67,7 +67,7 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       type: "info",
       title: "Установлена последняя версия",
       message: `Piπot ${updateState.currentVersion} — самая новая доступная версия.`,
-      buttons: ["OK"],
+      buttons: ["ОК"],
     });
   } else if (updateState.status === "error") {
     yield* electronDialog.showMessageBox({
@@ -75,7 +75,7 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       title: "Не удалось проверить обновления",
       message: "Не удалось проверить наличие обновлений.",
       detail: updateState.message ?? "Произошла неизвестная ошибка. Повторите попытку позже.",
-      buttons: ["OK"],
+      buttons: ["ОК"],
     });
   }
 }).pipe(Effect.withSpan("desktop.menu.checkForUpdates"));
@@ -93,7 +93,7 @@ const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
       title: "Обновления недоступны",
       message: "Автоматические обновления сейчас недоступны.",
       detail: disabledReason.value,
-      buttons: ["OK"],
+      buttons: ["ОК"],
     });
     return;
   }
@@ -143,7 +143,7 @@ export const make = Effect.gen(function* () {
       template.push({
         label: appName,
         submenu: [
-          { role: "about" },
+          { role: "about", label: `О ${appName}` },
           {
             label: "Проверить обновления...",
             click: checkForUpdatesClick,
@@ -155,13 +155,13 @@ export const make = Effect.gen(function* () {
             click: settingsClick,
           },
           { type: "separator" },
-          { role: "services" },
+          { role: "services", label: "Службы" },
           { type: "separator" },
-          { role: "hide" },
-          { role: "hideOthers" },
-          { role: "unhide" },
+          { role: "hide", label: `Скрыть ${appName}` },
+          { role: "hideOthers", label: "Скрыть остальные" },
+          { role: "unhide", label: "Показать все" },
           { type: "separator" },
-          { role: "quit" },
+          { role: "quit", label: `Выйти из ${appName}` },
         ],
       });
     }
@@ -180,7 +180,10 @@ export const make = Effect.gen(function* () {
                 },
                 { type: "separator" as const },
               ]),
-          { role: environment.platform === "darwin" ? "close" : "quit" },
+          {
+            role: environment.platform === "darwin" ? "close" : "quit",
+            label: environment.platform === "darwin" ? "Закрыть окно" : "Выйти",
+          },
         ],
       },
       { role: "editMenu", label: "Правка" },
