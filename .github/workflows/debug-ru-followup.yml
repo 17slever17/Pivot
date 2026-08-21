@@ -1,0 +1,31 @@
+name: Debug Russian localization follow-up
+
+on:
+  push:
+    branches:
+      - i18n-followup-staging4
+    paths:
+      - .github/run-ru-debug
+
+permissions:
+  contents: write
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run patch and capture output
+        run: |
+          set +e
+          python .github/ru-followup.py > .github/ru-followup.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> .github/ru-followup.log
+          set -e
+      - name: Commit debug log
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/ru-followup.log
+          git commit -m "debug: capture Russian follow-up patch output" || exit 0
+          git push
