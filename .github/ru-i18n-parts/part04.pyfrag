@@ -1,0 +1,206 @@
+        '    <SettingsRow\n'
+        '      {...searchableSetting("word-wrap")}\n'
+        '      title={t("settings.wordWrap")}\n'
+        '      description={t("settings.wordWrap.description")}\n',
+        "SettingsPanels.tsx: WordWrap row",
+    )
+
+    text = replace_once(
+        text,
+        'function TypographySection() {\n'
+        '  const [advanced, setAdvanced] = useLocalStorage(\n',
+        'function TypographySection() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const [advanced, setAdvanced] = useLocalStorage(\n',
+        "SettingsPanels.tsx: Typography hook",
+    )
+    text = replace_once(
+        text,
+        '      title="Typography"\n'
+        '      headerAction={\n'
+        '        <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">\n'
+        '          Advanced\n',
+        '      title={t("settings.typography")}\n'
+        '      headerAction={\n'
+        '        <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">\n'
+        '          {t("settings.advanced")}\n',
+        "SettingsPanels.tsx: Typography labels",
+    )
+
+    text = replace_once(
+        text,
+        'export function GeneralSettingsPanel() {\n'
+        '  const settings = usePrimarySettings();\n',
+        'export function GeneralSettingsPanel() {\n'
+        '  const { t } = useTranslation();\n'
+        '  const settings = usePrimarySettings();\n',
+        "SettingsPanels.tsx: General hook",
+    )
+    text = replace_once(
+        text,
+        '      <SettingsSection title="General">\n'
+        '        <SettingsRow\n'
+        '          {...searchableSetting("project-grouping")}\n'
+        '          description="Combine matching repositories across environments."\n',
+        '      <SettingsSection title={t("settings.general")}>\n'
+        '        <SettingsRow\n'
+        '          title={t("settings.language")}\n'
+        '          description={t("settings.language.description")}\n'
+        '          control={\n'
+        '            <Select\n'
+        '              value={settings.displayLanguage}\n'
+        '              onValueChange={(value) => {\n'
+        '                if (value === "en" || value === "ru") {\n'
+        '                  updateSettings({ displayLanguage: value });\n'
+        '                }\n'
+        '              }}\n'
+        '            >\n'
+        '              <SelectTrigger className="w-full sm:w-40" aria-label={t("settings.language")}>\n'
+        '                <SelectValue>\n'
+        '                  {settings.displayLanguage === "ru"\n'
+        '                    ? t("settings.language.russian")\n'
+        '                    : t("settings.language.english")}\n'
+        '                </SelectValue>\n'
+        '              </SelectTrigger>\n'
+        '              <SelectPopup align="end" alignItemWithTrigger={false}>\n'
+        '                <SelectItem hideIndicator value="ru">\n'
+        '                  {t("settings.language.russian")}\n'
+        '                </SelectItem>\n'
+        '                <SelectItem hideIndicator value="en">\n'
+        '                  {t("settings.language.english")}\n'
+        '                </SelectItem>\n'
+        '              </SelectPopup>\n'
+        '            </Select>\n'
+        '          }\n'
+        '        />\n\n'
+        '        <SettingsRow\n'
+        '          {...searchableSetting("project-grouping")}\n'
+        '          title={t("settings.projectGrouping")}\n'
+        '          description={t("settings.projectGrouping.description")}\n',
+        "SettingsPanels.tsx: language selector + project grouping",
+    )
+    text = replace_once(
+        text,
+        '        <SettingsRow\n'
+        '          {...searchableSetting("time-format")}\n'
+        '          description="System default follows your browser or OS clock preference."\n',
+        '        <SettingsRow\n'
+        '          {...searchableSetting("time-format")}\n'
+        '          title={t("settings.timeFormat")}\n'
+        '          description={t("settings.timeFormat.description")}\n',
+        "SettingsPanels.tsx: time format",
+    )
+
+    text = replace_once(
+        text,
+        '      ...(theme !== "system" ? ["Theme"] : []),\n'
+        '      ...(!followSystem ? ["Follow system"] : []),\n',
+        '      ...(theme !== "system" ? ["Theme"] : []),\n'
+        '      ...(settings.displayLanguage !== DEFAULT_UNIFIED_SETTINGS.displayLanguage\n'
+        '        ? ["Language"]\n'
+        '        : []),\n'
+        '      ...(!followSystem ? ["Follow system"] : []),\n',
+        "SettingsPanels.tsx: language dirty label",
+    )
+    text = replace_once(
+        text,
+        '      settings.confirmThreadArchive,\n'
+        '      settings.confirmThreadDelete,\n',
+        '      settings.confirmThreadArchive,\n'
+        '      settings.confirmThreadDelete,\n'
+        '      settings.displayLanguage,\n',
+        "SettingsPanels.tsx: language restore dependency",
+    )
+    text = replace_once(
+        text,
+        '    updateSettings({\n'
+        '      timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,\n',
+        '    updateSettings({\n'
+        '      displayLanguage: DEFAULT_UNIFIED_SETTINGS.displayLanguage,\n'
+        '      timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,\n',
+        "SettingsPanels.tsx: restore language",
+    )
+
+    save(rel, text)
+
+
+def patch_settings_nav(repo: Path) -> None:
+    rel = "apps/web/src/components/settings/SettingsSidebarNav.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { scrollToSettingsTarget } from "./settingsLayout";\n',
+        'import { useTranslation, type TranslationKey } from "../../i18n";\n',
+        "SettingsSidebarNav.tsx: i18n import",
+    )
+
+    mapping = '''const SETTINGS_SECTION_TRANSLATION_KEYS: Readonly<Record<SettingsPath, TranslationKey>> = {
+  "/settings/general": "settings.general",
+  "/settings/appearance": "settings.appearance",
+  "/settings/notifications": "settings.notifications",
+  "/settings/keybindings": "settings.keybindings",
+  "/settings/providers": "settings.providers",
+  "/settings/source-control": "settings.sourceControl",
+  "/settings/connections": "settings.connections",
+  "/settings/archived": "settings.archive",
+};
+
+'''
+    text = replace_once(
+        text,
+        'const SETTINGS_SECTION_ICONS: Readonly<\n',
+        mapping + 'const SETTINGS_SECTION_ICONS: Readonly<\n',
+        "SettingsSidebarNav.tsx: translation map",
+    )
+    text = replace_once(
+        text,
+        'export function SettingsSidebarNav({ pathname }: { pathname: string }) {\n'
+        '  const navigate = useNavigate();\n',
+        'export function SettingsSidebarNav({ pathname }: { pathname: string }) {\n'
+        '  const { t } = useTranslation();\n'
+        '  const navigate = useNavigate();\n',
+        "SettingsSidebarNav.tsx: hook",
+    )
+    for old, new, label in [
+        ('              placeholder="Search"\n',
+         '              placeholder={t("settings.search")}\n',
+         "search placeholder"),
+        ('              aria-label="Search settings"\n',
+         '              aria-label={t("settings.searchAria")}\n',
+         "search aria"),
+        ('                aria-label="Clear settings search"\n',
+         '                aria-label={t("settings.clearSearch")}\n',
+         "clear search"),
+        ('              No settings found\n',
+         '              {t("settings.noResults")}\n',
+         "no results"),
+        ('            aria-label={isSearching && hasResults ? "Settings search results" : undefined}\n',
+         '            aria-label={isSearching && hasResults ? t("settings.searchResults") : undefined}\n',
+         "results aria"),
+        ('                          {SETTINGS_SECTION_LABELS[item.to]}\n',
+         '                          {t(SETTINGS_SECTION_TRANSLATION_KEYS[item.to])}\n',
+         "result section"),
+        ('                        <span className="truncate">{item.label}</span>\n',
+         '                        <span className="truncate">\n'
+         '                          {t(SETTINGS_SECTION_TRANSLATION_KEYS[item.to])}\n'
+         '                        </span>\n',
+         "nav item"),
+        ('                <span>Back</span>\n',
+         '                <span>{t("nav.back")}</span>\n',
+         "back"),
+    ]:
+        text = replace_once(text, old, new, f"SettingsSidebarNav.tsx: {label}")
+    save(rel, text)
+
+
+def patch_sidebar_chrome(repo: Path) -> None:
+    rel = "apps/web/src/components/sidebar/SidebarChrome.tsx"
+    text = load(repo, rel)
+    text = add_import(
+        text,
+        'import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";\n',
+        'import { useTranslation } from "../../i18n";\n',
+        "SidebarChrome.tsx: i18n import",
+    )
+    text = replace_once(
+        text,
