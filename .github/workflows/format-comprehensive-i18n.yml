@@ -21,6 +21,154 @@ jobs:
           node-version-file: package.json
           cache: true
           run-install: true
+      - name: Fix duplicate and hybrid localization entries
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              if old in text:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"Expected one match in {path}, found {count}: {old[:80]!r}")
+                  p.write_text(text.replace(old, new, 1), encoding="utf-8")
+                  return
+              if new in text:
+                  return
+              raise SystemExit(f"Missing localization anchor in {path}: {old[:80]!r}")
+
+          common = "apps/web/src/i18n/runtimeRuCommon.ts"
+          pull_requests = "apps/web/src/i18n/runtimeRuPullRequests.ts"
+          settings = "apps/web/src/i18n/runtimeRuSettings.ts"
+          runtime = "apps/web/src/components/settings/SettingsRuntimeLocalization.tsx"
+
+          replace_once(
+              common,
+              '  "Collapse plan": "Свернуть план",\n  "Expand plan": "Развернуть план",\n  "Copy to clipboard": "Копировать в буфер обмена",\n  "Could not copy plan": "Не удалось скопировать план",\n',
+              '  "Collapse plan": "Свернуть план",\n  "Expand plan": "Развернуть план",\n  "Could not copy plan": "Не удалось скопировать план",\n',
+          )
+          for old, new in [
+              ('"Close transcript": "Закрыть transcript"', '"Close transcript": "Закрыть журнал"'),
+              ('"Collapse workflow": "Свернуть workflow"', '"Collapse workflow": "Свернуть рабочий процесс"'),
+              ('"Failed to load transcript": "Не удалось загрузить transcript"', '"Failed to load transcript": "Не удалось загрузить журнал"'),
+              ('"read-only transcript": "transcript только для чтения"', '"read-only transcript": "Журнал только для чтения"'),
+              ('"Copy branch": "Копировать branch"', '"Copy branch": "Копировать ветку"'),
+              ('"Branch copied": "Branch скопирован"', '"Branch copied": "Ветка скопирована"'),
+              ('"Enter a workspace path": "Введите путь workspace"', '"Enter a workspace path": "Введите путь рабочей папки"'),
+              ('"Plan saved to workspace": "План сохранён в workspace"', '"Plan saved to workspace": "План сохранён в рабочей папке"'),
+              ('"Save plan to workspace": "Сохранить план в workspace"', '"Save plan to workspace": "Сохранить план в рабочей папке"'),
+              ('"Workspace path": "Путь workspace"', '"Workspace path": "Путь рабочей папки"'),
+              ('"Workspace path is unavailable": "Путь workspace недоступен"', '"Workspace path is unavailable": "Путь рабочей папки недоступен"'),
+              ('"Review failed": "Review завершился ошибкой"', '"Review failed": "Ревью завершилось ошибкой"'),
+              ('"Fix with AI": "Исправить с помощью AI"', '"Fix with AI": "Исправить с помощью ИИ"'),
+              ('"Fix all with AI": "Исправить всё с помощью AI"', '"Fix all with AI": "Исправить всё с помощью ИИ"'),
+              ('"Fix review finding": "Исправить замечание review"', '"Fix review finding": "Исправить замечание ревью"'),
+          ]:
+              replace_once(common, old, new)
+
+          replace_once(
+              pull_requests,
+              '  "Merged pull request": "Pull Request merged",\n  "Closed pull request": "Pull Request закрыт",\n  "Reopened pull request": "Pull Request переоткрыт",\n  "Ready for review": "Готов к review",\n  "Converted to draft": "Переведён в Draft",\n',
+              '  "Merged pull request": "Pull Request merged",\n  "Closed pull request": "Pull Request закрыт",\n  "Reopened pull request": "Pull Request переоткрыт",\n  "Converted to draft": "Переведён в Draft",\n',
+          )
+          replace_once(
+              pull_requests,
+              '  "Created by me": "Созданные мной",\n  "Assigned to me": "Назначенные мне",\n  "Review requested": "Требуют моего review",\n  "Sort by": "Сортировка",\n',
+              '  "Created by me": "Созданные мной",\n  "Assigned to me": "Назначенные мне",\n  "Sort by": "Сортировка",\n',
+          )
+          for old, new in [
+              ('"Merge pull request": "Merge Pull Request"', '"Merge pull request": "Объединить Pull Request"'),
+              ('"Merge Pull Request": "Merge Pull Request"', '"Merge Pull Request": "Объединить Pull Request"'),
+              ('"Draft pull request": "Draft Pull Request"', '"Draft pull request": "Черновик Pull Request"'),
+              ('"Mark ready for review": "Отметить готовым к review"', '"Mark ready for review": "Отметить готовым к ревью"'),
+              ('"Ready for review": "Готов к review"', '"Ready for review": "Готов к ревью"'),
+              ('"Convert to draft": "Перевести в Draft"', '"Convert to draft": "Перевести в черновик"'),
+              ('"Pull request is draft": "Pull Request в состоянии Draft"', '"Pull request is draft": "Pull Request в состоянии черновика"'),
+              ('"Pull request is merged": "Pull Request merged"', '"Pull request is merged": "Pull Request объединён"'),
+              ('Merged: "Merged"', 'Merged: "Объединён"'),
+              ('Draft: "Draft"', 'Draft: "Черновик"'),
+              ('Commits: "Commits"', 'Commits: "Коммиты"'),
+              ('"View workflow run": "Открыть workflow run"', '"View workflow run": "Открыть запуск рабочего процесса"'),
+              ('Mergeable: "Можно merge"', 'Mergeable: "Можно объединить"'),
+              ('"Not mergeable": "Нельзя merge"', '"Not mergeable": "Нельзя объединить"'),
+              ('"Merge status": "Состояние merge"', '"Merge status": "Состояние слияния"'),
+              ('"Merge conflict": "Конфликт merge"', '"Merge conflict": "Конфликт слияния"'),
+              ('"Merge conflicts": "Конфликты merge"', '"Merge conflicts": "Конфликты слияния"'),
+              ('"Merge blocked": "Merge заблокирован"', '"Merge blocked": "Слияние заблокировано"'),
+              ('"Merge ready": "Готов к merge"', '"Merge ready": "Готов к слиянию"'),
+              ('"Waiting for reviews": "Ожидание review"', '"Waiting for reviews": "Ожидание ревью"'),
+              ('"Review required": "Требуется review"', '"Review required": "Требуется ревью"'),
+              ('"Branch is up to date": "Branch актуален"', '"Branch is up to date": "Ветка актуальна"'),
+              ('"Branch is behind": "Branch отстаёт"', '"Branch is behind": "Ветка отстаёт"'),
+              ('"Update branch": "Обновить branch"', '"Update branch": "Обновить ветку"'),
+              ('"Updating branch…": "Обновление branch…"', '"Updating branch…": "Обновление ветки…"'),
+              ('"Could not update branch": "Не удалось обновить branch"', '"Could not update branch": "Не удалось обновить ветку"'),
+              ('Reviewers: "Reviewers"', 'Reviewers: "Проверяющие"'),
+              ('Reviewer: "Reviewer"', 'Reviewer: "Проверяющий"'),
+              ('"Add reviewer": "Добавить reviewer"', '"Add reviewer": "Добавить проверяющего"'),
+              ('"Request review": "Запросить review"', '"Request review": "Запросить ревью"'),
+              ('"Request reviewers": "Запросить reviewers"', '"Request reviewers": "Запросить проверяющих"'),
+              ('"Re-request review": "Повторно запросить review"', '"Re-request review": "Повторно запросить ревью"'),
+              ('"Review requested": "Review запрошен"', '"Review requested": "Запрошено ревью"'),
+              ('"Review submitted": "Review отправлен"', '"Review submitted": "Ревью отправлено"'),
+              ('"Could not request review": "Не удалось запросить review"', '"Could not request review": "Не удалось запросить ревью"'),
+              ('"Could not submit review": "Не удалось отправить review"', '"Could not submit review": "Не удалось отправить ревью"'),
+              ('"Select reviewers": "Выберите reviewers"', '"Select reviewers": "Выберите проверяющих"'),
+              ('"Search reviewers": "Поиск reviewers"', '"Search reviewers": "Поиск проверяющих"'),
+              ('"No reviewers": "Reviewers отсутствуют"', '"No reviewers": "Проверяющие отсутствуют"'),
+              ('"No matching reviewers": "Подходящие reviewers не найдены"', '"No matching reviewers": "Подходящие проверяющие не найдены"'),
+              ('"Review summary": "Сводка review"', '"Review summary": "Сводка ревью"'),
+              ('"Submit review": "Отправить review"', '"Submit review": "Отправить ревью"'),
+              ('"Start review": "Начать review"', '"Start review": "Начать ревью"'),
+              ('"Finish review": "Завершить review"', '"Finish review": "Завершить ревью"'),
+              ('"Pending review": "Незавершённый review"', '"Pending review": "Незавершённое ревью"'),
+              ('"Review dismissed": "Review отклонён"', '"Review dismissed": "Ревью отклонено"'),
+              ('"Review requested changes": "Review запросил изменения"', '"Review requested changes": "В ревью запрошены изменения"'),
+              ('"Review approved": "Review одобрен"', '"Review approved": "Ревью одобрено"'),
+              ('"Converted to draft": "Переведён в Draft"', '"Converted to draft": "Переведён в черновик"'),
+              ('"PR review": "Review Pull Request"', '"PR review": "Ревью Pull Request"'),
+              ('"Run agent review": "Запустить agent review"', '"Run agent review": "Запустить ревью агентом"'),
+              ('"Run an agent review": "Запустить agent review"', '"Run an agent review": "Запустить ревью агентом"'),
+              ('"Review is running…": "Review выполняется…"', '"Review is running…": "Ревью выполняется…"'),
+              ('"Review failed": "Review завершился ошибкой"', '"Review failed": "Ревью завершилось ошибкой"'),
+              ('"Review failed to start": "Не удалось запустить review"', '"Review failed to start": "Не удалось запустить ревью"'),
+              ('"Run an agent review of these changes": "Запустить agent review этих изменений"', '"Run an agent review of these changes": "Запустить ревью этих изменений агентом"'),
+              ('"Run an agent review over this diff": "Запустить agent review этого Diff"', '"Run an agent review over this diff": "Запустить ревью этого Diff агентом"'),
+              ('"The review could not be started.": "Review не удалось запустить."', '"The review could not be started.": "Не удалось запустить ревью."'),
+              ('"Review findings": "Замечания review"', '"Review findings": "Замечания ревью"'),
+              ('"No review findings": "Замечаний review нет"', '"No review findings": "Замечаний ревью нет"'),
+              ('"Fix with AI": "Исправить с помощью AI"', '"Fix with AI": "Исправить с помощью ИИ"'),
+              ('"Fix all with AI": "Исправить всё с помощью AI"', '"Fix all with AI": "Исправить всё с помощью ИИ"'),
+              ('"Fix review finding": "Исправить замечание review"', '"Fix review finding": "Исправить замечание ревью"'),
+              ('"Review annotations": "Аннотации review"', '"Review annotations": "Аннотации ревью"'),
+          ]:
+              replace_once(pull_requests, old, new)
+
+          replace_once(
+              settings,
+              '  "Resource monitor binary was not found for win32/x64.": "Бинарный файл монитора ресурсов для win32/x64 не найден.",\n  "No reported errors": "Ошибок не зарегистрировано",\n  "No process samples": "Нет сэмплов процессов",\n',
+              '  "Resource monitor binary was not found for win32/x64.": "Бинарный файл монитора ресурсов для win32/x64 не найден.",\n  "No process samples": "Нет сэмплов процессов",\n',
+          )
+          for old, new in [
+              ('"Desktop only": "Только desktop"', '"Desktop only": "Только в настольном приложении"'),
+              ('"No retained process samples in this window.": "В этом интервале нет сохранённых сэмплов процессов."', '"No retained process samples in this window.": "В этом интервале нет сохранённых данных по процессам."'),
+              ('"No process samples": "Нет сэмплов процессов"', '"No process samples": "Нет данных по процессам"'),
+              ('"No trace spans": "Нет span трассировки"', '"No trace spans": "Нет спанов трассировки"'),
+              ('"No slow spans": "Медленных span нет"', '"No slow spans": "Медленных спанов нет"'),
+          ]:
+              replace_once(settings, old, new)
+
+          for old, new in [
+              ('[/^(\\d+) commits?$/, (count) => `Commits: ${count}`]', '[/^(\\d+) commits?$/, (count) => `Коммитов: ${count}`]'),
+              ('чтобы включить функции change request.', 'чтобы включить функции запросов на изменения.'),
+              ('`${label}: показать scopes (${count})`', '`${label}: показать области доступа (${count})`'),
+              ('`${count} scopes`', '`${count} областей доступа`'),
+          ]:
+              replace_once(runtime, old, new)
+          PY
       - name: Apply formatter fixes
         shell: bash
         run: |
@@ -32,7 +180,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add -A
-            git commit -m "style(i18n): format comprehensive Russian catalogs"
+            git commit -m "style(i18n): format and polish comprehensive Russian catalogs"
             git push origin HEAD:${{ github.head_ref }}
           fi
           exit "$rc"
