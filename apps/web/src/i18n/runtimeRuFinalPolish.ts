@@ -96,7 +96,7 @@ export const RU_FINAL_POLISH: Readonly<Record<string, string>> = {
   Failed: "Ошибка",
   "Has conflicts": "Есть конфликты",
 
-  "Leave empty to use \"~/\" when the Add Project browser opens.":
+  'Leave empty to use "~/" when the Add Project browser opens.':
     "Оставьте пустым, чтобы при открытии добавления проекта использовался «~/».",
   "Render text with thinner grayscale anti-aliasing instead of macOS's heavier default.":
     "Использовать более тонкое полутоновое сглаживание вместо более жирного стандартного сглаживания macOS.",
@@ -114,7 +114,8 @@ export const RU_FINAL_POLISH: Readonly<Record<string, string>> = {
     "Этот устаревший режим медленнее и усложняет чтение длинных ответов.",
   "Render text with thinner grayscale anti-aliasing when supported.":
     "Использовать более тонкое полутоновое сглаживание текста, если оно поддерживается.",
-  "No supported open-source themes found": "Поддерживаемые темы с открытым исходным кодом не найдены",
+  "No supported open-source themes found":
+    "Поддерживаемые темы с открытым исходным кодом не найдены",
   Email: "Электронная почта",
   "Hide email": "Скрыть электронную почту",
   "Reveal email": "Показать электронную почту",
@@ -166,7 +167,8 @@ export const RU_FINAL_POLISH: Readonly<Record<string, string>> = {
   "Reachable from devices on the same network.": "Доступно с устройств в той же локальной сети.",
   "User-configured HTTPS endpoint for this desktop backend.":
     "Пользовательский HTTPS-адрес настольного бэкенда.",
-  "User-configured endpoint for this desktop backend.": "Пользовательский адрес настольного бэкенда.",
+  "User-configured endpoint for this desktop backend.":
+    "Пользовательский адрес настольного бэкенда.",
   "Endpoint the pairing QR code and URL use": "Адрес, используемый QR-кодом и URL подключения",
   "Enter backend host and pairing code.": "Введите адрес бэкенда и код подключения.",
   "Backend added": "Бэкенд добавлен",
