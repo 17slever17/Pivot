@@ -1,6 +1,6 @@
-Catalogs: 15
-Known exact translations: 3176
-Files with candidate unmapped UI strings: 204
+Catalogs: 16
+Known exact translations: 3277
+Files with candidate unmapped UI strings: 197
 
 ## apps/web/src/appearanceFonts.ts (26)
 - !Number.isFinite(advance) || advance
@@ -586,9 +586,6 @@ Files with candidate unmapped UI strings: 204
 ## apps/web/src/components/settings/ModelSlugPicker.tsx (1)
 - provider/model
 
-## apps/web/src/components/settings/ProjectFaviconPickerDialog.tsx (1)
-- No image files found.
-
 ## apps/web/src/components/settings/ProjectSettingsPanel.tsx (6)
 - Choose a project icon file
 - Enter
@@ -603,47 +600,21 @@ Files with candidate unmapped UI strings: 204
 ## apps/web/src/components/settings/ProviderModelsSection.tsx (1)
 - Enter
 
-## apps/web/src/components/settings/ProviderSettingsPanel.tsx (1)
-- provider health check interval
-
-## apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx (4)
+## apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx (3)
 - = 1_024 && unitIndex
-- Available when this page runs inside the desktop app.
 - SIGINT
 - SIGKILL
 
 ## apps/web/src/components/settings/SettingsFontPreviews.tsx (1)
 - Use $frontend-design to fix the flaky test in
 
-## apps/web/src/components/settings/SettingsPanels.logic.ts (2)
-- Local trace file
-- Terminal logs only
-
-## apps/web/src/components/settings/SettingsPanels.tsx (24)
+## apps/web/src/components/settings/SettingsPanels.tsx (6)
 - = size.min && parsed
-- add project base directory
-- archive confirmation
-- background activity
-- delete confirmation
-- diff whitespace changes
 - Enter
-- environment identification
 - Escape
-- font smoothing
-- glass opacity
 - Leave empty to use
 - Menlo
-- new threads
-- new worktrees start from origin
-- project grouping
-- provider update checks
 - Render text with thinner grayscale anti-aliasing instead of macOS
-- text generation model
-- time format
-- Timeline plans
-- Timeline thinking
-- Timeline tool calls
-- word wrapping
 
 ## apps/web/src/components/settings/SettingsSidebarNav.tsx (6)
 - ArrowDown
@@ -653,14 +624,8 @@ Files with candidate unmapped UI strings: 204
 - INPUT
 - TEXTAREA
 
-## apps/web/src/components/settings/SourceControlSettings.tsx (1)
-- fetch interval
-
-## apps/web/src/components/settings/SourceControlWritingSettings.tsx (4)
-- change request templates
+## apps/web/src/components/settings/SourceControlWritingSettings.tsx (1)
 - Conventional Commits
-- source control writing style
-- Structures change request descriptions using the current repository
 
 ## apps/web/src/components/settings/ThemeColorPicker.tsx (5)
 - !Number.isInteger(channel) || channel
@@ -669,28 +634,23 @@ Files with candidate unmapped UI strings: 204
 - ArrowRight
 - ArrowUp
 
-## apps/web/src/components/settings/ThemeEditorPanel.tsx (3)
-- Cancel and clear the selection
+## apps/web/src/components/settings/ThemeEditorPanel.tsx (2)
 - Escape
 - M7 1 1 7M7 4.5 4.5 7
 
-## apps/web/src/components/settings/ThemeImportDialog.tsx (5)
+## apps/web/src/components/settings/ThemeImportDialog.tsx (2)
 - Aurora
-- could not install
-- Name (1)
-- not a theme file
 - Promise
 
 ## apps/web/src/components/settings/ThemePreviewCircles.tsx (1)
 - Piπot
 
-## apps/web/src/components/settings/ThemeSearchSection.tsx (6)
+## apps/web/src/components/settings/ThemeSearchSection.tsx (5)
 - : isInstalled ?
 - Catppuccin
 - Dracula
 - Nord
 - Tokyo Night
-- try dracula, nord, catppuccin...
 
 ## apps/web/src/components/settings/ThemeSettings.tsx (3)
 - ): ReadonlyArray
@@ -734,10 +694,6 @@ Files with candidate unmapped UI strings: 204
 - M19.5 5.5L6.49737 5.51844V2L1 6.9999L6.5 12L6.49737 8.5L19.5 8.5V12L25 6.9999L19.5 2V5.5Z
 - NumberFieldScrubArea must be used within a NumberField component for accessibility.
 
-## apps/web/src/components/ui/sidebar.tsx (2)
-- Could not restore persisted sidebar width.
-- Displays the mobile sidebar.
-
 ## apps/web/src/components/ui/toast.tsx (1)
 - Enter
 
@@ -760,33 +716,15 @@ Files with candidate unmapped UI strings: 204
 - Pick
 - ReadonlyArray
 
-## apps/web/src/connection/platform.ts (12)
+## apps/web/src/connection/platform.ts (4)
 - cached.expiresAtEpochMs !== undefined && nowEpochMs
-- Could not connect a desktop-local backend.
-- Could not discover the primary environment.
-- Could not read the desktop-local backend topology.
-- Could not read the primary environment topology.
 - Piπot Desktop
 - Piπot Web
-- Sign in to T3 Connect to connect this environment.
-- SSH environments are only available in the desktop app.
-- The SSH environment did not issue a pairing credential.
-- The T3 Connect session is unavailable.
 - WSL: Ubuntu
 
-## apps/web/src/connection/storage.ts (12)
+## apps/web/src/connection/storage.ts (2)
 - ConnectionPersistenceError
-- Could not persist the recovered web connection catalog.
-- Could not quarantine the corrupt web connection catalog.
-- Desktop secure storage is unavailable in this system context.
-- Discarding a corrupt web connection catalog.
 - Effect.Effect
-- IndexedDB is unavailable in this browser context.
-- Unknown IndexedDB cursor error
-- Unknown IndexedDB error
-- Unknown IndexedDB read error
-- Unknown IndexedDB remove error
-- Unknown IndexedDB write error
 
 ## apps/web/src/contextMenuFallback.ts (10)
 - Escape
@@ -818,9 +756,6 @@ Files with candidate unmapped UI strings: 204
 - PrimaryEnvironmentPairingCredentialRequiredError
 - PrimaryEnvironmentRequestError
 - Promise
-
-## apps/web/src/environments/primary/sessionState.ts (1)
-- Could not read environment session.
 
 ## apps/web/src/environments/primary/target.ts (3)
 - DesktopEnvironmentBootstrapIncompleteError
@@ -859,9 +794,7 @@ Files with candidate unmapped UI strings: 204
 ## apps/web/src/hooks/useThreadActionMenu.ts (1)
 - Promise
 
-## apps/web/src/hooks/useThreadActions.ts (9)
-- Failed to remove orphaned worktree after thread deletion
-- This thread is the only one linked to this worktree:
+## apps/web/src/hooks/useThreadActions.ts (7)
 - ThreadArchiveBlockedError
 - ThreadPinningUnsupportedError
 - ThreadPinReorderUnsupportedError
@@ -976,7 +909,7 @@ Files with candidate unmapped UI strings: 204
 ## apps/web/src/modelSelection.ts (1)
 - ; readonly modelOrder: ReadonlyArray
 
-## apps/web/src/openVsxThemes.ts (51)
+## apps/web/src/openVsxThemes.ts (12)
 - ): Record
 - AbortError
 - Apache-2.0
@@ -986,47 +919,8 @@ Files with candidate unmapped UI strings: 204
 - Extension manifest
 - JSZip.JSZipStreamHelper
 - MPL-2.0
-- One or more color themes in that extension could not be imported safely.
-- Open VSX returned an unexpectedly large detail response.
-- Open VSX returned an unexpectedly large manifest.
-- Open VSX returned an unexpectedly large response.
-- Open VSX returned an unreadable response.
-- Open VSX returned an unreadable search response.
-- Open VSX returned malformed theme details.
-- Open VSX returned unreadable theme details.
-- Open VSX search is unavailable right now.
-- Open VSX theme details are unavailable right now.
-- Open VSX theme details are unavailable.
-- Open VSX took too long to respond.
 - Promise
-- That extension contains too many color themes to import safely.
-- That extension does not contain color themes.
-- That extension has no compatible color themes.
 - That extension package
-- That extension package does not match its advertised license.
-- That extension package does not match the selected Open VSX theme.
-- That extension package expands beyond the safe import limit.
-- That extension package has an invalid ZIP directory.
-- That extension package has an unsafe compression ratio.
-- That extension package has no ZIP directory.
-- That extension package has too many files.
-- That extension package has unsupported ZIP64 metadata.
-- That extension references too many theme files.
-- That Open VSX checksum response is invalid.
-- That Open VSX extension has no readable manifest.
-- That Open VSX extension manifest is too large.
-- That Open VSX extension package could not be opened.
-- That Open VSX theme could not be downloaded.
-- That Open VSX theme failed its integrity check.
-- That Open VSX theme has an invalid checksum.
-- That Open VSX theme has no readable checksum.
-- That theme extension is too large to import safely.
-- The operation was aborted.
-- theme could not be read
-- Theme includes are nested too deeply.
-- Theme includes contain a cycle.
-- Theme path escapes the extension package.
-- Theme path is not a safe relative package path.
 - Unlicense
 
 ## apps/web/src/orchestrationRecovery.ts (2)
@@ -1103,9 +997,6 @@ Files with candidate unmapped UI strings: 204
 
 ## apps/web/src/state/pullRequests.ts (1)
 - Atom.Atom
-
-## apps/web/src/state/reviewRuns.ts (1)
-- Maximum update depth exceeded
 
 ## apps/web/src/state/sourceControlActions.ts (2)
 - , AtomCommandFailure
@@ -1280,14 +1171,13 @@ Files with candidate unmapped UI strings: 204
 - Unidentified
 - WakeUp
 
-## apps/web/src/terminal/ghostty/surface.ts (22)
+## apps/web/src/terminal/ghostty/surface.ts (21)
 - = match.start && offset
 - = value.startIndex && match.end - 1
 - = value.startIndex && match.start
 - AltGraph
 - ArrowDown
 - ArrowUp
-- Canvas 2D is unavailable
 - CaskaydiaCove Nerd Font
 - FiraCode Nerd Font
 - Hack Nerd Font
