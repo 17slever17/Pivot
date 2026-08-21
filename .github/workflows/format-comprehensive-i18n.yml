@@ -1,0 +1,38 @@
+name: Format comprehensive i18n
+
+on:
+  pull_request:
+    branches:
+      - test/ru-i18n-omp-telemetry
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.head_ref == 'test/ru-i18n-omp-telemetry-direct'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+      - name: Apply formatter fixes
+        shell: bash
+        run: |
+          set +e
+          vp check --fix
+          rc=$?
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "style(i18n): format comprehensive Russian catalogs"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+          exit "$rc"
