@@ -1,21 +1,21 @@
 name: Final localization polish
 
 on:
-  pull_request:
+  push:
     branches:
-      - test/ru-i18n-omp-telemetry
+      - test/ru-i18n-omp-telemetry-direct
 
 permissions:
   contents: write
 
 jobs:
   polish:
-    if: github.head_ref == 'test/ru-i18n-omp-telemetry-direct'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref }}
+          ref: test/ru-i18n-omp-telemetry-direct
       - name: Apply final localization polish
         shell: bash
         run: |
@@ -127,4 +127,4 @@ jobs:
             exit 0
           fi
           git commit -m "feat(i18n): finish native and dynamic Russian UI coverage"
-          git push --no-verify origin HEAD:${{ github.head_ref }}
+          git push --no-verify origin HEAD:test/ru-i18n-omp-telemetry-direct
