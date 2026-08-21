@@ -8,6 +8,7 @@ import { RU_AUDIT_EXTRA_D } from "../../i18n/runtimeRuAuditExtraD";
 import { RU_AUDIT_EXTRA_E } from "../../i18n/runtimeRuAuditExtraE";
 import { RU_AUDIT_EXTRA_F } from "../../i18n/runtimeRuAuditExtraF";
 import { RU_AUDIT_EXTRA_G } from "../../i18n/runtimeRuAuditExtraG";
+import { RU_AUDIT_EXTRA_H } from "../../i18n/runtimeRuAuditExtraH";
 import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
 import { RU_CHAT_EXTRA } from "../../i18n/runtimeRuChatExtra";
 import { RU_COMMON } from "../../i18n/runtimeRuCommon";
@@ -33,6 +34,7 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_AUDIT_EXTRA_E,
   ...RU_AUDIT_EXTRA_F,
   ...RU_AUDIT_EXTRA_G,
+  ...RU_AUDIT_EXTRA_H,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
