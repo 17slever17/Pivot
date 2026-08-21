@@ -61,20 +61,79 @@ jobs:
 
           test = Path('apps/desktop/src/shell/DesktopShellEnvironment.test.ts')
           text = test.read_text(encoding='utf-8')
-          old = '''  readonly handler: (command: ChildProcess.Command) => string;\n  readonly failure?: PlatformError.PlatformError;\n}) {\n'''
-          new = '''  readonly handler: (command: ChildProcess.Command) => string;\n  readonly failure?: PlatformError.PlatformError;\n  readonly failureForCommand?: (\n    command: ChildProcess.Command,\n  ) => PlatformError.PlatformError | undefined;\n}) {\n'''
+          old = '''  readonly handler: (command: ChildProcess.Command) => string;
+  readonly failure?: PlatformError.PlatformError;
+}) {
+'''
+          new = '''  readonly handler: (command: ChildProcess.Command) => string;
+  readonly failure?: PlatformError.PlatformError;
+  readonly failureForCommand?: (
+    command: ChildProcess.Command,
+  ) => PlatformError.PlatformError | undefined;
+}) {
+'''
           if text.count(old) != 1:
               raise SystemExit('test helper type anchor mismatch')
           text = text.replace(old, new, 1)
 
-          old = '''    ChildProcessSpawner.make((command) =>\n      input.failure === undefined\n        ? Effect.succeed(makeProcess(input.handler(command)))\n        : Effect.fail(input.failure),\n    ),\n'''
-          new = '''    ChildProcessSpawner.make((command) => {\n      const failure = input.failureForCommand?.(command) ?? input.failure;\n      return failure === undefined\n        ? Effect.succeed(makeProcess(input.handler(command)))\n        : Effect.fail(failure);\n    }),\n'''
+          old = '''    ChildProcessSpawner.make((command) =>
+      input.failure === undefined
+        ? Effect.succeed(makeProcess(input.handler(command)))
+        : Effect.fail(input.failure),
+    ),
+'''
+          new = '''    ChildProcessSpawner.make((command) => {
+      const failure = input.failureForCommand?.(command) ?? input.failure;
+      return failure === undefined
+        ? Effect.succeed(makeProcess(input.handler(command)))
+        : Effect.fail(failure);
+    }),
+'''
           if text.count(old) != 1:
               raise SystemExit('test helper spawner anchor mismatch')
           text = text.replace(old, new, 1)
 
-          anchor = '''  it.effect("prefers login-shell desktop session hints over inherited values on linux", () =>\n'''
-          insert = r'''  it.effect("silently falls back to Windows PowerShell when pwsh is not installed", () => {\n    const env: NodeJS.ProcessEnv = {\n      PATH: "C:\\\\Windows\\\\System32",\n      APPDATA: "C:\\\\Users\\\\testuser\\\\AppData\\\\Roaming",\n      LOCALAPPDATA: "C:\\\\Users\\\\testuser\\\\AppData\\\\Local",\n      USERPROFILE: "C:\\\\Users\\\\testuser",\n    };\n    const cause = PlatformError.systemError({\n      _tag: "NotFound",\n      module: "ChildProcess",\n      method: "spawn",\n      pathOrDescriptor: "pwsh.exe",\n    });\n    const messages: Array<unknown> = [];\n    const logger = Logger.make(({ message }) => {\n      messages.push(message);\n    });\n\n    return runShellEnvironment({\n      env,\n      platform: "win32",\n      handler: () => envOutput({ PATH: "C:\\\\Fallback\\\\Bin;C:\\\\Windows\\\\System32" }),\n      failureForCommand: (command) =>\n        command._tag === "StandardCommand" && command.command === "pwsh.exe" ? cause : undefined,\n    }).pipe(\n      Effect.andThen(\n        Effect.sync(() => {\n          assert.include(env.PATH ?? "", "C:\\\\Fallback\\\\Bin");\n          const errors = messages\n            .flatMap((message) => (Array.isArray(message) ? message : [message]))\n            .filter(isDesktopShellEnvironmentCommandError);\n          assert.lengthOf(errors, 0);\n        }),\n      ),\n      Effect.provide(Logger.layer([logger], { mergeWithExisting: false })),\n    );\n  });\n\n'''
+          anchor = '''  it.effect("prefers login-shell desktop session hints over inherited values on linux", () =>
+'''
+          insert = r'''  it.effect("silently falls back to Windows PowerShell when pwsh is not installed", () => {
+    const env: NodeJS.ProcessEnv = {
+      PATH: "C:\\Windows\\System32",
+      APPDATA: "C:\\Users\\testuser\\AppData\\Roaming",
+      LOCALAPPDATA: "C:\\Users\\testuser\\AppData\\Local",
+      USERPROFILE: "C:\\Users\\testuser",
+    };
+    const cause = PlatformError.systemError({
+      _tag: "NotFound",
+      module: "ChildProcess",
+      method: "spawn",
+      pathOrDescriptor: "pwsh.exe",
+    });
+    const messages: Array<unknown> = [];
+    const logger = Logger.make(({ message }) => {
+      messages.push(message);
+    });
+
+    return runShellEnvironment({
+      env,
+      platform: "win32",
+      handler: () => envOutput({ PATH: "C:\\Fallback\\Bin;C:\\Windows\\System32" }),
+      failureForCommand: (command) =>
+        command._tag === "StandardCommand" && command.command === "pwsh.exe" ? cause : undefined,
+    }).pipe(
+      Effect.andThen(
+        Effect.sync(() => {
+          assert.include(env.PATH ?? "", "C:\\Fallback\\Bin");
+          const errors = messages
+            .flatMap((message) => (Array.isArray(message) ? message : [message]))
+            .filter(isDesktopShellEnvironmentCommandError);
+          assert.lengthOf(errors, 0);
+        }),
+      ),
+      Effect.provide(Logger.layer([logger], { mergeWithExisting: false })),
+    );
+  });
+
+'''
           if text.count(anchor) != 1:
               raise SystemExit('test insertion anchor mismatch')
           text = text.replace(anchor, insert + anchor, 1)
