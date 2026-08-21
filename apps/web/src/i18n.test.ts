@@ -3,6 +3,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { translate } from "./i18n";
 
 describe("i18n", () => {
+  it("uses the English catalog when English is selected", () => {
+    expect(translate("en", "sidebar.newThread")).toBe("New thread");
+    expect(translate("en", "settings.language")).toBe("Language");
+  });
+
   it("translates ordinary interface copy to Russian", () => {
     expect(translate("ru", "sidebar.newThread")).toBe("Новый чат");
     expect(translate("ru", "settings.language")).toBe("Язык");
