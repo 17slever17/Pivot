@@ -13,6 +13,7 @@ import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
 import { RU_CHAT_EXTRA } from "../../i18n/runtimeRuChatExtra";
 import { RU_COMMON } from "../../i18n/runtimeRuCommon";
 import { RU_CONNECTIONS_EXTRA } from "../../i18n/runtimeRuConnectionsExtra";
+import { RU_FINAL_POLISH } from "../../i18n/runtimeRuFinalPolish";
 import { RU_PULL_REQUESTS } from "../../i18n/runtimeRuPullRequests";
 import { RU_REMAINING } from "../../i18n/runtimeRuRemaining";
 import { RU_SETTINGS } from "../../i18n/runtimeRuSettings";
@@ -35,6 +36,7 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_AUDIT_EXTRA_F,
   ...RU_AUDIT_EXTRA_G,
   ...RU_AUDIT_EXTRA_H,
+  ...RU_FINAL_POLISH,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
@@ -49,6 +51,20 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
   [/^Reachable at (.+)$/, (address) => `Доступно по адресу ${address}`],
+  [
+    /^Exposed on all interfaces\. Pairing links use (.+)\.$/,
+    (host) => `Доступно на всех сетевых интерфейсах. Ссылки подключения используют ${host}.`,
+  ],
+  [/^Conflicts with (.+)$/, (branch) => `Конфликтует с ${branch}`],
+  [
+    /^Reset (.+) to default$/,
+    (name) => `Восстановить значение по умолчанию: ${STATIC_TRANSLATIONS[name] ?? name}`,
+  ],
+  [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
+  [/^(.+) files$/, (project) => `Файлы: ${project}`],
+  [/^(\d+) of (\d+) failing$/, (count, total) => `Не пройдено проверок: ${count} из ${total}`],
+  [/^(\d+) of (\d+) running$/, (count, total) => `Выполняется проверок: ${count} из ${total}`],
+  [/^(\d+) of (\d+) passing$/, (count, total) => `Пройдено проверок: ${count} из ${total}`],
   [/^Expand (.+)$/, (name) => `Развернуть ${name}`],
   [/^Collapse (.+)$/, (name) => `Свернуть ${name}`],
   [/^Edit shortcut for (.+)$/, (name) => `Изменить сочетание для ${name}`],
@@ -108,7 +124,14 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   ],
 ];
 
-const TRANSLATED_ATTRIBUTES = ["aria-label", "aria-description", "aria-valuetext", "alt", "placeholder", "title"] as const;
+const TRANSLATED_ATTRIBUTES = [
+  "aria-label",
+  "aria-description",
+  "aria-valuetext",
+  "alt",
+  "placeholder",
+  "title",
+] as const;
 
 const NEVER_TRANSLATE_SELECTOR = [
   "pre",
