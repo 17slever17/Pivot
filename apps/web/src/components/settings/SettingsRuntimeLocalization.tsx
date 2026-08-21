@@ -180,7 +180,7 @@ function translateTextNode(node: Text): void {
 }
 
 function translateAttributes(element: Element): void {
-  if (element.matches(NEVER_TRANSLATE_SELECTOR) || element.closest("[data-i18n-skip]")) return;
+  if (element.closest("[data-i18n-skip]")) return;
   let originals = originalAttributes.get(element);
   let lastTranslations = lastTranslatedAttributes.get(element);
   for (const attribute of TRANSLATED_ATTRIBUTES) {
@@ -207,8 +207,8 @@ function translateSubtree(root: Node): void {
     return;
   }
   if (!(root instanceof Element)) return;
-  if (root.matches(NEVER_TRANSLATE_SELECTOR)) return;
   translateAttributes(root);
+  if (root.matches(NEVER_TRANSLATE_SELECTOR)) return;
   for (const child of root.childNodes) translateSubtree(child);
 }
 
