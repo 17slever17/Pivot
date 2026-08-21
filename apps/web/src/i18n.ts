@@ -1,76 +1,4 @@
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import argparse
-import subprocess
-import sys
-from pathlib import Path
-
-
-class PatchError(RuntimeError):
-    pass
-
-
-STAGED: dict[str, str] = {}
-NEW_FILES: dict[str, str] = {}
-
-
-def read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError as exc:
-        raise PatchError(f"Required file not found: {path}") from exc
-
-
-def load(repo: Path, rel: str) -> str:
-    if rel not in STAGED:
-        STAGED[rel] = read(repo / rel)
-    return STAGED[rel]
-
-
-def save(rel: str, text: str) -> None:
-    STAGED[rel] = text
-
-
-def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if new in text:
-        return text
-    count = text.count(old)
-    if count != 1:
-        raise PatchError(
-            f"{label}: expected exactly one source match, found {count}. "
-            "Pivot main likely changed; no files have been written yet."
-        )
-    return text.replace(old, new, 1)
-
-
-def add_import(text: str, anchor: str, line: str, label: str) -> str:
-    if line in text:
-        return text
-    return replace_once(text, anchor, anchor + line, label)
-
-
-def ensure_clean(repo: Path, paths: list[str], force: bool) -> None:
-    if force:
-        return
-    proc = subprocess.run(
-        ["git", "-C", str(repo), "status", "--porcelain", "--", *paths],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    if proc.returncode != 0:
-        raise PatchError(proc.stderr.strip() or "git status failed")
-    if proc.stdout.strip():
-        raise PatchError(
-            "Files touched by this patch already have local changes. "
-            "Commit/stash them first, or re-run with --force if intentional:\n\n"
-            + proc.stdout.rstrip()
-        )
-
-
-I18N_TS = r'''import type { DisplayLanguage } from "@t3tools/contracts/settings";
+import type { DisplayLanguage } from "@t3tools/contracts/settings";
 
 import { useClientSettings } from "./hooks/useSettings";
 
@@ -223,3 +151,102 @@ const ru: Partial<Record<TranslationKey, string>> = {
   "nav.pullRequests": "Pull Requests",
 
   "home.start": "Над чем будем работать?",
+  "home.startDescription": "Добавьте проект, чтобы начать первый чат.",
+  "home.addProject": "Добавить проект",
+  "home.threadStartError": "Не удалось начать новый чат",
+  "home.threadStartErrorDescription":
+    "Проект всё ещё доступен. Попробуйте открыть черновик ещё раз.",
+  "home.tryAgain": "Повторить",
+  "home.connect": "Подключите окружение, чтобы начать",
+  "home.connectCloud":
+    "Войдите в T3 Connect, чтобы подключить связанное окружение через managed tunnel, или добавьте доступный backend вручную.",
+  "home.connectManual": "Добавьте доступный backend вручную, чтобы работать из этого браузера.",
+  "home.openConnections": "Открыть подключения",
+  "home.addEnvironment": "Добавить окружение",
+
+  "sidebar.search": "Поиск",
+  "sidebar.searchThreads": "Поиск по чатам",
+  "sidebar.clearSearch": "Очистить поиск по чатам",
+  "sidebar.newThread": "Новый чат",
+  "sidebar.newThreadCurrentProject": "Новый чат в текущем проекте",
+  "sidebar.filterByProject": "Фильтр чатов по проекту",
+  "sidebar.allProjects": "Все проекты",
+  "sidebar.projectSettings": "Настройки проекта: {project}",
+  "sidebar.newProject": "Новый проект",
+  "sidebar.searchResults": "Результаты поиска чатов",
+  "sidebar.noSearchResults": "Чаты не найдены",
+  "sidebar.noProjects": "Пока нет проектов",
+  "sidebar.addProject": "Добавить проект",
+  "sidebar.noThreads": "Пока нет чатов",
+  "sidebar.noThreadsInProject": "В проекте {project} пока нет чатов",
+  "sidebar.snoozed": "Отложенные",
+  "sidebar.settled": "Завершённые",
+  "sidebar.showMore": "Показать ещё {count}",
+
+  "rightPanel.browser": "Браузер",
+  "rightPanel.terminal": "Терминал",
+  "rightPanel.files": "Файлы",
+  "rightPanel.diff": "Diff",
+  "rightPanel.pullRequest": "Pull request",
+  "rightPanel.agents": "Агенты",
+  "rightPanel.openSurface": "Открыть панель",
+  "rightPanel.chooseSurface": "Выберите, что показать в правой панели.",
+  "rightPanel.openBrowser": "Открыть локальное приложение или URL.",
+  "rightPanel.openTerminal": "Запустить shell в этом workspace.",
+  "rightPanel.openFiles": "Просматривать файлы workspace.",
+  "rightPanel.openDiff": "Просмотреть изменения в этом чате.",
+  "rightPanel.openPullRequest": "Открыть pull request этой ветки.",
+  "rightPanel.openAgents": "Следить за subagents и workflows.",
+  "rightPanel.addSurface": "Добавить панель",
+  "rightPanel.close": "Закрыть",
+
+  "omp.accounts": "Аккаунты omp",
+  "omp.refresh": "Обновить",
+  "omp.loadFailed": "Не удалось загрузить провайдеры входа omp",
+  "omp.checkInstalled": "Проверьте, что omp установлен, и повторите попытку.",
+  "omp.loginFailed": "Не удалось войти в {provider}",
+  "omp.loginFailedDescription":
+    "Завершите вход в браузере, открывшемся на хосте сервера, либо выполните omp login на нём.",
+  "omp.signedInTo": "Вход в {provider} выполнен",
+  "omp.loginDescription":
+    "Вход открывается в браузере на машине, где запущен сервер Pivot. OAuth callbacks остаются на этом хосте.",
+  "omp.loadingProviders": "Загрузка провайдеров входа…",
+  "omp.noProviders": "omp не сообщил ни одного провайдера входа.",
+  "omp.signedIn": "Вход выполнен",
+  "omp.notSignedIn": "Вход не выполнен",
+  "omp.unavailable": "недоступен",
+  "omp.relogin": "Войти заново",
+  "omp.login": "Войти",
+
+  "root.somethingWentWrong": "Что-то пошло не так.",
+  "root.tryAgain": "Повторить",
+  "root.reload": "Перезапустить приложение",
+  "root.showError": "Показать детали ошибки",
+  "root.hideError": "Скрыть детали ошибки",
+  "root.unexpectedError": "Произошла непредвиденная ошибка роутера.",
+};
+
+function interpolate(message: string, params?: TranslationParams): string {
+  if (!params) return message;
+  let result = message;
+  for (const [name, value] of Object.entries(params)) {
+    result = result.replaceAll(`{${name}}`, String(value));
+  }
+  return result;
+}
+
+export function translate(
+  language: DisplayLanguage,
+  key: TranslationKey,
+  params?: TranslationParams,
+): string {
+  return interpolate(language === "ru" ? (ru[key] ?? en[key]) : en[key], params);
+}
+
+export function useTranslation() {
+  const language = useClientSettings((settings) => settings.displayLanguage);
+  return {
+    language,
+    t: (key: TranslationKey, params?: TranslationParams) => translate(language, key, params),
+  };
+}

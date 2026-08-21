@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 import { SETTLED_DOCK_PAGE_COUNT } from "../Sidebar.logic";
 import { TooltipProvider } from "../ui/tooltip";
+import { useTranslation } from "../../i18n";
 
 export interface SidebarSettledDockProps {
   /** Settled rows to render (already capped + paged + open-thread pinned). */
@@ -25,6 +26,7 @@ export interface SidebarSettledDockProps {
  * +25 per "Show more".
  */
 export function SidebarSettledDock(props: SidebarSettledDockProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex w-full shrink-0 flex-col" data-testid="sidebar-settled-dock">
       <button
@@ -35,7 +37,9 @@ export function SidebarSettledDock(props: SidebarSettledDockProps) {
         className="mb-1 mt-3 flex w-full cursor-pointer items-center gap-2 px-2.5 text-left"
       >
         <span className="text-xs font-medium text-muted-foreground/50">
-          {props.expanded ? "Settled" : `Settled (${props.settled.length})`}
+          {props.expanded
+            ? t("sidebar.settled")
+            : `${t("sidebar.settled")} (${props.settled.length})`}
         </span>
         <span aria-hidden className="h-px flex-1 bg-sidebar-border/60" />
         <ChevronDownIcon
@@ -66,7 +70,9 @@ export function SidebarSettledDock(props: SidebarSettledDockProps) {
               className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-sidebar-muted-foreground/55 hover:bg-sidebar-row-hover hover:text-sidebar-foreground"
             >
               <PlusIcon aria-hidden className="size-4 shrink-0" />
-              Show {Math.min(props.hiddenCount, SETTLED_DOCK_PAGE_COUNT)} more
+              {t("sidebar.showMore", {
+                count: Math.min(props.hiddenCount, SETTLED_DOCK_PAGE_COUNT),
+              })}
             </button>
           ) : null}
         </div>

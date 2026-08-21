@@ -31,6 +31,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "~/components/ui/menu";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { faviconUrlForOrigin } from "~/lib/favicon";
 import { useTheme } from "~/hooks/useTheme";
+import { useTranslation } from "~/i18n";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 
 import { PreviewPanelShell, type PreviewPanelMode } from "./preview/PreviewPanelShell";
@@ -164,13 +165,14 @@ function RightPanelEmptyState(props: {
   agentsAvailable: boolean;
   liveAgentCount: number;
 }) {
+  const { t } = useTranslation();
   // -1 means no highlight: it only appears on hover or arrow use.
   const [highlight, setHighlight] = useState(-1);
 
   const actions = [
     {
-      label: "Browser",
-      description: "Open a local app or URL.",
+      label: t("rightPanel.browser"),
+      description: t("rightPanel.openBrowser"),
       icon: Globe2,
       shortcut: "B",
       available: props.browserAvailable,
@@ -179,8 +181,8 @@ function RightPanelEmptyState(props: {
       badgeCount: 0,
     },
     {
-      label: "Terminal",
-      description: "Start a shell in this workspace.",
+      label: t("rightPanel.terminal"),
+      description: t("rightPanel.openTerminal"),
       icon: TerminalSquare,
       shortcut: "T",
       available: props.terminalAvailable,
@@ -189,8 +191,8 @@ function RightPanelEmptyState(props: {
       badgeCount: 0,
     },
     {
-      label: "Files",
-      description: "Browse and read workspace files.",
+      label: t("rightPanel.files"),
+      description: t("rightPanel.openFiles"),
       icon: Files,
       shortcut: "F",
       available: props.filesAvailable,
@@ -199,8 +201,8 @@ function RightPanelEmptyState(props: {
       badgeCount: 0,
     },
     {
-      label: "Diff",
-      description: "Review changes in this thread.",
+      label: t("rightPanel.diff"),
+      description: t("rightPanel.openDiff"),
       icon: FileDiff,
       shortcut: "D",
       available: props.diffAvailable,
@@ -209,8 +211,8 @@ function RightPanelEmptyState(props: {
       badgeCount: 0,
     },
     {
-      label: "Pull request",
-      description: "Open this branch's pull request.",
+      label: t("rightPanel.pullRequest"),
+      description: t("rightPanel.openPullRequest"),
       icon: GitPullRequest,
       shortcut: "P",
       available: props.pullRequestAvailable,
@@ -219,8 +221,8 @@ function RightPanelEmptyState(props: {
       badgeCount: 0,
     },
     {
-      label: "Agents",
-      description: "Follow subagents and workflows.",
+      label: t("rightPanel.agents"),
+      description: t("rightPanel.openAgents"),
       icon: Bot,
       shortcut: "A",
       available: props.agentsAvailable,
@@ -332,7 +334,7 @@ function RightPanelEmptyState(props: {
       ref={focusOnMount}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      aria-label="Open a surface"
+      aria-label={t("rightPanel.openSurface")}
       data-surface-launcher-keys={availableActions.map((action) => action.shortcut).join("")}
       className={cn(
         "flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 pt-6 outline-none",
@@ -343,10 +345,8 @@ function RightPanelEmptyState(props: {
     >
       <div className="relative w-full max-w-lg">
         <div className="absolute inset-x-0 bottom-full mb-5 text-center">
-          <h3 className="font-medium text-foreground text-sm">Open a surface</h3>
-          <p className="mt-1 text-muted-foreground text-xs">
-            Choose what to show in the right panel.
-          </p>
+          <h3 className="font-medium text-foreground text-sm">{t("rightPanel.openSurface")}</h3>
+          <p className="mt-1 text-muted-foreground text-xs">{t("rightPanel.chooseSurface")}</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {actions.map((action) =>
@@ -503,6 +503,7 @@ function SurfaceIcon({
 }
 
 export function RightPanelTabs(props: RightPanelTabsProps) {
+  const { t } = useTranslation();
   const ownsDesktopTitleBar = isElectron && props.mode === "inline";
   const { resolvedTheme } = useTheme();
   const tabListRef = useRef<HTMLDivElement>(null);
@@ -669,7 +670,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
               <Menu>
                 <MenuTrigger
                   className="cursor-pointer relative inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Add panel surface"
+                  aria-label={t("rightPanel.addSurface")}
                 >
                   <Plus className="size-3.5" />
                 </MenuTrigger>
@@ -680,7 +681,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddBrowser}
                   >
                     <Globe2 />
-                    Browser
+                    {t("rightPanel.browser")}
                   </SurfaceMenuItem>
                   <SurfaceMenuItem
                     available={props.terminalAvailable}
@@ -688,7 +689,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddTerminal}
                   >
                     <TerminalSquare />
-                    Terminal
+                    {t("rightPanel.terminal")}
                   </SurfaceMenuItem>
                   <SurfaceMenuItem
                     available={props.filesAvailable}
@@ -696,7 +697,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddFiles}
                   >
                     <Files />
-                    Files
+                    {t("rightPanel.files")}
                   </SurfaceMenuItem>
                   <SurfaceMenuItem
                     available={props.diffAvailable}
@@ -704,7 +705,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddDiff}
                   >
                     <FileDiff />
-                    Diff
+                    {t("rightPanel.diff")}
                   </SurfaceMenuItem>
                   <SurfaceMenuItem
                     available={props.pullRequestAvailable}
@@ -712,7 +713,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddPullRequest}
                   >
                     <GitPullRequest />
-                    Pull request
+                    {t("rightPanel.pullRequest")}
                   </SurfaceMenuItem>
                   <SurfaceMenuItem
                     available={props.agentsAvailable}
@@ -720,7 +721,7 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
                     onClick={props.onAddAgents}
                   >
                     <Bot />
-                    Agents
+                    {t("rightPanel.agents")}
                   </SurfaceMenuItem>
                 </MenuPopup>
               </Menu>
