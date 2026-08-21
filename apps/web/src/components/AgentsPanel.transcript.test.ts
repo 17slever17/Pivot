@@ -30,6 +30,31 @@ describe("formatAgentActivityText", () => {
       "Comparing validation tails · ▸ bash python eval.py --split val · 1m 47s",
     );
   });
+
+  it("compacts multiline tool args without inventing a tool age", () => {
+    const agent = {
+      status: "running",
+      progress: null,
+      lastToolName: "bash",
+      lastIntent: null,
+      currentToolArgs: "python   eval.py\n--split val",
+      currentToolStartMs: null,
+      result: null,
+      error: null,
+    } satisfies Pick<
+      RuntimeSubagent,
+      | "status"
+      | "progress"
+      | "lastToolName"
+      | "lastIntent"
+      | "currentToolArgs"
+      | "currentToolStartMs"
+      | "result"
+      | "error"
+    >;
+
+    expect(formatAgentActivityText(agent, 108_000)).toBe("▸ bash python eval.py --split val");
+  });
 });
 
 describe("formatOmpTranscriptMessage", () => {
