@@ -409,9 +409,12 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
       // itself re-resolves per call and fails closed with a typed error.
       const processRunner = yield* ProcessRunner.ProcessRunner;
       const resolveAgentDir = Effect.gen(function* () {
-        const result = yield* processRunner
-          .run({ command: launchBinary, args: ["config", "path"] })
-          .pipe(Effect.orDie);
+        // Keep spawn failures in the typed error channel so the fallback below
+        // can keep Pivot bootable before omp has been installed from Settings.
+        const result = yield* processRunner.run({
+          command: launchBinary,
+          args: ["config", "path"],
+        });
         const stdout = result.stdout.trim();
         if (result.code !== 0 || result.timedOut || stdout.length === 0) {
           return yield* Effect.fail("omp config path failed");
