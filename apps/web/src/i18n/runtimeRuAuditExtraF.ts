@@ -3,20 +3,31 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Unable to initialize libghostty-vt": "Не удалось инициализировать libghostty-vt",
   "The environment": "Окружение",
   "Codex Personal — Unavailable.": "Codex Personal — недоступно.",
-  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Download the available update to switch to the native Apple Silicon build.": "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Скачайте доступное обновление, чтобы перейти на нативную Apple Silicon-сборку.",
-  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Restart to install the downloaded Apple Silicon build.": "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Перезапустите приложение, чтобы установить скачанную Apple Silicon-сборку.",
-  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.": "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Следующее обновление заменит её нативной Apple Silicon-сборкой.",
+  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Download the available update to switch to the native Apple Silicon build.":
+    "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Скачайте доступное обновление, чтобы перейти на нативную Apple Silicon-сборку.",
+  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. Restart to install the downloaded Apple Silicon build.":
+    "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Перезапустите приложение, чтобы установить скачанную Apple Silicon-сборку.",
+  "This Mac has Apple Silicon, but Piπot is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.":
+    "Этот Mac использует Apple Silicon, но Piπot запущен в Intel-сборке через Rosetta. Следующее обновление заменит её нативной Apple Silicon-сборкой.",
   "The chat isn't available for this project.": "Чат для этого проекта недоступен.",
 
-  "The host refused it. A rebase stops at the first commit that does not apply cleanly; updating with a merge commit may still work.": "Хост отклонил действие. Rebase останавливается на первом commit, который не применился чисто; обновление через merge commit всё ещё может сработать.",
-  "The host refused it. Check that this repository allows auto-merge, that you have write access, and that there is something left for it to wait on.": "Хост отклонил действие. Проверьте, что репозиторий разрешает auto-merge, у вас есть доступ на запись и Pull Request ещё ожидает каких-либо условий.",
-  "The host refused it. Check that you have write access to this repository.": "Хост отклонил действие. Проверьте доступ на запись к репозиторию.",
-  "The host refused it. Check that you have write access, and that the branch still exists.": "Хост отклонил действие. Проверьте доступ на запись и существование branch.",
-  "The host refused it. Check that you have write access, and that the merge has not already happened.": "Хост отклонил действие. Проверьте доступ на запись и убедитесь, что merge ещё не выполнен.",
-  "The host refused it. Check that you have write access, or that you opened it.": "Хост отклонил действие. Проверьте доступ на запись или то, что Pull Request открыт вами.",
-  "The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting.": "Хост отклонил merge. Проверьте доступ на запись, прохождение обязательных проверок и отсутствие конфликтов branch.",
+  "The host refused it. A rebase stops at the first commit that does not apply cleanly; updating with a merge commit may still work.":
+    "Хост отклонил действие. Rebase останавливается на первом commit, который не применился чисто; обновление через merge commit всё ещё может сработать.",
+  "The host refused it. Check that this repository allows auto-merge, that you have write access, and that there is something left for it to wait on.":
+    "Хост отклонил действие. Проверьте, что репозиторий разрешает auto-merge, у вас есть доступ на запись и Pull Request ещё ожидает каких-либо условий.",
+  "The host refused it. Check that you have write access to this repository.":
+    "Хост отклонил действие. Проверьте доступ на запись к репозиторию.",
+  "The host refused it. Check that you have write access, and that the branch still exists.":
+    "Хост отклонил действие. Проверьте доступ на запись и существование branch.",
+  "The host refused it. Check that you have write access, and that the merge has not already happened.":
+    "Хост отклонил действие. Проверьте доступ на запись и убедитесь, что merge ещё не выполнен.",
+  "The host refused it. Check that you have write access, or that you opened it.":
+    "Хост отклонил действие. Проверьте доступ на запись или то, что Pull Request открыт вами.",
+  "The host refused the merge. Check that you have write access, that the checks it requires have passed, and that the branch is not conflicting.":
+    "Хост отклонил merge. Проверьте доступ на запись, прохождение обязательных проверок и отсутствие конфликтов branch.",
   "The host refused the new title.": "Хост отклонил новый заголовок.",
-  "The host refused it. Check that you have write access on this repository, and that they still have access to it.": "Хост отклонил действие. Проверьте свой доступ на запись и доступ выбранного пользователя к репозиторию.",
+  "The host refused it. Check that you have write access on this repository, and that they still have access to it.":
+    "Хост отклонил действие. Проверьте свой доступ на запись и доступ выбранного пользователя к репозиторию.",
   "Could not post the comment": "Не удалось отправить комментарий",
   "Could not save the comment": "Не удалось сохранить комментарий",
   "Could not save the description": "Не удалось сохранить описание",
@@ -25,11 +36,15 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Open on host": "Открыть на хосте",
   Others: "Другие",
 
-  "Instance ID must be 64 characters or fewer.": "ID экземпляра должен содержать не более 64 символов.",
+  "Instance ID must be 64 characters or fewer.":
+    "ID экземпляра должен содержать не более 64 символов.",
   "e.g. Work": "например, Work",
-  "Clipboard copy is unavailable here. Manually copy this code into another client.": "Копирование в буфер недоступно. Скопируйте код вручную в другой клиент.",
-  "Clipboard copy is unavailable here. Open or manually copy this full pairing URL on the device you want to connect.": "Копирование в буфер недоступно. Откройте или вручную скопируйте полный URL подключения на нужном устройстве.",
-  "Clipboard copy is unavailable here. Open or manually copy this hosted app link on the device you want to connect.": "Копирование в буфер недоступно. Откройте или вручную скопируйте ссылку hosted-приложения на нужном устройстве.",
+  "Clipboard copy is unavailable here. Manually copy this code into another client.":
+    "Копирование в буфер недоступно. Скопируйте код вручную в другой клиент.",
+  "Clipboard copy is unavailable here. Open or manually copy this full pairing URL on the device you want to connect.":
+    "Копирование в буфер недоступно. Откройте или вручную скопируйте полный URL подключения на нужном устройстве.",
+  "Clipboard copy is unavailable here. Open or manually copy this hosted app link on the device you want to connect.":
+    "Копирование в буфер недоступно. Откройте или вручную скопируйте ссылку hosted-приложения на нужном устройстве.",
   "Enter a backend host and pairing code.": "Введите адрес backend и код подключения.",
   "Enter a port from 1 to 65535.": "Введите порт от 1 до 65535.",
   "Failed to add backend.": "Не удалось добавить backend.",
@@ -44,43 +59,71 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Failed to update network exposure.": "Не удалось изменить сетевую доступность.",
   "Failed to update WSL backend.": "Не удалось изменить backend WSL.",
   "No new SSH hosts were discovered.": "Новые SSH-хосты не обнаружены.",
-  "Open it in the browser on the device you want to connect.": "Откройте ссылку в браузере на устройстве, которое хотите подключить.",
-  "Open it in the client you want to pair to this environment.": "Откройте ссылку в клиенте, который хотите подключить к окружению.",
+  "Open it in the browser on the device you want to connect.":
+    "Откройте ссылку в браузере на устройстве, которое хотите подключить.",
+  "Open it in the client you want to pair to this environment.":
+    "Откройте ссылку в клиенте, который хотите подключить к окружению.",
   "Opens the hosted app, no install needed": "Открывает hosted-приложение, установка не требуется",
-  "Other paired clients will need a new pairing link before reconnecting.": "Другим подключённым клиентам потребуется новая ссылка подключения перед переподключением.",
-  "Pairing link — scan to open on another device": "Ссылка подключения — отсканируйте для открытия на другом устройстве",
-  "Pairing links and client-session management require the access:write scope for this backend.": "Для ссылок подключения и управления клиентскими сессиями этому backend требуется scope access:write.",
-  "Paste it into another client to finish pairing.": "Вставьте значение в другом клиенте, чтобы завершить подключение.",
-  "Piπot will restart and bring the Windows backend back up alongside WSL.": "Piπot перезапустится и снова запустит backend Windows параллельно с WSL.",
-  "Piπot will restart and limit this environment back to this machine.": "Piπot перезапустится и снова ограничит окружение этим компьютером.",
-  "Piπot will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL.": "Piπot перезапустится на backend Windows. Чаты и проекты WSL останутся внутри дистрибутива и снова станут доступны после включения WSL.",
-  "Piπot will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted.": "Piπot перезапустит backend WSL в новом дистрибутиве. Сессии в текущем дистрибутиве будут прерваны.",
-  "Piπot will restart to expose this environment over the network.": "Piπot перезапустится, чтобы открыть окружение для сети.",
+  "Other paired clients will need a new pairing link before reconnecting.":
+    "Другим подключённым клиентам потребуется новая ссылка подключения перед переподключением.",
+  "Pairing link — scan to open on another device":
+    "Ссылка подключения — отсканируйте для открытия на другом устройстве",
+  "Pairing links and client-session management require the access:write scope for this backend.":
+    "Для ссылок подключения и управления клиентскими сессиями этому backend требуется scope access:write.",
+  "Paste it into another client to finish pairing.":
+    "Вставьте значение в другом клиенте, чтобы завершить подключение.",
+  "Piπot will restart and bring the Windows backend back up alongside WSL.":
+    "Piπot перезапустится и снова запустит backend Windows параллельно с WSL.",
+  "Piπot will restart and limit this environment back to this machine.":
+    "Piπot перезапустится и снова ограничит окружение этим компьютером.",
+  "Piπot will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL.":
+    "Piπot перезапустится на backend Windows. Чаты и проекты WSL останутся внутри дистрибутива и снова станут доступны после включения WSL.",
+  "Piπot will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted.":
+    "Piπot перезапустит backend WSL в новом дистрибутиве. Сессии в текущем дистрибутиве будут прерваны.",
+  "Piπot will restart to expose this environment over the network.":
+    "Piπot перезапустится, чтобы открыть окружение для сети.",
   "Re-enable the Windows backend?": "Снова включить backend Windows?",
   "Revoked 1 other client": "Отозван ещё 1 клиент",
-  "Run the WSL backend alongside the Windows one, or stop the Windows backend and use only WSL? You can change this later from Settings.": "Запустить backend WSL параллельно с Windows или остановить Windows и использовать только WSL? Это можно изменить позже в настройках.",
-  "Send activity from this environment to your mobile clients for push notifications and Live Activities. Works without a T3 Connect tunnel.": "Отправлять активность окружения мобильным клиентам для push-уведомлений и Live Activities. Работает без tunnel T3 Connect.",
+  "Run the WSL backend alongside the Windows one, or stop the Windows backend and use only WSL? You can change this later from Settings.":
+    "Запустить backend WSL параллельно с Windows или остановить Windows и использовать только WSL? Это можно изменить позже в настройках.",
+  "Send activity from this environment to your mobile clients for push notifications and Live Activities. Works without a T3 Connect tunnel.":
+    "Отправлять активность окружения мобильным клиентам для push-уведомлений и Live Activities. Работает без tunnel T3 Connect.",
   "Set up Tailscale HTTPS?": "Настроить Tailscale HTTPS?",
   "Showing the full value instead.": "Вместо этого показано полное значение.",
   "Start the WSL backend": "Запустить backend WSL",
-  "Stop the Windows backend and run only the WSL backend. Useful if you develop entirely inside WSL and don't need Windows-side projects.": "Остановить backend Windows и использовать только WSL. Подходит, если разработка полностью идёт внутри WSL и Windows-проекты не нужны.",
-  "The environment is saved and will reconnect on app startup.": "Окружение сохранено и будет переподключаться при запуске приложения.",
-  "The managed tunnel was removed. Agent activity publishing stays on.": "Managed tunnel удалён. Публикация активности агента остаётся включённой.",
-  "This backend is already configured for remote access. Network exposure changes must be made where the server is launched.": "Этот backend уже настроен для удалённого доступа. Сетевую доступность нужно менять там, где запускается сервер.",
-  "This backend is only reachable on this machine. Restart it with a non-loopback host to enable remote pairing.": "Этот backend доступен только на этом компьютере. Перезапустите его с non-loopback host для удалённого подключения.",
+  "Stop the Windows backend and run only the WSL backend. Useful if you develop entirely inside WSL and don't need Windows-side projects.":
+    "Остановить backend Windows и использовать только WSL. Подходит, если разработка полностью идёт внутри WSL и Windows-проекты не нужны.",
+  "The environment is saved and will reconnect on app startup.":
+    "Окружение сохранено и будет переподключаться при запуске приложения.",
+  "The managed tunnel was removed. Agent activity publishing stays on.":
+    "Managed tunnel удалён. Публикация активности агента остаётся включённой.",
+  "This backend is already configured for remote access. Network exposure changes must be made where the server is launched.":
+    "Этот backend уже настроен для удалённого доступа. Сетевую доступность нужно менять там, где запускается сервер.",
+  "This backend is only reachable on this machine. Restart it with a non-loopback host to enable remote pairing.":
+    "Этот backend доступен только на этом компьютере. Перезапустите его с non-loopback host для удалённого подключения.",
   "This environment is available through T3 Connect.": "Окружение доступно через T3 Connect.",
-  "This environment is no longer available through T3 Connect.": "Окружение больше не доступно через T3 Connect.",
-  "This environment will stop publishing agent activity.": "Окружение перестанет публиковать активность агента.",
+  "This environment is no longer available through T3 Connect.":
+    "Окружение больше не доступно через T3 Connect.",
+  "This environment will stop publishing agent activity.":
+    "Окружение перестанет публиковать активность агента.",
   "Turn off WSL and switch back to Windows?": "Выключить WSL и вернуться на Windows?",
-  "Use local SSH config, agent, and tunnels for the backend.": "Использовать локальные SSH config, agent и tunnels для backend.",
-  "Use Tailscale Serve to expose this backend through a MagicDNS HTTPS URL.": "Использовать Tailscale Serve для доступа к backend через HTTPS URL MagicDNS.",
-  "WSL is no longer available, so the Windows backend is running instead. Switch off the WSL backend to clear this preference.": "WSL больше недоступен, поэтому используется backend Windows. Выключите backend WSL, чтобы сбросить эту настройку.",
-  "Your session does not have permission to manage T3 Connect access.": "У этой сессии нет разрешения на управление доступом T3 Connect.",
+  "Use local SSH config, agent, and tunnels for the backend.":
+    "Использовать локальные SSH config, agent и tunnels для backend.",
+  "Use Tailscale Serve to expose this backend through a MagicDNS HTTPS URL.":
+    "Использовать Tailscale Serve для доступа к backend через HTTPS URL MagicDNS.",
+  "WSL is no longer available, so the Windows backend is running instead. Switch off the WSL backend to clear this preference.":
+    "WSL больше недоступен, поэтому используется backend Windows. Выключите backend WSL, чтобы сбросить эту настройку.",
+  "Your session does not have permission to manage T3 Connect access.":
+    "У этой сессии нет разрешения на управление доступом T3 Connect.",
 
-  "Spans at or above the configured slow-span threshold.": "Spans с длительностью не ниже настроенного порога медленных spans.",
-  "The process is not a child of the T3 Server. It might already have exited.": "Процесс не является дочерним процессом сервера T3. Возможно, он уже завершился.",
-  "Total CPU across live child processes of the current server process. The desktop shell and other parent processes are not included.": "Суммарное CPU-время активных дочерних процессов текущего сервера. Desktop shell и другие родительские процессы не учитываются.",
-  "Total resident memory across live child processes of the current server process. The desktop shell and other parent processes are not included.": "Суммарная резидентная память активных дочерних процессов текущего сервера. Desktop shell и другие родительские процессы не учитываются.",
+  "Spans at or above the configured slow-span threshold.":
+    "Spans с длительностью не ниже настроенного порога медленных spans.",
+  "The process is not a child of the T3 Server. It might already have exited.":
+    "Процесс не является дочерним процессом сервера T3. Возможно, он уже завершился.",
+  "Total CPU across live child processes of the current server process. The desktop shell and other parent processes are not included.":
+    "Суммарное CPU-время активных дочерних процессов текущего сервера. Desktop shell и другие родительские процессы не учитываются.",
+  "Total resident memory across live child processes of the current server process. The desktop shell and other parent processes are not included.":
+    "Суммарная резидентная память активных дочерних процессов текущего сервера. Desktop shell и другие родительские процессы не учитываются.",
   "No fonts found.": "Шрифты не найдены.",
   "Search fonts…": "Поиск шрифтов…",
   "The keybinding was not removed.": "Сочетание клавиш не было удалено.",
@@ -91,33 +134,46 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Search image files…": "Поиск изображений…",
   "Searching project files…": "Поиск файлов проекта…",
 
-  "A t3.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values.": "В этом checkout есть t3.json, но он не разбирается, поэтому объявленные в нём действия и значки игнорируются. Проверьте синтаксис JSON и значения icon.",
-  "Add a project from the sidebar to configure it here.": "Добавьте проект на боковой панели, чтобы настроить его здесь.",
-  "Another script change is still saving. Try again.": "Предыдущее изменение скрипта всё ещё сохраняется. Повторите позже.",
-  "Deletes the project entry and its threads. Files on disk are not touched.": "Удаляет запись проекта и его чаты. Файлы на диске не затрагиваются.",
+  "A t3.json exists in this checkout but fails to parse, so every action and icon it declares is ignored. Check the JSON syntax and icon values.":
+    "В этом checkout есть t3.json, но он не разбирается, поэтому объявленные в нём действия и значки игнорируются. Проверьте синтаксис JSON и значения icon.",
+  "Add a project from the sidebar to configure it here.":
+    "Добавьте проект на боковой панели, чтобы настроить его здесь.",
+  "Another script change is still saving. Try again.":
+    "Предыдущее изменение скрипта всё ещё сохраняется. Повторите позже.",
+  "Deletes the project entry and its threads. Files on disk are not touched.":
+    "Удаляет запись проекта и его чаты. Файлы на диске не затрагиваются.",
   "Failed to remove keybinding": "Не удалось удалить сочетание клавиш",
   "Failed to save keybinding": "Не удалось сохранить сочетание клавиш",
   "Failed to save scripts": "Не удалось сохранить скрипты",
   "Failed to update default model": "Не удалось изменить модель по умолчанию",
   "Failed to update new-thread workspace": "Не удалось изменить workspace нового чата",
   "Failed to update project icon": "Не удалось изменить значок проекта",
-  "How this checkout joins project groups in the sidebar. Changing it can move you to a different project group.": "Определяет, как этот checkout объединяется с группами проектов на боковой панели. Изменение может переместить его в другую группу.",
-  "New threads in this project start with this model. Applies to every checkout in this group.": "Новые чаты этого проекта запускаются с этой моделью. Применяется ко всем checkout в группе.",
+  "How this checkout joins project groups in the sidebar. Changing it can move you to a different project group.":
+    "Определяет, как этот checkout объединяется с группами проектов на боковой панели. Изменение может переместить его в другую группу.",
+  "New threads in this project start with this model. Applies to every checkout in this group.":
+    "Новые чаты этого проекта запускаются с этой моделью. Применяется ко всем checkout в группе.",
   "New-thread workspace": "Workspace нового чата",
-  "Other entries in this grouped project are unaffected.": "Остальные записи в этой группе проекта не изменятся.",
+  "Other entries in this grouped project are unaffected.":
+    "Остальные записи в этой группе проекта не изменятся.",
   "Remove this project everywhere": "Удалить этот проект везде",
-  "Removes this checkout and its threads from the project group. Files on disk are not touched.": "Удаляет checkout и его чаты из группы проекта. Файлы на диске не затрагиваются.",
-  "The shared name for this project group in the sidebar and thread lists.": "Общее название этой группы проекта на боковой панели и в списках чатов.",
+  "Removes this checkout and its threads from the project group. Files on disk are not touched.":
+    "Удаляет checkout и его чаты из группы проекта. Файлы на диске не затрагиваются.",
+  "The shared name for this project group in the sidebar and thread lists.":
+    "Общее название этой группы проекта на боковой панели и в списках чатов.",
   "This project is no longer available.": "Проект больше недоступен.",
   "Unavailable project": "Недоступный проект",
-  "Where new threads in this project start. Overrides t3.json and the global default; applies to every checkout in this group.": "Определяет, где запускаются новые чаты проекта. Переопределяет t3.json и глобальную настройку; применяется ко всем checkout в группе.",
+  "Where new threads in this project start. Overrides t3.json and the global default; applies to every checkout in this group.":
+    "Определяет, где запускаются новые чаты проекта. Переопределяет t3.json и глобальную настройку; применяется ко всем checkout в группе.",
   "Custom hex accent color": "Пользовательский HEX-цвет акцента",
   "Click to hide email": "Нажмите, чтобы скрыть email",
   "Click to reveal email": "Нажмите, чтобы показать email",
-  "Run it in a terminal when you are ready to update.": "Выполните команду в терминале, когда будете готовы к обновлению.",
-  "Stored secret - enter a new value to replace": "Сохранённый секрет — введите новое значение для замены",
+  "Run it in a terminal when you are ready to update.":
+    "Выполните команду в терминале, когда будете готовы к обновлению.",
+  "Stored secret - enter a new value to replace":
+    "Сохранённый секрет — введите новое значение для замены",
   "Toggle account email visibility": "Показать или скрыть email аккаунта",
-  "Used to distinguish this instance in picker rails and model lists.": "Используется, чтобы отличать этот экземпляр в списках и выборе моделей.",
+  "Used to distinguish this instance in picker rails and model lists.":
+    "Используется, чтобы отличать этот экземпляр в списках и выборе моделей.",
   "Enter a model slug.": "Введите slug модели.",
   "Hide from picker": "Скрыть из списка выбора",
   "Move down": "Переместить вниз",
@@ -127,54 +183,78 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Decrease provider health check interval": "Уменьшить интервал проверки состояния провайдера",
   "Increase provider health check interval": "Увеличить интервал проверки состояния провайдера",
   "Provider health check interval in seconds": "Интервал проверки состояния провайдера в секундах",
-  "The provider update command could not be started.": "Не удалось запустить команду обновления провайдера.",
+  "The provider update command could not be started.":
+    "Не удалось запустить команду обновления провайдера.",
   "Refresh telemetry snapshot": "Обновить snapshot телеметрии",
   "The resource monitor retry failed.": "Повторный запуск монитора ресурсов завершился ошибкой.",
   "Terminal font preview": "Предпросмотр шрифта терминала",
-  "Creates the worktree from the latest matching branch on origin instead of your local branch.": "Создаёт worktree из последнего совпадающего branch на origin, а не из локального branch.",
-  "It is significantly slower than the default buffered output and hurts the reading experience. This switch exists only for backwards compatibility.": "Заметно медленнее стандартного буферизованного вывода и ухудшает чтение. Переключатель оставлен только для обратной совместимости.",
-  "Only the box you write prompts in. Mono works well here.": "Только поле, в котором вводятся prompt. Здесь хорошо подходит моноширинный шрифт.",
-  "Render text with thinner grayscale anti-aliasing instead of macOS subpixel behavior.": "Использовать более тонкое grayscale-сглаживание вместо subpixel-поведения macOS.",
-  "Terminal output, independent from code blocks and diffs.": "Вывод терминала, независимо от блоков кода и Diff.",
-  "Wrap code, tables, diffs, and file previews by default": "По умолчанию переносить строки в коде, таблицах, Diff и просмотре файлов",
+  "Creates the worktree from the latest matching branch on origin instead of your local branch.":
+    "Создаёт worktree из последнего совпадающего branch на origin, а не из локального branch.",
+  "It is significantly slower than the default buffered output and hurts the reading experience. This switch exists only for backwards compatibility.":
+    "Заметно медленнее стандартного буферизованного вывода и ухудшает чтение. Переключатель оставлен только для обратной совместимости.",
+  "Only the box you write prompts in. Mono works well here.":
+    "Только поле, в котором вводятся prompt. Здесь хорошо подходит моноширинный шрифт.",
+  "Render text with thinner grayscale anti-aliasing instead of macOS subpixel behavior.":
+    "Использовать более тонкое grayscale-сглаживание вместо subpixel-поведения macOS.",
+  "Terminal output, independent from code blocks and diffs.":
+    "Вывод терминала, независимо от блоков кода и Diff.",
+  "Wrap code, tables, diffs, and file previews by default":
+    "По умолчанию переносить строки в коде, таблицах, Diff и просмотре файлов",
   "Could not scan the server environment": "Не удалось просканировать окружение сервера",
-  "Install Git on the server, add optional hosting integrations or credentials your workspace needs, then rescan.": "Установите Git на сервер, добавьте необходимые интеграции хостинга или учётные данные workspace, затем повторите сканирование.",
+  "Install Git on the server, add optional hosting integrations or credentials your workspace needs, then rescan.":
+    "Установите Git на сервер, добавьте необходимые интеграции хостинга или учётные данные workspace, затем повторите сканирование.",
   "Rescan Git and hosting integrations": "Повторно просканировать Git и интеграции хостинга",
-  "Structures change request descriptions using the current repository's template when one is available.": "Формирует описания change request по шаблону текущего репозитория, если он доступен.",
-  "Browser storage is unavailable, so the change was not kept.": "Хранилище браузера недоступно, поэтому изменение не сохранено.",
+  "Structures change request descriptions using the current repository's template when one is available.":
+    "Формирует описания change request по шаблону текущего репозитория, если он доступен.",
+  "Browser storage is unavailable, so the change was not kept.":
+    "Хранилище браузера недоступно, поэтому изменение не сохранено.",
   "Close the theme editor": "Закрыть редактор темы",
   "Could not create the theme.": "Не удалось создать тему.",
   "Could not save the theme.": "Не удалось сохранить тему.",
   "Expand the theme editor": "Развернуть редактор темы",
   "Minimize the theme editor": "Свернуть редактор темы",
   "Pick a color from the app": "Выбрать цвет из приложения",
-  "Theme saved, but it could not be made active. Try again.": "Тема сохранена, но не удалось сделать её активной. Повторите попытку.",
-  "Could not read that file. Paste the JSON below instead.": "Не удалось прочитать файл. Вставьте JSON ниже.",
+  "Theme saved, but it could not be made active. Try again.":
+    "Тема сохранена, но не удалось сделать её активной. Повторите попытку.",
+  "Could not read that file. Paste the JSON below instead.":
+    "Не удалось прочитать файл. Вставьте JSON ниже.",
   "That theme file is invalid.": "Файл темы некорректен.",
-  "Theme added, but it could not be selected. Try again.": "Тема добавлена, но выбрать её не удалось. Повторите попытку.",
+  "Theme added, but it could not be selected. Try again.":
+    "Тема добавлена, но выбрать её не удалось. Повторите попытку.",
   "Couldn’t remove theme": "Не удалось удалить тему",
   "Couldn’t save theme selection": "Не удалось сохранить выбор темы",
   "Follow the system appearance": "Следовать системному оформлению",
   "Light and dark theme variants": "Светлый и тёмный варианты темы",
-  "Select the variants you want to remove. You can restore them by importing the extension again.": "Выберите варианты для удаления. Их можно восстановить повторным импортом расширения.",
-  "Use the first variants for light and dark": "Использовать первые варианты для светлого и тёмного режима",
-  "You can bring it back anytime by importing its JSON file.": "Тему можно вернуть в любой момент, импортировав её JSON-файл.",
+  "Select the variants you want to remove. You can restore them by importing the extension again.":
+    "Выберите варианты для удаления. Их можно восстановить повторным импортом расширения.",
+  "Use the first variants for light and dark":
+    "Использовать первые варианты для светлого и тёмного режима",
+  "You can bring it back anytime by importing its JSON file.":
+    "Тему можно вернуть в любой момент, импортировав её JSON-файл.",
   "The provider failed its startup checks.": "Проверки провайдера при запуске завершились ошибкой.",
-  "The provider is installed, but the server could not fully verify it.": "Провайдер установлен, но сервер не смог полностью проверить его состояние.",
-  "This provider is installed but disabled for new sessions in Piπot.": "Провайдер установлен, но отключён для новых сессий Piπot.",
-  "Waiting for the server to report installation and authentication details.": "Ожидание данных сервера об установке и авторизации.",
+  "The provider is installed, but the server could not fully verify it.":
+    "Провайдер установлен, но сервер не смог полностью проверить его состояние.",
+  "This provider is installed but disabled for new sessions in Piπot.":
+    "Провайдер установлен, но отключён для новых сессий Piπot.",
+  "Waiting for the server to report installation and authentication details.":
+    "Ожидание данных сервера об установке и авторизации.",
   "Source control": "Контроль версий",
 
   "Could not read T3 Connect link state.": "Не удалось прочитать состояние привязки T3 Connect.",
   "Could not persist panel width.": "Не удалось сохранить ширину панели.",
   "Could not read persisted panel width.": "Не удалось прочитать сохранённую ширину панели.",
   "Invalid keybinding.": "Некорректное сочетание клавиш.",
-  "Failed to configure client tracing exporter": "Не удалось настроить exporter клиентской трассировки",
-  "Could not persist provider-update dismissals.": "Не удалось сохранить скрытые уведомления об обновлении провайдера.",
-  "Could not read provider-update dismissals.": "Не удалось прочитать скрытые уведомления об обновлении провайдера.",
+  "Failed to configure client tracing exporter":
+    "Не удалось настроить exporter клиентской трассировки",
+  "Could not persist provider-update dismissals.":
+    "Не удалось сохранить скрытые уведомления об обновлении провайдера.",
+  "Could not read provider-update dismissals.":
+    "Не удалось прочитать скрытые уведомления об обновлении провайдера.",
   "Desktop network access is unavailable.": "Сетевой доступ desktop недоступен.",
-  "Failed to load advertised desktop endpoints.": "Не удалось загрузить объявленные desktop endpoints.",
-  "Failed to load desktop server exposure state.": "Не удалось загрузить состояние сетевой доступности desktop-сервера.",
+  "Failed to load advertised desktop endpoints.":
+    "Не удалось загрузить объявленные desktop endpoints.",
+  "Failed to load desktop server exposure state.":
+    "Не удалось загрузить состояние сетевой доступности desktop-сервера.",
   "Desktop SSH host discovery is unavailable.": "Поиск SSH-хостов на desktop недоступен.",
   "Failed to discover SSH hosts.": "Не удалось найти SSH-хосты.",
   "Desktop WSL state is unavailable.": "Состояние WSL на desktop недоступно.",
@@ -187,17 +267,24 @@ export const RU_AUDIT_EXTRA_F: Readonly<Record<string, string>> = {
   "Publishing repository": "Публикация репозитория",
   "Pulling latest changes": "Pull последних изменений",
   "Running source control action": "Выполнение действия контроля версий",
-  "This environment could not report usage.": "Окружение не смогло сообщить статистику использования.",
-  "Add at least one color role to the theme file.": "Добавьте в файл темы хотя бы одну цветовую роль.",
+  "This environment could not report usage.":
+    "Окружение не смогло сообщить статистику использования.",
+  "Add at least one color role to the theme file.":
+    "Добавьте в файл темы хотя бы одну цветовую роль.",
   "That theme collection is invalid.": "Коллекция тем некорректна.",
   "Theme collections need a valid id and label.": "Коллекции тем требуют корректные id и label.",
   "Theme colors must be objects.": "Цвета темы должны быть объектами.",
   "Theme files must contain a JSON object.": "Файлы темы должны содержать JSON-объект.",
   "Theme files need a colors object.": "Файлу темы нужен объект colors.",
-  "Theme files need a name (48 characters or fewer).": "Файлу темы нужно название длиной не более 48 символов.",
-  "Theme ids may only contain lowercase letters, numbers, and hyphens.": "ID темы может содержать только строчные буквы, цифры и дефисы.",
+  "Theme files need a name (48 characters or fewer).":
+    "Файлу темы нужно название длиной не более 48 символов.",
+  "Theme ids may only contain lowercase letters, numbers, and hyphens.":
+    "ID темы может содержать только строчные буквы, цифры и дефисы.",
   "Theme variants must be an object.": "variants темы должен быть объектом.",
-  "Your installed themes changed while this package was downloading. Try again.": "Установленные темы изменились во время загрузки пакета. Повторите попытку.",
-  "Could not persist version-mismatch dismissals.": "Не удалось сохранить скрытые уведомления о несовпадении версий.",
-  "Could not read version-mismatch dismissals.": "Не удалось прочитать скрытые уведомления о несовпадении версий.",
+  "Your installed themes changed while this package was downloading. Try again.":
+    "Установленные темы изменились во время загрузки пакета. Повторите попытку.",
+  "Could not persist version-mismatch dismissals.":
+    "Не удалось сохранить скрытые уведомления о несовпадении версий.",
+  "Could not read version-mismatch dismissals.":
+    "Не удалось прочитать скрытые уведомления о несовпадении версий.",
 };

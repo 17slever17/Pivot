@@ -8,7 +8,8 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Conversations not on the current diff": "Обсуждения вне текущего Diff",
   "Conversations not on the diff loaded so far": "Обсуждения вне загруженной части Diff",
   "Fix in a thread": "Исправить в чате",
-  "Line comments are written from the whole change": "Комментарии к строкам относятся ко всему изменению",
+  "Line comments are written from the whole change":
+    "Комментарии к строкам относятся ко всему изменению",
   "Loading more files...": "Загрузка дополнительных файлов...",
   "Loading pull request diff...": "Загрузка Diff Pull Request...",
   "Reply could not be posted": "Не удалось отправить ответ",
@@ -22,13 +23,15 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Ask a question": "Задать вопрос",
   "Asked in a thread": "Вопрос отправлен в чат",
   "Auto-merge turned off": "Auto-merge выключен",
-  "Auto-merge turned on — merges as soon as this is ready, sooner if it already is": "Auto-merge включён — merge произойдёт, как только Pull Request будет готов, или сразу, если он уже готов",
+  "Auto-merge turned on — merges as soon as this is ready, sooner if it already is":
+    "Auto-merge включён — merge произойдёт, как только Pull Request будет готов, или сразу, если он уже готов",
   "Branch updated with the base branch": "Branch обновлён из базового branch",
   "Changes can be cleanly merged.": "Изменения можно merge без конфликтов.",
   "Checked out": "Checkout выполнен",
   "Checked out here": "Checkout выполнен здесь",
   "Checked out, but not on the latest commits": "Checkout выполнен, но не на последних commits",
-  "Checked out, but the thread stayed where it was": "Checkout выполнен, но чат остался на прежнем месте",
+  "Checked out, but the thread stayed where it was":
+    "Checkout выполнен, но чат остался на прежнем месте",
   "Checking out...": "Checkout...",
   "Checkout ready": "Checkout готов",
   "Close pull request?": "Закрыть Pull Request?",
@@ -62,7 +65,8 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Newest first": "Сначала новые",
   "Oldest first": "Сначала старые",
   "Opening...": "Открытие...",
-  "Opens a thread that knows which pull request you mean.": "Открывает чат с контекстом этого Pull Request.",
+  "Opens a thread that knows which pull request you mean.":
+    "Открывает чат с контекстом этого Pull Request.",
   "Preparing the pull request checkout...": "Подготовка checkout Pull Request...",
   "Preparing...": "Подготовка...",
   "Pull request closed": "Pull Request закрыт",
@@ -74,14 +78,21 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Reviewing…": "Review…",
   "Show newest activity first": "Показывать новую активность первой",
   "Show oldest activity first": "Показывать старую активность первой",
-  "The checkout could not be moved onto the pull request": "Не удалось переключить checkout на Pull Request",
-  "The host will merge this on its own once its requirements are met": "Хост выполнит merge автоматически после выполнения требований",
-  "The pull request is in its own worktree, with a thread open on it.": "Pull Request находится в отдельном worktree, и для него открыт чат.",
-  "The pull request is in the composer — type your question, then send.": "Pull Request добавлен в поле ввода — напишите вопрос и отправьте.",
-  "The question is in the composer — read it over, then send.": "Вопрос добавлен в поле ввода — проверьте его и отправьте.",
-  "The task is in the composer — read it over, then send.": "Задача добавлена в поле ввода — проверьте её и отправьте.",
+  "The checkout could not be moved onto the pull request":
+    "Не удалось переключить checkout на Pull Request",
+  "The host will merge this on its own once its requirements are met":
+    "Хост выполнит merge автоматически после выполнения требований",
+  "The pull request is in its own worktree, with a thread open on it.":
+    "Pull Request находится в отдельном worktree, и для него открыт чат.",
+  "The pull request is in the composer — type your question, then send.":
+    "Pull Request добавлен в поле ввода — напишите вопрос и отправьте.",
+  "The question is in the composer — read it over, then send.":
+    "Вопрос добавлен в поле ввода — проверьте его и отправьте.",
+  "The task is in the composer — read it over, then send.":
+    "Задача добавлена в поле ввода — проверьте её и отправьте.",
   "The title could not be saved": "Не удалось сохранить заголовок",
-  "Try again from the project, or open a thread first.": "Повторите из проекта или сначала откройте чат.",
+  "Try again from the project, or open a thread first.":
+    "Повторите из проекта или сначала откройте чат.",
   "Update with rebase": "Обновить через rebase",
   "Loading people": "Загрузка пользователей",
   "Loading pull request": "Загрузка Pull Request",
@@ -93,9 +104,11 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Load more pull requests": "Загрузить ещё Pull Requests",
   "No projects in this workspace": "В этом workspace нет проектов",
   "Nothing under these filters": "По этим фильтрам ничего нет",
-  "Pull requests from every project in this workspace appear here.": "Здесь отображаются Pull Requests из всех проектов этого workspace.",
-  "Widen the state, involvement or project filter to see more.": "Расширьте фильтр состояния, участия или проекта, чтобы увидеть больше.",
-  "All": "Все",
+  "Pull requests from every project in this workspace appear here.":
+    "Здесь отображаются Pull Requests из всех проектов этого workspace.",
+  "Widen the state, involvement or project filter to see more.":
+    "Расширьте фильтр состояния, участия или проекта, чтобы увидеть больше.",
+  All: "Все",
   "Drafts only": "Только Draft",
   "Hide drafts": "Скрыть Draft",
   Host: "Хост",
@@ -157,7 +170,9 @@ export const RU_AUDIT_EXTRA_B: Readonly<Record<string, string>> = {
   "Pull request scope": "Область Pull Request",
   "Pull requests breadcrumb": "Навигация Pull Requests",
   Reviewing: "Требуют review",
-  "The latest request failed. Showing the last pull requests loaded.": "Последний запрос завершился ошибкой. Показаны последние успешно загруженные Pull Requests.",
+  "The latest request failed. Showing the last pull requests loaded.":
+    "Последний запрос завершился ошибкой. Показаны последние успешно загруженные Pull Requests.",
   "This host could not be read.": "Не удалось прочитать данные этого хоста.",
-  "Update your Piπot servers to browse pull requests.": "Обновите серверы Piπot для просмотра Pull Requests.",
+  "Update your Piπot servers to browse pull requests.":
+    "Обновите серверы Piπot для просмотра Pull Requests.",
 };

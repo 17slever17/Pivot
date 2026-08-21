@@ -6,13 +6,15 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Background activity profile": "Профиль фоновой активности",
   "Check provider versions": "Проверять версии провайдеров",
   "Code blocks, diffs, and file previews.": "Блоки кода, Diff и просмотр файлов.",
-  "Code blocks, diffs, file previews, and the terminal.": "Блоки кода, Diff, просмотр файлов и терминал.",
+  "Code blocks, diffs, file previews, and the terminal.":
+    "Блоки кода, Diff, просмотр файлов и терминал.",
   "Configure advanced background activity": "Настроить расширенную фоновую активность",
   "Configure background activity": "Настроить фоновую активность",
   "Confirm thread archiving": "Подтверждать архивацию чатов",
   "Confirm thread deletion": "Подтверждать удаление чатов",
   "Couldn’t restore theme settings": "Не удалось восстановить настройки темы",
-  "Creates worktree from latest matching branch on origin. Falls back to local branch if origin is unavailable.": "Создаёт worktree из последнего совпадающего branch на origin. Если origin недоступен, используется локальный branch.",
+  "Creates worktree from latest matching branch on origin. Falls back to local branch if origin is unavailable.":
+    "Создаёт worktree из последнего совпадающего branch на origin. Если origin недоступен, используется локальный branch.",
   "Decrease active host power interval": "Уменьшить интервал проверки питания активного хоста",
   "Increase active host power interval": "Увеличить интервал проверки питания активного хоста",
   "Decrease Git fetch interval": "Уменьшить интервал Git fetch",
@@ -29,12 +31,14 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Host power monitor": "Монитор питания хоста",
   "Idle host monitor": "Монитор неактивного хоста",
   "Idle host power interval in seconds": "Интервал проверки питания неактивного хоста в секундах",
-  "Leave empty to use ~/ when the Add Project browser opens.": "Оставьте пустым, чтобы при добавлении проекта использовалась папка ~/.",
+  "Leave empty to use ~/ when the Add Project browser opens.":
+    "Оставьте пустым, чтобы при добавлении проекта использовалась папка ~/.",
   "Monospace font": "Моноширинный шрифт",
   "New thread mode": "Режим нового чата",
   "New worktrees start from origin": "Новые worktree создаются от origin",
   "Project Grouping": "Группировка проектов",
-  "Render text with thinner grayscale anti-aliasing when supported.": "Использовать более тонкое grayscale-сглаживание текста, если оно поддерживается.",
+  "Render text with thinner grayscale anti-aliasing when supported.":
+    "Использовать более тонкое grayscale-сглаживание текста, если оно поддерживается.",
   "Restore default settings?": "Восстановить настройки по умолчанию?",
   "Shared background policy": "Общая политика фоновой активности",
   "Shared policy": "Общая политика",
@@ -42,14 +46,17 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Start new worktrees from origin by default": "По умолчанию создавать новые worktree от origin",
   "Stream token by token": "Поток по одному токену",
   "System monospace": "Системный моноширинный",
-  "Terminal output is independent from this setting.": "Вывод терминала не зависит от этой настройки.",
+  "Terminal output is independent from this setting.":
+    "Вывод терминала не зависит от этой настройки.",
   Theme: "Тема",
   "Theme mix": "Комбинация темы",
   "Timestamp format": "Формат времени",
   "Turn on token-by-token output?": "Включить вывод токен за токеном?",
   "Visible threads": "Видимые чаты",
-  "Wrap code, tables, diffs, and file previews": "Переносить строки в коде, таблицах, Diff и просмотре файлов",
-  "This legacy mode is slower and makes long responses harder to follow.": "Этот legacy-режим медленнее и усложняет чтение длинных ответов.",
+  "Wrap code, tables, diffs, and file previews":
+    "Переносить строки в коде, таблицах, Diff и просмотре файлов",
+  "This legacy mode is slower and makes long responses harder to follow.":
+    "Этот legacy-режим медленнее и усложняет чтение длинных ответов.",
 
   Background: "Фон",
   "Choose a color": "Выберите цвет",
@@ -182,7 +189,8 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Update command could not start.": "Не удалось запустить команду обновления.",
   "Checking provider status": "Проверка состояния провайдера",
   "CLI not detected on PATH.": "CLI не найден в PATH.",
-  "Installed and ready, but authentication could not be verified.": "Установлен и готов, но авторизацию не удалось проверить.",
+  "Installed and ready, but authentication could not be verified.":
+    "Установлен и готов, но авторизацию не удалось проверить.",
   "Needs attention": "Требует внимания",
   "Not found": "Не найден",
   "Provider startup checks failed.": "Проверки провайдера при запуске завершились ошибкой.",
@@ -190,7 +198,8 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Installed but disabled.": "Установлен, но отключён.",
   "Waiting for server…": "Ожидание сервера…",
 
-  "Add a project from the sidebar to configure project settings.": "Добавьте проект на боковой панели, чтобы настроить его.",
+  "Add a project from the sidebar to configure project settings.":
+    "Добавьте проект на боковой панели, чтобы настроить его.",
   "Another script change is still saving.": "Предыдущее изменение скрипта всё ещё сохраняется.",
   Checkout: "Checkout",
   "Choose project icon file": "Выберите файл значка проекта",
@@ -224,7 +233,8 @@ export const RU_AUDIT_EXTRA_C: Readonly<Record<string, string>> = {
   "Search image files": "Поиск изображений",
   "Select icon": "Выбрать значок",
 
-  "Use variables with !, &&, ||, and parentheses.": "Используйте переменные с !, &&, || и скобками.",
+  "Use variables with !, &&, ||, and parentheses.":
+    "Используйте переменные с !, &&, || и скобками.",
   "Cancel new keybinding": "Отменить новое сочетание",
   "Negate group": "Инвертировать группу",
   "Remove condition": "Удалить условие",

@@ -7,7 +7,8 @@ export const RU_AUDIT_EXTRA_E: Readonly<Record<string, string>> = {
   "Copy full trace ID": "Копировать полный ID трассировки",
   "Could not confirm signal": "Не удалось подтвердить отправку сигнала",
   CPU: "CPU",
-  "In-memory process samples retained by the server. This resets when the server restarts.": "Сэмплы процессов хранятся сервером в памяти и очищаются при перезапуске сервера.",
+  "In-memory process samples retained by the server. This resets when the server restarts.":
+    "Сэмплы процессов хранятся сервером в памяти и очищаются при перезапуске сервера.",
   Kill: "Завершить",
   Level: "Уровень",
   "Loading failure groups...": "Загрузка групп ошибок...",
@@ -22,7 +23,8 @@ export const RU_AUDIT_EXTRA_E: Readonly<Record<string, string>> = {
   "No environment is selected.": "Окружение не выбрано.",
   "No failed spans found.": "Ошибочные spans не найдены.",
   "No live descendant processes found.": "Активные дочерние процессы не найдены.",
-  "No process resource samples found for this window.": "Сэмплы ресурсов процессов за этот интервал не найдены.",
+  "No process resource samples found for this window.":
+    "Сэмплы ресурсов процессов за этот интервал не найдены.",
   "No repeated failures found.": "Повторяющиеся ошибки не найдены.",
   "No spans found.": "Spans не найдены.",
   "No trace records": "Записей трассировки нет",
@@ -46,7 +48,8 @@ export const RU_AUDIT_EXTRA_E: Readonly<Record<string, string>> = {
   Trace: "Трассировка",
   "Unable to open logs folder.": "Не удалось открыть папку логов.",
   "All I/O bytes": "Все байты I/O",
-  "Available when this page runs inside desktop app.": "Доступно, когда страница открыта в desktop-приложении.",
+  "Available when this page runs inside desktop app.":
+    "Доступно, когда страница открыта в desktop-приложении.",
   "Backend child": "Дочерний backend",
   "Could not restart resource monitor": "Не удалось перезапустить монитор ресурсов",
   "Electron main": "Основной Electron",
@@ -70,11 +73,14 @@ export const RU_AUDIT_EXTRA_E: Readonly<Record<string, string>> = {
   "Waiting for sample": "Ожидание сэмпла",
   "Write Total": "Всего записано",
   "Write/s": "Запись/с",
-  "This process is not a child of the Piπot server and cannot be signalled from diagnostics.": "Этот процесс не является дочерним процессом сервера Piπot и не может получить сигнал из диагностики.",
-  "CPU is cumulative process CPU time; resident memory is the current working set.": "CPU — накопленное процессорное время процесса; резидентная память — текущий working set.",
+  "This process is not a child of the Piπot server and cannot be signalled from diagnostics.":
+    "Этот процесс не является дочерним процессом сервера Piπot и не может получить сигнал из диагностики.",
+  "CPU is cumulative process CPU time; resident memory is the current working set.":
+    "CPU — накопленное процессорное время процесса; резидентная память — текущий working set.",
 
   "This install is using the correct architecture.": "Установка использует правильную архитектуру.",
-  "This Intel build is running on Apple Silicon through Rosetta. Install the Apple Silicon build for better performance and battery life.": "Intel-сборка работает на Apple Silicon через Rosetta. Установите сборку для Apple Silicon для лучшей производительности и автономности.",
+  "This Intel build is running on Apple Silicon through Rosetta. Install the Apple Silicon build for better performance and battery life.":
+    "Intel-сборка работает на Apple Silicon через Rosetta. Установите сборку для Apple Silicon для лучшей производительности и автономности.",
   "This Apple Silicon build is running natively.": "Сборка для Apple Silicon работает нативно.",
   "Up to date": "Обновлений нет",
   "Unable to open release notes": "Не удалось открыть примечания к релизу",
@@ -89,11 +95,13 @@ export const RU_AUDIT_EXTRA_E: Readonly<Record<string, string>> = {
   "Restart Piπot to finish updating.": "Перезапустите Piπot, чтобы завершить обновление.",
 
   "Keybindings updated": "Горячие клавиши обновлены",
-  "Keybindings configuration reloaded successfully.": "Конфигурация горячих клавиш успешно перезагружена.",
+  "Keybindings configuration reloaded successfully.":
+    "Конфигурация горячих клавиш успешно перезагружена.",
   "Invalid keybindings configuration": "Некорректная конфигурация горячих клавиш",
   "Unknown error opening file.": "Неизвестная ошибка при открытии файла.",
   "No additional error details are available.": "Дополнительные сведения об ошибке отсутствуют.",
-  "Open Piπot in the desktop app to use in-app preview.": "Откройте Piπot в desktop-приложении, чтобы использовать встроенный предпросмотр.",
+  "Open Piπot in the desktop app to use in-app preview.":
+    "Откройте Piπot в desktop-приложении, чтобы использовать встроенный предпросмотр.",
   "Preview is desktop-only.": "Предпросмотр доступен только в desktop-приложении.",
   "Usage breadcrumb": "Навигация использования",
   "Settings breadcrumb": "Навигация настроек",

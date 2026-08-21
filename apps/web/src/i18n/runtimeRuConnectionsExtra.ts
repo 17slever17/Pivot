@@ -1,16 +1,21 @@
 export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "View environment": "Просмотр окружения",
-  "Read threads, status, diffs, and configuration.": "Просматривать чаты, состояние, Diff и конфигурацию.",
+  "Read threads, status, diffs, and configuration.":
+    "Просматривать чаты, состояние, Diff и конфигурацию.",
   "Operate tasks": "Управление задачами",
-  "Start tasks and perform changes in the environment.": "Запускать задачи и вносить изменения в окружении.",
+  "Start tasks and perform changes in the environment.":
+    "Запускать задачи и вносить изменения в окружении.",
   "Use terminals": "Использование терминалов",
-  "Create terminals and send input to running shells.": "Создавать терминалы и отправлять ввод запущенным shell.",
+  "Create terminals and send input to running shells.":
+    "Создавать терминалы и отправлять ввод запущенным shell.",
   "Write reviews": "Запись review",
   "Create comments while reviewing changes.": "Создавать комментарии во время review изменений.",
   "View access": "Просмотр доступа",
-  "Inspect pairing links and authorized clients.": "Просматривать ссылки подключения и авторизованных клиентов.",
+  "Inspect pairing links and authorized clients.":
+    "Просматривать ссылки подключения и авторизованных клиентов.",
   "Manage access": "Управление доступом",
-  "Issue and revoke credentials for other clients.": "Выдавать и отзывать учётные данные других клиентов.",
+  "Issue and revoke credentials for other clients.":
+    "Выдавать и отзывать учётные данные других клиентов.",
   "View relay": "Просмотр relay",
   "Inspect managed relay connectivity.": "Просматривать состояние managed relay-подключения.",
   "Manage relay": "Управление relay",
@@ -101,16 +106,21 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "At least one permission is required.": "Необходимо выбрать хотя бы одно разрешение.",
   "View only": "Только просмотр",
   "View and operate": "Просмотр и управление",
-  "Administrative": "Административный",
-  "Can inspect this environment but cannot make changes.": "Можно просматривать это окружение, но нельзя вносить изменения.",
-  "Can run tasks and change files in this environment.": "Можно запускать задачи и изменять файлы в этом окружении.",
-  "Can manage pairing links and authorized clients.": "Можно управлять ссылками подключения и авторизованными клиентами.",
+  Administrative: "Административный",
+  "Can inspect this environment but cannot make changes.":
+    "Можно просматривать это окружение, но нельзя вносить изменения.",
+  "Can run tasks and change files in this environment.":
+    "Можно запускать задачи и изменять файлы в этом окружении.",
+  "Can manage pairing links and authorized clients.":
+    "Можно управлять ссылками подключения и авторизованными клиентами.",
 
   "Network access": "Сетевой доступ",
   "Enable network access?": "Включить сетевой доступ?",
   "Disable network access?": "Отключить сетевой доступ?",
-  "This will make the local backend reachable from other devices on your network.": "Локальный backend станет доступен другим устройствам в вашей сети.",
-  "This will stop accepting network connections to the local backend.": "Локальный backend перестанет принимать сетевые подключения.",
+  "This will make the local backend reachable from other devices on your network.":
+    "Локальный backend станет доступен другим устройствам в вашей сети.",
+  "This will stop accepting network connections to the local backend.":
+    "Локальный backend перестанет принимать сетевые подключения.",
   "Enable access": "Включить доступ",
   "Disable access": "Отключить доступ",
   "Enabling network access…": "Включение сетевого доступа…",
@@ -166,8 +176,10 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "WSL backend is running": "Backend WSL запущен",
   "WSL backend is stopped": "Backend WSL остановлен",
   "Windows and WSL backends are running": "Backend Windows и WSL запущены",
-  "Projects opened in WSL stay on the Linux filesystem.": "Проекты, открытые в WSL, остаются в файловой системе Linux.",
-  "Windows projects continue to use the Windows backend.": "Windows-проекты продолжают использовать backend Windows.",
+  "Projects opened in WSL stay on the Linux filesystem.":
+    "Проекты, открытые в WSL, остаются в файловой системе Linux.",
+  "Windows projects continue to use the Windows backend.":
+    "Windows-проекты продолжают использовать backend Windows.",
 
   "SSH environment": "SSH-окружение",
   "SSH environments": "SSH-окружения",
@@ -201,7 +213,8 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "Pairing code": "Код подключения",
   "Pairing URL": "URL подключения",
   "Paste pairing URL": "Вставьте URL подключения",
-  "Paste a pairing URL or enter host and code manually.": "Вставьте URL подключения или укажите адрес и код вручную.",
+  "Paste a pairing URL or enter host and code manually.":
+    "Вставьте URL подключения или укажите адрес и код вручную.",
   "Connect remote environment": "Подключить удалённое окружение",
   "Connecting remote environment…": "Подключение удалённого окружения…",
   "Remote environment connected": "Удалённое окружение подключено",
@@ -214,7 +227,8 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "Could not save environment": "Не удалось сохранить окружение",
   "Remove saved environment": "Удалить сохранённое окружение",
   "Are you sure you want to remove this environment?": "Удалить это окружение?",
-  "This removes the saved connection from this device. It does not delete files or stop the remote server.": "Будет удалено только сохранённое подключение на этом устройстве. Файлы и удалённый сервер не затрагиваются.",
+  "This removes the saved connection from this device. It does not delete files or stop the remote server.":
+    "Будет удалено только сохранённое подключение на этом устройстве. Файлы и удалённый сервер не затрагиваются.",
   "Environment disconnected": "Окружение отключено",
   "Reconnect environment": "Переподключить окружение",
   "Environment reconnecting…": "Переподключение окружения…",
@@ -242,7 +256,7 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "Environment added": "Окружение добавлено",
   "You appear to be offline.": "Похоже, нет подключения к сети.",
 
-  "Access": "Доступ",
+  Access: "Доступ",
   "Pairing & access": "Подключение и доступ",
   "Client access": "Доступ клиентов",
   "Manage authorized clients": "Управление авторизованными клиентами",
@@ -256,7 +270,8 @@ export const RU_CONNECTIONS_EXTRA: Readonly<Record<string, string>> = {
   "Session permissions": "Разрешения сессии",
   "Access is managed by the environment host.": "Доступ управляется хостом окружения.",
   "Access management unavailable": "Управление доступом недоступно",
-  "This session does not have permission to manage access.": "У этой сессии нет разрешения на управление доступом.",
+  "This session does not have permission to manage access.":
+    "У этой сессии нет разрешения на управление доступом.",
   "Activity publishing": "Публикация активности",
   "Publish activity": "Публиковать активность",
   "Publish agent activity to T3 Connect": "Публиковать активность агента в T3 Connect",

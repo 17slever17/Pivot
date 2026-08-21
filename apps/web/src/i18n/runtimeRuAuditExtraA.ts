@@ -1,15 +1,21 @@
 export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Unlock viewport aspect ratio": "Разблокировать соотношение сторон",
   "Resize browser viewport from bottom edge": "Изменить размер области браузера за нижний край",
-  "Resize browser viewport from bottom-left corner": "Изменить размер области браузера за левый нижний угол",
-  "Resize browser viewport from bottom-right corner": "Изменить размер области браузера за правый нижний угол",
+  "Resize browser viewport from bottom-left corner":
+    "Изменить размер области браузера за левый нижний угол",
+  "Resize browser viewport from bottom-right corner":
+    "Изменить размер области браузера за правый нижний угол",
   "Resize browser viewport from left edge": "Изменить размер области браузера за левый край",
   "Resize browser viewport from right edge": "Изменить размер области браузера за правый край",
-  "This environment port needs the planned authenticated preview gateway; its server address is not directly private-network reachable.": "Для этого порта окружения нужен защищённый preview gateway; адрес сервера недоступен напрямую через приватную сеть.",
+  "This environment port needs the planned authenticated preview gateway; its server address is not directly private-network reachable.":
+    "Для этого порта окружения нужен защищённый preview gateway; адрес сервера недоступен напрямую через приватную сеть.",
   "The environment returned an invalid asset URL.": "Окружение вернуло некорректный URL ресурса.",
-  "Could not read persisted client settings.": "Не удалось прочитать сохранённые настройки клиента.",
-  "Could not clear persisted thread sidebar width.": "Не удалось удалить сохранённую ширину боковой панели чатов.",
-  "Could not read persisted thread sidebar width.": "Не удалось прочитать сохранённую ширину боковой панели чатов.",
+  "Could not read persisted client settings.":
+    "Не удалось прочитать сохранённые настройки клиента.",
+  "Could not clear persisted thread sidebar width.":
+    "Не удалось удалить сохранённую ширину боковой панели чатов.",
+  "Could not read persisted thread sidebar width.":
+    "Не удалось прочитать сохранённую ширину боковой панели чатов.",
   "Failed to copy branch name": "Не удалось скопировать имя branch",
   "Failed to create and switch ref.": "Не удалось создать и переключить ref.",
   "Failed to switch ref.": "Не удалось переключить ref.",
@@ -26,7 +32,8 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Refreshing diff": "Обновление Diff",
   "Refreshing diff…": "Обновление Diff…",
   "Remote only": "Только remote",
-  "Branch has diverged from upstream. Rebase/merge first.": "Branch разошёлся с upstream. Сначала выполните rebase/merge.",
+  "Branch has diverged from upstream. Rebase/merge first.":
+    "Branch разошёлся с upstream. Сначала выполните rebase/merge.",
   "Branch is up to date. No action needed.": "Branch актуален. Действия не требуются.",
   "Commit & push": "Commit & push",
   "Commit & push to default ref?": "Выполнить commit & push в ref по умолчанию?",
@@ -39,22 +46,27 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Push to default ref?": "Выполнить push в ref по умолчанию?",
   "Pushing...": "Push...",
   "Sync ref": "Синхронизировать ref",
-  "Branch is behind upstream. Pull/rebase before pushing.": "Branch отстаёт от upstream. Выполните pull/rebase перед push.",
+  "Branch is behind upstream. Pull/rebase before pushing.":
+    "Branch отстаёт от upstream. Выполните pull/rebase перед push.",
   "Commit is currently unavailable.": "Commit сейчас недоступен.",
-  "Commit or stash local changes before pushing.": "Сделайте commit или stash локальных изменений перед push.",
-  "Detached HEAD: checkout a refName before pushing.": "Detached HEAD: выполните checkout ref перед push.",
+  "Commit or stash local changes before pushing.":
+    "Сделайте commit или stash локальных изменений перед push.",
+  "Detached HEAD: checkout a refName before pushing.":
+    "Detached HEAD: выполните checkout ref перед push.",
   "Editor opening is unavailable.": "Открытие редактора недоступно.",
   "Link opening is unavailable.": "Открытие ссылок недоступно.",
   Pulled: "Pull выполнен",
   "Pulling...": "Pull...",
   "Push is currently unavailable.": "Push сейчас недоступен.",
-  "Review and confirm your commit. Leave the message blank to auto-generate one.": "Проверьте и подтвердите commit. Оставьте сообщение пустым для автоматической генерации.",
+  "Review and confirm your commit. Leave the message blank to auto-generate one.":
+    "Проверьте и подтвердите commit. Оставьте сообщение пустым для автоматической генерации.",
   "Run action on default refName?": "Выполнить действие на ref по умолчанию?",
   "Running git action...": "Выполнение Git-действия...",
   "This action is currently unavailable.": "Это действие сейчас недоступно.",
   "Waiting for Git...": "Ожидание Git...",
   "Warning: default refName": "Предупреждение: ref по умолчанию",
-  "Worktree is clean. Make changes before committing.": "Worktree чист. Внесите изменения перед commit.",
+  "Worktree is clean. Make changes before committing.":
+    "Worktree чист. Внесите изменения перед commit.",
 
   "Collapse all folders": "Свернуть все папки",
   "Expand all folders": "Развернуть все папки",
@@ -66,7 +78,8 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Built-in": "Встроенные",
   "An error occurred while copying.": "Произошла ошибка при копировании.",
   "An error occurred while saving.": "Произошла ошибка при сохранении.",
-  "This thread does not have a workspace path to save into.": "У этого чата нет пути workspace для сохранения.",
+  "This thread does not have a workspace path to save into.":
+    "У этого чата нет пути workspace для сохранения.",
   "Resize review findings": "Изменить размер панели замечаний review",
 
   "Annotate elements, regions, and drawings": "Аннотировать элементы, области и рисунки",
@@ -112,18 +125,27 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Authentication failed.": "Авторизация завершилась ошибкой.",
   "Backend paired": "Backend подключён",
   "Connecting to this backend.": "Подключение к этому backend.",
-  "Desktop-managed pairing and one-time pairing tokens are both accepted for this environment.": "Это окружение принимает как desktop-managed подключение, так и одноразовые токены подключения.",
-  "Enter a pairing token to start a session with this environment.": "Введите токен подключения, чтобы начать сессию с этим окружением.",
+  "Desktop-managed pairing and one-time pairing tokens are both accepted for this environment.":
+    "Это окружение принимает как desktop-managed подключение, так и одноразовые токены подключения.",
+  "Enter a pairing token to start a session with this environment.":
+    "Введите токен подключения, чтобы начать сессию с этим окружением.",
   "Pairing backend": "Подключение backend",
   "Paste a one-time token or pairing secret": "Вставьте одноразовый токен или pairing secret",
-  "This environment accepts one-time pairing tokens. Pairing links can open this page directly, or you can paste the token here.": "Это окружение принимает одноразовые токены подключения. Ссылка подключения может открыть эту страницу напрямую, либо токен можно вставить здесь.",
-  "This environment expects a trusted pairing credential before the app can connect.": "Перед подключением приложению требуются доверенные учётные данные pairing.",
-  "This environment is desktop-managed. Open it from the desktop app or paste a bootstrap credential if one was issued explicitly.": "Это окружение управляется desktop-приложением. Откройте его из desktop-приложения или вставьте bootstrap credential, если он был явно выдан.",
-  "This one-time pairing token was already submitted. Request a new pairing link.": "Этот одноразовый токен уже использован. Запросите новую ссылку подключения.",
-  "This pairing link is missing its backend host or token.": "В ссылке подключения отсутствует адрес backend или токен.",
+  "This environment accepts one-time pairing tokens. Pairing links can open this page directly, or you can paste the token here.":
+    "Это окружение принимает одноразовые токены подключения. Ссылка подключения может открыть эту страницу напрямую, либо токен можно вставить здесь.",
+  "This environment expects a trusted pairing credential before the app can connect.":
+    "Перед подключением приложению требуются доверенные учётные данные pairing.",
+  "This environment is desktop-managed. Open it from the desktop app or paste a bootstrap credential if one was issued explicitly.":
+    "Это окружение управляется desktop-приложением. Откройте его из desktop-приложения или вставьте bootstrap credential, если он был явно выдан.",
+  "This one-time pairing token was already submitted. Request a new pairing link.":
+    "Этот одноразовый токен уже использован. Запросите новую ссылку подключения.",
+  "This pairing link is missing its backend host or token.":
+    "В ссылке подключения отсутствует адрес backend или токен.",
   "Enter a pairing token to continue.": "Введите токен подключения, чтобы продолжить.",
-  "Invalid pairing token. Check the token and try again.": "Некорректный токен подключения. Проверьте его и повторите попытку.",
-  "Timed out waiting for authenticated session after bootstrap.": "Истекло время ожидания авторизованной сессии после bootstrap.",
+  "Invalid pairing token. Check the token and try again.":
+    "Некорректный токен подключения. Проверьте его и повторите попытку.",
+  "Timed out waiting for authenticated session after bootstrap.":
+    "Истекло время ожидания авторизованной сессии после bootstrap.",
 
   "Piπot splash screen": "Заставка Piπot",
   "Failed to clear terminal": "Не удалось очистить терминал",
@@ -142,21 +164,25 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Search project contents…": "Поиск по проекту…",
   "Type to search across your project.": "Введите текст для поиска по проекту.",
   "Use regular expression": "Использовать регулярное выражение",
-  "Failed to parse patch. Showing raw patch.": "Не удалось разобрать patch. Показан исходный patch.",
-  "Unsupported diff format. Showing raw patch.": "Формат Diff не поддерживается. Показан исходный patch.",
+  "Failed to parse patch. Showing raw patch.":
+    "Не удалось разобрать patch. Показан исходный patch.",
+  "Unsupported diff format. Showing raw patch.":
+    "Формат Diff не поддерживается. Показан исходный patch.",
   "Unable to open pull request link.": "Не удалось открыть ссылку Pull Request.",
   "Local API not found": "Local API не найден",
   "Unable to open link.": "Не удалось открыть ссылку.",
   "Implement plan": "Реализовать план",
   "Plan preview unavailable.": "Предпросмотр плана недоступен.",
   "File comment": "Комментарий к файлу",
-  "Blocking": "Блокирующее",
+  Blocking: "Блокирующее",
   "Should fix": "Желательно исправить",
   "This agent": "Этот агент",
   "Cannot archive a running thread.": "Нельзя архивировать выполняющийся чат.",
   "Delete the worktree too?": "Удалить также worktree?",
-  "This thread is waiting on you. Respond to the pending request before snoozing it.": "Чат ожидает вашего ответа. Ответьте на запрос перед переносом в отложенные.",
-  "This thread still needs attention. Resolve or interrupt it first, then try again.": "Этот чат всё ещё требует внимания. Сначала завершите или прервите его, затем повторите.",
+  "This thread is waiting on you. Respond to the pending request before snoozing it.":
+    "Чат ожидает вашего ответа. Ответьте на запрос перед переносом в отложенные.",
+  "This thread still needs attention. Resolve or interrupt it first, then try again.":
+    "Этот чат всё ещё требует внимания. Сначала завершите или прервите его, затем повторите.",
   "Thread deleted, but worktree removal failed": "Чат удалён, но удалить worktree не удалось",
   "Unknown error removing worktree.": "Неизвестная ошибка при удалении worktree.",
   "Loading messages...": "Загрузка сообщений...",
@@ -164,5 +190,6 @@ export const RU_AUDIT_EXTRA_A: Readonly<Record<string, string>> = {
   "Connected for 3m": "Подключено 3 мин",
   "Expires in a moment": "Истекает через мгновение",
   Soon: "Скоро",
-  "Version mismatch. Try syncing the client and server to the same Piπot version.": "Версии не совпадают. Обновите клиент и сервер до одной версии Piπot.",
+  "Version mismatch. Try syncing the client and server to the same Piπot version.":
+    "Версии не совпадают. Обновите клиент и сервер до одной версии Piπot.",
 };

@@ -23,21 +23,27 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Expired terminal context": "Контекст терминала устарел",
   "Expired terminal contexts": "Контексты терминала устарели",
   "Failed to read image.": "Не удалось прочитать изображение.",
-  "Re-add it if you want that terminal output included.": "Добавьте его заново, если хотите включить этот вывод терминала.",
-  "Remove it or re-add it to include terminal output.": "Удалите его или добавьте заново, чтобы включить вывод терминала.",
+  "Re-add it if you want that terminal output included.":
+    "Добавьте его заново, если хотите включить этот вывод терминала.",
+  "Remove it or re-add it to include terminal output.":
+    "Удалите его или добавьте заново, чтобы включить вывод терминала.",
   "Start a new chat to change models": "Начните новый чат, чтобы сменить модель",
-  "This provider does not allow switching models after a conversation has started.": "Этот провайдер не позволяет менять модель после начала разговора.",
+  "This provider does not allow switching models after a conversation has started.":
+    "Этот провайдер не позволяет менять модель после начала разговора.",
   "An error occurred while creating the new thread.": "Произошла ошибка при создании нового чата.",
   "Branch changed — was": "Branch изменён — был",
-  "Checkout switched, but the thread could not be updated": "Checkout переключён, но чат обновить не удалось",
+  "Checkout switched, but the thread could not be updated":
+    "Checkout переключён, но чат обновить не удалось",
   "Could not delete action": "Не удалось удалить действие",
   "Could not reconnect environment": "Не удалось переподключить окружение",
   "Could not start implementation thread": "Не удалось запустить чат реализации",
   "Could not update": "Не удалось обновить",
   "Dismiss branch change notice": "Закрыть уведомление об изменении branch",
-  "Dismiss to clear the Woke indicator, or send a message to keep going.": "Закройте уведомление, чтобы убрать индикатор пробуждения, или отправьте сообщение, чтобы продолжить.",
+  "Dismiss to clear the Woke indicator, or send a message to keep going.":
+    "Закройте уведомление, чтобы убрать индикатор пробуждения, или отправьте сообщение, чтобы продолжить.",
   "Dismiss update notice": "Закрыть уведомление об обновлении",
-  "Failed to clean up implementation thread after start failure.": "Не удалось очистить чат реализации после ошибки запуска.",
+  "Failed to clean up implementation thread after start failure.":
+    "Не удалось очистить чат реализации после ошибки запуска.",
   "Failed to connect": "Не удалось подключиться",
   "Failed to interrupt the current turn.": "Не удалось прервать текущий ход.",
   "Failed to reconnect.": "Не удалось переподключиться.",
@@ -48,40 +54,61 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Failed to stop background work.": "Не удалось остановить фоновую работу.",
   "Failed to submit approval decision.": "Не удалось отправить решение подтверждения.",
   "Failed to submit user input.": "Не удалось отправить пользовательский ввод.",
-  "Interrupt the current turn before reverting checkpoints.": "Прервите текущий ход перед откатом checkpoint.",
-  "It may be finishing an update. One moment.": "Возможно, завершается обновление. Подождите немного.",
-  "No active project is available for this pull request.": "Для этого Pull Request нет активного проекта.",
-  "Reconnect this environment before sending messages or running actions.": "Переподключите окружение перед отправкой сообщений или запуском действий.",
-  "Reconnecting to the environment. Try again once it is connected.": "Идёт переподключение к окружению. Повторите после подключения.",
-  "Remove attachments and contexts to queue a follow-up while a turn is running.": "Удалите вложения и контексты, чтобы поставить следующее сообщение в очередь во время текущего хода.",
+  "Interrupt the current turn before reverting checkpoints.":
+    "Прервите текущий ход перед откатом checkpoint.",
+  "It may be finishing an update. One moment.":
+    "Возможно, завершается обновление. Подождите немного.",
+  "No active project is available for this pull request.":
+    "Для этого Pull Request нет активного проекта.",
+  "Reconnect this environment before sending messages or running actions.":
+    "Переподключите окружение перед отправкой сообщений или запуском действий.",
+  "Reconnecting to the environment. Try again once it is connected.":
+    "Идёт переподключение к окружению. Повторите после подключения.",
+  "Remove attachments and contexts to queue a follow-up while a turn is running.":
+    "Удалите вложения и контексты, чтобы поставить следующее сообщение в очередь во время текущего хода.",
   "Restoring...": "Восстановление...",
-  "Select a base branch before sending in New worktree mode.": "Выберите базовый branch перед отправкой в режиме New worktree.",
-  "Sending a message moves it back to Active in the sidebar.": "Отправка сообщения вернёт чат в «Активные» на боковой панели.",
-  "Sending a message wakes it and moves it back to Active in the sidebar.": "Отправка сообщения разбудит чат и вернёт его в «Активные».",
-  "Sending is unavailable right now. Finish the current action, then send.": "Сейчас отправка недоступна. Завершите текущее действие и повторите.",
-  "This draft no longer points to an available project.": "Этот черновик больше не связан с доступным проектом.",
+  "Select a base branch before sending in New worktree mode.":
+    "Выберите базовый branch перед отправкой в режиме New worktree.",
+  "Sending a message moves it back to Active in the sidebar.":
+    "Отправка сообщения вернёт чат в «Активные» на боковой панели.",
+  "Sending a message wakes it and moves it back to Active in the sidebar.":
+    "Отправка сообщения разбудит чат и вернёт его в «Активные».",
+  "Sending is unavailable right now. Finish the current action, then send.":
+    "Сейчас отправка недоступна. Завершите текущее действие и повторите.",
+  "This draft no longer points to an available project.":
+    "Этот черновик больше не связан с доступным проектом.",
   "This thread woke from snooze": "Этот чат вышел из отложенных",
-  "This will discard newer messages and turn diffs in this thread.": "Новые сообщения и Diff ходов в этом чате будут удалены.",
+  "This will discard newer messages and turn diffs in this thread.":
+    "Новые сообщения и Diff ходов в этом чате будут удалены.",
   "Un-settling...": "Возврат из завершённых...",
   "Waking...": "Пробуждение...",
 
-  "Add feedback to refine the plan, or leave this blank to implement it": "Добавьте замечания для уточнения плана или оставьте поле пустым, чтобы начать реализацию",
-  "Attach images after answering plan questions.": "Прикрепляйте изображения после ответа на вопросы плана.",
+  "Add feedback to refine the plan, or leave this blank to implement it":
+    "Добавьте замечания для уточнения плана или оставьте поле пустым, чтобы начать реализацию",
+  "Attach images after answering plan questions.":
+    "Прикрепляйте изображения после ответа на вопросы плана.",
   Auto: "Авто",
-  "Browser storage is unavailable, so this stash is kept in memory only for this session.": "Хранилище браузера недоступно, поэтому stash сохранён только в памяти этой сессии.",
-  "Browser storage rejected the delete, so this prompt could reappear after a reload.": "Хранилище браузера отклонило удаление, поэтому prompt может снова появиться после перезагрузки.",
-  "Browser storage rejected the update, so this entry could still be there after a reload.": "Хранилище браузера отклонило обновление, поэтому запись может остаться после перезагрузки.",
-  "Browser storage rejected the write, so the composer was left as-is. Free up site data and try again.": "Хранилище браузера отклонило запись. Освободите данные сайта и повторите попытку.",
+  "Browser storage is unavailable, so this stash is kept in memory only for this session.":
+    "Хранилище браузера недоступно, поэтому stash сохранён только в памяти этой сессии.",
+  "Browser storage rejected the delete, so this prompt could reappear after a reload.":
+    "Хранилище браузера отклонило удаление, поэтому prompt может снова появиться после перезагрузки.",
+  "Browser storage rejected the update, so this entry could still be there after a reload.":
+    "Хранилище браузера отклонило обновление, поэтому запись может остаться после перезагрузки.",
+  "Browser storage rejected the write, so the composer was left as-is. Free up site data and try again.":
+    "Хранилище браузера отклонило запись. Освободите данные сайта и повторите попытку.",
   Build: "Build",
   "Could not stash this prompt": "Не удалось сохранить prompt в stash",
   "Default mode — click to enter plan mode": "Обычный режим — нажмите, чтобы перейти в Plan",
   "Draft attachment may not persist": "Вложение черновика может не сохраниться",
   "Expand composer": "Развернуть поле ввода",
-  "No skills found. Try / to browse provider commands.": "Навыки не найдены. Используйте / для просмотра команд провайдера.",
+  "No skills found. Try / to browse provider commands.":
+    "Навыки не найдены. Используйте / для просмотра команд провайдера.",
   "Oldest stashed prompt discarded": "Самый старый prompt из stash удалён",
   Plan: "Plan",
-  "Plan mode — click to return to normal build mode": "Режим Plan — нажмите, чтобы вернуться в обычный Build",
-  "Restored prompt may reappear in the stash": "Восстановленный prompt может снова появиться в stash",
+  "Plan mode — click to return to normal build mode":
+    "Режим Plan — нажмите, чтобы вернуться в обычный Build",
+  "Restored prompt may reappear in the stash":
+    "Восстановленный prompt может снова появиться в stash",
   "Send again once its thumbnail appears.": "Отправьте снова после появления миниатюры.",
   "Some images were not restored": "Некоторые изображения не восстановлены",
   "Stash entry may come back": "Запись stash может появиться снова",
@@ -91,7 +118,8 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Switch response model for this thread": "Сменить модель ответа для этого чата",
   "Switch this thread back to normal build mode": "Вернуть этот чат в обычный режим Build",
   "Switch this thread into plan mode": "Перевести этот чат в режим Plan",
-  "The prompt was stashed, but browser storage rejected its images. They will be missing if you reload.": "Prompt сохранён в stash, но браузер не сохранил изображения. После перезагрузки они исчезнут.",
+  "The prompt was stashed, but browser storage rejected its images. They will be missing if you reload.":
+    "Prompt сохранён в stash, но браузер не сохранил изображения. После перезагрузки они исчезнут.",
   "Searching workspace files...": "Поиск файлов workspace...",
   "Searching workspace skills...": "Поиск навыков workspace...",
   "Dismiss warning": "Закрыть предупреждение",
@@ -125,15 +153,18 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Available for Git repositories.": "Доступно для Git-репозиториев.",
   "Available from a thread.": "Доступно внутри чата.",
   "Available when a project is open.": "Доступно, когда открыт проект.",
-  "Browser previews are only available in the Piπot desktop app.": "Предпросмотр браузера доступен только в desktop-приложении Piπot.",
+  "Browser previews are only available in the Piπot desktop app.":
+    "Предпросмотр браузера доступен только в desktop-приложении Piπot.",
   "Close all": "Закрыть все",
   "Close others": "Закрыть остальные",
   "Close to the right": "Закрыть справа",
-  "Diff is only available for server threads in Git repositories.": "Diff доступен только для серверных чатов в Git-репозиториях.",
+  "Diff is only available for server threads in Git repositories.":
+    "Diff доступен только для серверных чатов в Git-репозиториях.",
   "Files are only available when a project is open.": "Файлы доступны только при открытом проекте.",
   "No pull request on this branch yet.": "В этом branch пока нет Pull Request.",
   "Only available in the desktop app.": "Доступно только в desktop-приложении.",
-  "Terminal surfaces are only available from a project thread.": "Терминал доступен только из чата проекта.",
+  "Terminal surfaces are only available from a project thread.":
+    "Терминал доступен только из чата проекта.",
 
   "Add action": "Добавить действие",
   "Add Action": "Добавить действие",
@@ -151,18 +182,23 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Failed to save action.": "Не удалось сохранить действие.",
   Lint: "Lint",
   "Name is required.": "Название обязательно.",
-  "Open preview automatically when this action runs": "Автоматически открывать предпросмотр при запуске этого действия",
+  "Open preview automatically when this action runs":
+    "Автоматически открывать предпросмотр при запуске этого действия",
   "Preview URL (optional)": "URL предпросмотра (необязательно)",
   "Run automatically on worktree creation": "Автоматически запускать при создании worktree",
   "Save action": "Сохранить действие",
   Test: "Тест",
 
   "Provider update failed.": "Обновление провайдера завершилось ошибкой.",
-  "This environment isn’t connected — try again once it reconnects.": "Окружение не подключено — повторите после переподключения.",
+  "This environment isn’t connected — try again once it reconnects.":
+    "Окружение не подключено — повторите после переподключения.",
   "Update timed out — try again.": "Время ожидания обновления истекло — повторите попытку.",
-  "Install the update now or review provider settings.": "Установите обновление сейчас или откройте настройки провайдера.",
-  "New sessions will use the updated provider.": "Новые сессии будут использовать обновлённый провайдер.",
-  "New sessions will use the updated providers.": "Новые сессии будут использовать обновлённые провайдеры.",
+  "Install the update now or review provider settings.":
+    "Установите обновление сейчас или откройте настройки провайдера.",
+  "New sessions will use the updated provider.":
+    "Новые сессии будут использовать обновлённый провайдер.",
+  "New sessions will use the updated providers.":
+    "Новые сессии будут использовать обновлённые провайдеры.",
   "Provider still needs an update": "Провайдер всё ещё требует обновления",
   "Provider updated": "Провайдер обновлён",
   "Provider updates failed": "Обновления провайдеров завершились ошибкой",

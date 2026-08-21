@@ -56,8 +56,15 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^Actions for (.+)$/, (name) => `Действия для ${name}`],
   [/^Edit when clause for (.+)$/, (name) => `Изменить условие для ${name}`],
   [/^What should we build in (.+)\?$/, (project) => `Что будем делать в ${project}?`],
-  [/^(\d+) omp config settings are available to edit\.$/, (count) => `Доступно ${count} настроек omp для редактирования.`],
-  [/^Archived (.+) · Created (.+)$/, (archived, created) => `Архивирован ${translateRelativeTime(archived)} · Создан ${translateRelativeTime(created)}`],
+  [
+    /^(\d+) omp config settings are available to edit\.$/,
+    (count) => `Доступно ${count} настроек omp для редактирования.`,
+  ],
+  [
+    /^Archived (.+) · Created (.+)$/,
+    (archived, created) =>
+      `Архивирован ${translateRelativeTime(archived)} · Создан ${translateRelativeTime(created)}`,
+  ],
   [/^Support for (.+) is coming soon\.$/, (name) => `Поддержка ${name} появится позже.`],
   [/^Not available on this server: (.+)$/, (hint) => `Недоступно на этом сервере: ${hint}`],
   [/^Could not verify (.+)\.$/, (name) => `Не удалось проверить ${name}.`],
@@ -66,7 +73,11 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^Waiting for (.+)'s configuration\.$/, (name) => `Ожидание конфигурации ${name}.`],
   [/^Available - (.+)$/, (detail) => `Доступно — ${detail}`],
   [/^Available — (.+)$/, (detail) => `Доступно — ${detail}`],
-  [/^Conflicts with (.+)\. The most recent matching binding wins when both conditions can apply\.$/, (binding) => `Конфликтует с ${binding}. Если подходят оба условия, используется более поздняя привязка.`],
+  [
+    /^Conflicts with (.+)\. The most recent matching binding wins when both conditions can apply\.$/,
+    (binding) =>
+      `Конфликтует с ${binding}. Если подходят оба условия, используется более поздняя привязка.`,
+  ],
   [/^Preview (.+)$/, (name) => `Предпросмотр ${name}`],
   [/^Remove attachment (.+)$/, (name) => `Удалить вложение ${name}`],
   [/^Open (.+) in editor$/, (name) => `Открыть ${name} в редакторе`],
@@ -75,27 +86,29 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+) selected$/, (count) => `Выбрано: ${count}`],
   [/^(\d+) files? changed$/, (count) => `Изменено файлов: ${count}`],
   [/^(\d+) comments?$/, (count) => `Комментариев: ${count}`],
-  [/^(\d+) commits?$/, (count) => `Commits: ${count}`],
+  [/^(\d+) commits?$/, (count) => `Коммитов: ${count}`],
   [/^Worked for (.+)$/, (duration) => `Работал ${duration}`],
   [/^Working for (.+)$/, (duration) => `Работает ${duration}`],
-  [/^(.+) is not authenticated on this server\. Sign in or configure credentials using (.+) tool on the server host to enable change request features\.$/, (name, tool) => `${name} не авторизован на этом сервере. Войдите или настройте учётные данные через ${tool} на хосте сервера, чтобы включить функции change request.`],
-  [/^(.+): show (\d+) scopes?$/, (label, count) => `${label}: показать scopes (${count})`],
-  [/^(\d+) scopes?$/, (count) => `${count} scopes`],
-  [/^(.+) · (.+)$/, (left, right) => {
-    const translatedLeft = STATIC_TRANSLATIONS[left] ?? left;
-    const translatedRight = STATIC_TRANSLATIONS[right] ?? right;
-    return translatedLeft === left && translatedRight === right
-      ? `${left} · ${right}`
-      : `${translatedLeft} · ${translatedRight}`;
-  }],
+  [
+    /^(.+) is not authenticated on this server\. Sign in or configure credentials using (.+) tool on the server host to enable change request features\.$/,
+    (name, tool) =>
+      `${name} не авторизован на этом сервере. Войдите или настройте учётные данные через ${tool} на хосте сервера, чтобы включить функции запросов на изменения.`,
+  ],
+  [/^(.+): show (\d+) scopes?$/, (label, count) => `${label}: показать области доступа (${count})`],
+  [/^(\d+) scopes?$/, (count) => `${count} областей доступа`],
+  [
+    /^(.+) · (.+)$/,
+    (left, right) => {
+      const translatedLeft = STATIC_TRANSLATIONS[left] ?? left;
+      const translatedRight = STATIC_TRANSLATIONS[right] ?? right;
+      return translatedLeft === left && translatedRight === right
+        ? `${left} · ${right}`
+        : `${translatedLeft} · ${translatedRight}`;
+    },
+  ],
 ];
 
-const TRANSLATED_ATTRIBUTES = [
-  "aria-label",
-  "placeholder",
-  "title",
-  "aria-description",
-] as const;
+const TRANSLATED_ATTRIBUTES = ["aria-label", "placeholder", "title", "aria-description"] as const;
 
 const NEVER_TRANSLATE_SELECTOR = [
   "pre",

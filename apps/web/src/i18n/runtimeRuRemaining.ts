@@ -1,9 +1,12 @@
 export const RU_REMAINING: Readonly<Record<string, string>> = {
-  "A role names a model for a specific job. The review agent uses the": "Роль назначает модель для конкретной задачи. Агент review использует",
+  "A role names a model for a specific job. The review agent uses the":
+    "Роль назначает модель для конкретной задачи. Агент review использует",
   "Cleared model roles": "Роли моделей очищены",
   "Could not load model roles": "Не удалось загрузить роли моделей",
-  "Every model your connected providers expose. Assign one to a role below.": "Все модели, доступные через подключённые провайдеры. Назначьте нужную модель роли ниже.",
-  "Models and roles apply to the global omp agent directory.": "Модели и роли применяются к глобальному каталогу агентов omp.",
+  "Every model your connected providers expose. Assign one to a role below.":
+    "Все модели, доступные через подключённые провайдеры. Назначьте нужную модель роли ниже.",
+  "Models and roles apply to the global omp agent directory.":
+    "Модели и роли применяются к глобальному каталогу агентов omp.",
   "New role name": "Название новой роли",
   "No models available — connect a provider.": "Нет доступных моделей — подключите провайдер.",
   "No models match the current search.": "Модели по текущему запросу не найдены.",
@@ -11,11 +14,14 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Saved model roles": "Сохранённые роли моделей",
   "Show fewer": "Показать меньше",
   Slug: "Slug",
-  "Edit the omp settings this project overrides.": "Изменить настройки omp, переопределённые этим проектом.",
-  "Manage the rules loaded for this project.": "Управлять правилами, загружаемыми для этого проекта.",
+  "Edit the omp settings this project overrides.":
+    "Изменить настройки omp, переопределённые этим проектом.",
+  "Manage the rules loaded for this project.":
+    "Управлять правилами, загружаемыми для этого проекта.",
   "Manage the skills this project can use.": "Управлять навыками, доступными этому проекту.",
   "Value is not valid JSON.": "Значение не является корректным JSON.",
-  "Effective: defaults <- global <- project <- overlays <- runtime": "Итог: defaults ← global ← project ← overlays ← runtime",
+  "Effective: defaults <- global <- project <- overlays <- runtime":
+    "Итог: defaults ← global ← project ← overlays ← runtime",
   "Enter a number.": "Введите число.",
   "Could not load omp settings": "Не удалось загрузить настройки omp",
   "New setting key": "Ключ новой настройки",
@@ -25,16 +31,23 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "omp reported no config settings.": "omp не сообщил о настройках конфигурации.",
   "Could not remove the project.": "Не удалось удалить проект.",
   "Remove project": "Удалить проект",
-  "This permanently clears conversation history for those threads.": "История разговоров в этих чатах будет удалена без возможности восстановления.",
-  "This removes only the project entries, not the files on disk.": "Удаляются только записи проекта; файлы на диске останутся.",
+  "This permanently clears conversation history for those threads.":
+    "История разговоров в этих чатах будет удалена без возможности восстановления.",
+  "This removes only the project entries, not the files on disk.":
+    "Удаляются только записи проекта; файлы на диске останутся.",
   "A rule that applies to every session.": "Правило, применяемое к каждой сессии.",
-  "A skill the agent can load when the task matches.": "Навык, который агент может загрузить для подходящей задачи.",
-  "Check that omp is installed on the server host.": "Проверьте, что omp установлен на хосте сервера.",
+  "A skill the agent can load when the task matches.":
+    "Навык, который агент может загрузить для подходящей задачи.",
+  "Check that omp is installed on the server host.":
+    "Проверьте, что omp установлен на хосте сервера.",
   "It may have been removed outside of the app.": "Возможно, элемент был удалён вне приложения.",
   "Item contents": "Содержимое элемента",
-  "Project and global skills coexist — a project skill is available in addition to the same-named global one.": "Навыки проекта и глобальные навыки сосуществуют: навык проекта доступен дополнительно к одноимённому глобальному.",
-  "Rules are loaded into every session and shape how the agent behaves.": "Правила загружаются в каждую сессию и определяют поведение агента.",
-  "Skills are invoked on demand when a task matches their description.": "Навыки вызываются по необходимости, когда задача соответствует их описанию.",
+  "Project and global skills coexist — a project skill is available in addition to the same-named global one.":
+    "Навыки проекта и глобальные навыки сосуществуют: навык проекта доступен дополнительно к одноимённому глобальному.",
+  "Rules are loaded into every session and shape how the agent behaves.":
+    "Правила загружаются в каждую сессию и определяют поведение агента.",
+  "Skills are invoked on demand when a task matches their description.":
+    "Навыки вызываются по необходимости, когда задача соответствует их описанию.",
   missing: "отсутствует",
   present: "есть",
   masked: "скрыто",
@@ -72,7 +85,8 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Update track change failed.": "Не удалось сменить канал обновлений.",
   "Download failed.": "Загрузка завершилась ошибкой.",
   "Install failed.": "Установка завершилась ошибкой.",
-  "Automatic updates are not available in this build.": "Автоматические обновления недоступны в этой сборке.",
+  "Automatic updates are not available in this build.":
+    "Автоматические обновления недоступны в этой сборке.",
 
   "Project settings": "Настройки проекта",
   "Project name": "Название проекта",
@@ -120,7 +134,8 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Edit theme": "Изменить тему",
   "Rename theme": "Переименовать тему",
   "Delete theme?": "Удалить тему?",
-  "This custom theme will be permanently deleted.": "Пользовательская тема будет удалена без возможности восстановления.",
+  "This custom theme will be permanently deleted.":
+    "Пользовательская тема будет удалена без возможности восстановления.",
   "Theme file": "Файл темы",
   "Drop a theme file here": "Перетащите сюда файл темы",
   "Choose file": "Выбрать файл",
@@ -180,10 +195,13 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Copy trace ID": "Копировать ID трассировки",
   "Trace ID copied": "ID трассировки скопирован",
 
-  "Push notifications are disabled on this device.": "Push-уведомления отключены на этом устройстве.",
-  "Push notifications are enabled, but no alert types are selected.": "Push-уведомления включены, но типы оповещений не выбраны.",
+  "Push notifications are disabled on this device.":
+    "Push-уведомления отключены на этом устройстве.",
+  "Push notifications are enabled, but no alert types are selected.":
+    "Push-уведомления включены, но типы оповещений не выбраны.",
   "Update time unavailable": "Время обновления недоступно",
-  "Devices registered to receive T3 Connect activity from your environments.": "Устройства, зарегистрированные для получения активности T3 Connect из ваших окружений.",
+  "Devices registered to receive T3 Connect activity from your environments.":
+    "Устройства, зарегистрированные для получения активности T3 Connect из ваших окружений.",
   "Live Activities": "Live Activities",
   "Loading mobile clients": "Загрузка мобильных клиентов",
   "Mobile clients": "Мобильные клиенты",
@@ -193,10 +211,12 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Could not deregister server": "Не удалось отменить регистрацию сервера",
   Deregister: "Отменить регистрацию",
   "Deregistering…": "Отмена регистрации…",
-  "Environments registered to your account. Connections on this device are managed in Settings.": "Окружения, зарегистрированные в вашем аккаунте. Подключения на этом устройстве управляются в настройках.",
+  "Environments registered to your account. Connections on this device are managed in Settings.":
+    "Окружения, зарегистрированные в вашем аккаунте. Подключения на этом устройстве управляются в настройках.",
   "Link date unavailable": "Дата привязки недоступна",
   "Server deregistered": "Регистрация сервера отменена",
-  "T3 Connect access was revoked and a host space is now available.": "Доступ T3 Connect отозван; место хоста теперь свободно.",
+  "T3 Connect access was revoked and a host space is now available.":
+    "Доступ T3 Connect отозван; место хоста теперь свободно.",
   "Could not update T3 Connect": "Не удалось обновить T3 Connect",
   "Could not load T3 Connect": "Не удалось загрузить T3 Connect",
   "T3 Connect profile": "Профиль T3 Connect",
@@ -204,7 +224,7 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Sign in to T3 Connect": "Войти в T3 Connect",
   "Sign out": "Выйти",
   "Signing out…": "Выход…",
-  "Account": "Аккаунт",
+  Account: "Аккаунт",
   "Connected environments": "Подключённые окружения",
   "Registered environments": "Зарегистрированные окружения",
 
@@ -215,12 +235,14 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Connecting your terminal": "Подключение терминала",
   "Copy authorization code": "Копировать код авторизации",
   "Authorization code copied": "Код авторизации скопирован",
-  "Enter this code in your waiting terminal to finish connecting.": "Введите этот код в ожидающем терминале, чтобы завершить подключение.",
+  "Enter this code in your waiting terminal to finish connecting.":
+    "Введите этот код в ожидающем терминале, чтобы завершить подключение.",
   "expires shortly": "скоро истечёт",
   "Authorization expired": "Срок авторизации истёк",
   "Authorization denied": "Авторизация отклонена",
   "Authorization complete": "Авторизация завершена",
-  "You can close this window and return to your terminal.": "Можно закрыть это окно и вернуться в терминал.",
+  "You can close this window and return to your terminal.":
+    "Можно закрыть это окно и вернуться в терминал.",
   "Could not complete authorization": "Не удалось завершить авторизацию",
   "Invalid authorization request": "Некорректный запрос авторизации",
   "Missing authorization code": "Отсутствует код авторизации",
@@ -228,12 +250,14 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
 
   "Connect devices": "Подключение устройств",
   "Enabling…": "Включение…",
-  "Make this environment available from your other devices.": "Сделайте это окружение доступным с других устройств.",
+  "Make this environment available from your other devices.":
+    "Сделайте это окружение доступным с других устройств.",
   "Publish this environment": "Опубликовать это окружение",
-  "Publish": "Опубликовать",
+  Publish: "Опубликовать",
   "Publishing…": "Публикация…",
   "Set up T3 Connect": "Настроить T3 Connect",
-  "T3 Connect lets you reach this environment from other signed-in devices.": "T3 Connect позволяет подключаться к этому окружению с других устройств, где выполнен вход.",
+  "T3 Connect lets you reach this environment from other signed-in devices.":
+    "T3 Connect позволяет подключаться к этому окружению с других устройств, где выполнен вход.",
   "Not now": "Не сейчас",
   "Maybe later": "Позже",
   "Environment published": "Окружение опубликовано",
@@ -249,12 +273,13 @@ export const RU_REMAINING: Readonly<Record<string, string>> = {
   "Could not start relay client": "Не удалось запустить relay-клиент",
   "Retry installation": "Повторить установку",
 
-  "Dismiss": "Закрыть",
+  Dismiss: "Закрыть",
   Expired: "Истёк",
   "SSH password prompt failed.": "Запрос пароля SSH завершился ошибкой.",
   "SSH Password Required": "Требуется пароль SSH",
-  "The SSH password request expired. Retry the connection to request it again.": "Срок запроса пароля SSH истёк. Повторите подключение, чтобы запросить пароль снова.",
+  "The SSH password request expired. Retry the connection to request it again.":
+    "Срок запроса пароля SSH истёк. Повторите подключение, чтобы запросить пароль снова.",
   "Enter the password for the SSH connection.": "Введите пароль для SSH-подключения.",
-  "Password": "Пароль",
+  Password: "Пароль",
   "Submit password": "Отправить пароль",
 };
