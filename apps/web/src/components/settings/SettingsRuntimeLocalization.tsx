@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 
 import { useClientSettings } from "../../hooks/useSettings";
+import { RU_AUDIT_EXTRA_A } from "../../i18n/runtimeRuAuditExtraA";
+import { RU_AUDIT_EXTRA_B } from "../../i18n/runtimeRuAuditExtraB";
+import { RU_AUDIT_EXTRA_C } from "../../i18n/runtimeRuAuditExtraC";
+import { RU_AUDIT_EXTRA_D } from "../../i18n/runtimeRuAuditExtraD";
+import { RU_AUDIT_EXTRA_E } from "../../i18n/runtimeRuAuditExtraE";
 import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
 import { RU_CHAT_EXTRA } from "../../i18n/runtimeRuChatExtra";
 import { RU_COMMON } from "../../i18n/runtimeRuCommon";
@@ -19,6 +24,11 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_CONNECTIONS_EXTRA,
   ...RU_PULL_REQUESTS,
   ...RU_REMAINING,
+  ...RU_AUDIT_EXTRA_A,
+  ...RU_AUDIT_EXTRA_B,
+  ...RU_AUDIT_EXTRA_C,
+  ...RU_AUDIT_EXTRA_D,
+  ...RU_AUDIT_EXTRA_E,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
