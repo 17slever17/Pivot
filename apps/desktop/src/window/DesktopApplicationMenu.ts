@@ -145,12 +145,12 @@ export const make = Effect.gen(function* () {
         submenu: [
           { role: "about" },
           {
-            label: "Check for Updates...",
+            label: "Проверить обновления...",
             click: checkForUpdatesClick,
           },
           { type: "separator" },
           {
-            label: "Settings...",
+            label: "Настройки...",
             accelerator: "CmdOrCtrl+,",
             click: settingsClick,
           },
@@ -174,7 +174,7 @@ export const make = Effect.gen(function* () {
             ? []
             : [
                 {
-                  label: "Settings...",
+                  label: "Настройки...",
                   accelerator: "CmdOrCtrl+,",
                   click: settingsClick,
                 },
@@ -215,7 +215,7 @@ export const make = Effect.gen(function* () {
         role: "help",
         submenu: [
           {
-            label: "Check for Updates...",
+            label: "Проверить обновления...",
             click: checkForUpdatesClick,
           },
         ],
