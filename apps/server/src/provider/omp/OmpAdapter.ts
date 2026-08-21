@@ -1002,7 +1002,53 @@ export class OmpAdapter {
     const toolUseId =
       typeof payload.parentToolCallId === "string" ? payload.parentToolCallId : undefined;
     const lastToolName =
-      typeof progress.currentTool === "string" ? progress.currentTool : undefined;
+      typeof progress.currentTool === "string" && progress.currentTool.length > 0
+        ? progress.currentTool
+        : undefined;
+    const lastIntent =
+      typeof progress.lastIntent === "string" && progress.lastIntent.length > 0
+        ? progress.lastIntent
+        : undefined;
+    const currentToolArgs =
+      typeof progress.currentToolArgs === "string" && progress.currentToolArgs.length > 0
+        ? progress.currentToolArgs
+        : undefined;
+    const currentToolStartMs =
+      typeof progress.currentToolStartMs === "number" &&
+      Number.isFinite(progress.currentToolStartMs) &&
+      progress.currentToolStartMs >= 0
+        ? Math.floor(progress.currentToolStartMs)
+        : undefined;
+    const model =
+      typeof progress.resolvedModel === "string" && progress.resolvedModel.length > 0
+        ? progress.resolvedModel
+        : undefined;
+    const totalTokens =
+      typeof progress.tokens === "number" &&
+      Number.isFinite(progress.tokens) &&
+      progress.tokens >= 0
+        ? Math.floor(progress.tokens)
+        : undefined;
+    const toolUses =
+      typeof progress.toolCount === "number" &&
+      Number.isFinite(progress.toolCount) &&
+      progress.toolCount >= 0
+        ? Math.floor(progress.toolCount)
+        : undefined;
+    const durationMs =
+      typeof progress.durationMs === "number" &&
+      Number.isFinite(progress.durationMs) &&
+      progress.durationMs >= 0
+        ? Math.floor(progress.durationMs)
+        : undefined;
+    const typedUsage =
+      totalTokens === undefined
+        ? undefined
+        : {
+            totalTokens,
+            ...(toolUses === undefined ? {} : { toolUses }),
+            ...(durationMs === undefined ? {} : { durationMs }),
+          };
     const status = runtimeTaskStatusFromOmpProgress(progress.status);
     const agentIndex = typeof progress.index === "number" ? progress.index : undefined;
     return this.#emit({
@@ -1014,6 +1060,11 @@ export class OmpAdapter {
         description,
         ...(status === undefined ? {} : { status }),
         ...(lastToolName === undefined ? {} : { lastToolName }),
+        ...(lastIntent === undefined ? {} : { lastIntent }),
+        ...(currentToolArgs === undefined ? {} : { currentToolArgs }),
+        ...(currentToolStartMs === undefined ? {} : { currentToolStartMs }),
+        ...(typedUsage === undefined ? {} : { typedUsage }),
+        ...(model === undefined ? {} : { model }),
         ...(role === undefined ? {} : { role }),
         ...(toolUseId === undefined ? {} : { toolUseId }),
         ...(agentIndex === undefined ? {} : { agentIndex }),

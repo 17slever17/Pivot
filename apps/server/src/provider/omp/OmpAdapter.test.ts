@@ -1921,7 +1921,14 @@ describe("OmpAdapter", () => {
             agentSource: "bundled",
             status: "running",
             task: "survey repo",
+            lastIntent: "Inspecting repository structure",
             currentTool: "read",
+            currentToolArgs: "src/provider/omp/OmpAdapter.ts",
+            currentToolStartMs: 1_700_000_000_000,
+            toolCount: 7,
+            tokens: 44_000,
+            durationMs: 123_000,
+            resolvedModel: "openai-codex/gpt-5.6-sol",
           },
         },
       });
@@ -1954,6 +1961,15 @@ describe("OmpAdapter", () => {
       NodeAssert.equal(progress?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(progress?.payload.description, "survey repo");
       NodeAssert.equal(progress?.payload.lastToolName, "read");
+      NodeAssert.equal(progress?.payload.lastIntent, "Inspecting repository structure");
+      NodeAssert.equal(progress?.payload.currentToolArgs, "src/provider/omp/OmpAdapter.ts");
+      NodeAssert.equal(progress?.payload.currentToolStartMs, 1_700_000_000_000);
+      NodeAssert.deepEqual(progress?.payload.typedUsage, {
+        totalTokens: 44_000,
+        toolUses: 7,
+        durationMs: 123_000,
+      });
+      NodeAssert.equal(progress?.payload.model, "openai-codex/gpt-5.6-sol");
       NodeAssert.equal(progress?.payload.status, "running");
       NodeAssert.equal(completed?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(completed?.payload.status, "completed");
