@@ -5,6 +5,7 @@ import {
   PairingPendingSurface,
   PairingRouteSurface,
 } from "../components/auth/PairingRouteSurface";
+import { SettingsRuntimeLocalization } from "../components/settings/SettingsRuntimeLocalization";
 
 export const Route = createFileRoute("/pair")({
   beforeLoad: async ({ context }) => {
@@ -34,21 +35,31 @@ function PairRouteView() {
     return null;
   }
 
-  if (authGateState.status === "hosted-pairing") {
-    return <HostedPairingRouteSurface />;
-  }
-
   return (
-    <PairingRouteSurface
-      auth={authGateState.auth}
-      onAuthenticated={() => {
-        void navigate({ to: "/", replace: true });
-      }}
-      {...(authGateState.errorMessage ? { initialErrorMessage: authGateState.errorMessage } : {})}
-    />
+    <>
+      <SettingsRuntimeLocalization />
+      {authGateState.status === "hosted-pairing" ? (
+        <HostedPairingRouteSurface />
+      ) : (
+        <PairingRouteSurface
+          auth={authGateState.auth}
+          onAuthenticated={() => {
+            void navigate({ to: "/", replace: true });
+          }}
+          {...(authGateState.errorMessage
+            ? { initialErrorMessage: authGateState.errorMessage }
+            : {})}
+        />
+      )}
+    </>
   );
 }
 
 function PairRoutePendingView() {
-  return <PairingPendingSurface />;
+  return (
+    <>
+      <SettingsRuntimeLocalization />
+      <PairingPendingSurface />
+    </>
+  );
 }
