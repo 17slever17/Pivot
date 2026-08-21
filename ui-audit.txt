@@ -1,6 +1,6 @@
-Catalogs: 16
-Known exact translations: 3277
-Files with candidate unmapped UI strings: 197
+Catalogs: 17
+Known exact translations: 3287
+Files with candidate unmapped UI strings: 195
 
 ## apps/web/src/appearanceFonts.ts (26)
 - !Number.isFinite(advance) || advance
@@ -301,9 +301,6 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/components/chat/ComposerPendingApprovalActions.tsx (1)
 - Promise
 
-## apps/web/src/components/chat/ComposerPreviewAnnotationCards.tsx (1)
-- style change
-
 ## apps/web/src/components/chat/ComposerPrimaryActions.tsx (1)
 - M7 11.5V2.5M7 2.5L3 6.5M7 2.5L11 6.5
 
@@ -430,9 +427,8 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/components/preview/PreviewMoreMenu.tsx (1)
 - Promise
 
-## apps/web/src/components/preview/PreviewUnreachable.tsx (5)
+## apps/web/src/components/preview/PreviewUnreachable.tsx (4)
 - ERR_NAME_NOT_RESOLVED
-- FAILED
 - M16 12 L48 12 L48 52 L16 52 Z
 - M22 22 L42 22 M22 30 L36 30 M22 38 L40 38
 - M52 8 L12 56
@@ -476,10 +472,9 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/components/preview/usePreviewSession.ts (1)
 - PreviewSessionThreadKeyParseError
 
-## apps/web/src/components/projectScriptEditor.tsx (4)
+## apps/web/src/components/projectScriptEditor.tsx (3)
 - Backspace
 - bun test
-- Play
 - Promise
 
 ## apps/web/src/components/pullRequest/PullRequestCodeTab.tsx (2)
@@ -586,8 +581,7 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/components/settings/ModelSlugPicker.tsx (1)
 - provider/model
 
-## apps/web/src/components/settings/ProjectSettingsPanel.tsx (6)
-- Choose a project icon file
+## apps/web/src/components/settings/ProjectSettingsPanel.tsx (5)
 - Enter
 - Escape
 - project default model
@@ -951,15 +945,8 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/routes/_chat.$environmentId.$threadId.tsx (1)
 - Some
 
-## apps/web/src/routes/_chat.pull-requests.tsx (3)
-- Filter by host
-- Filter by involvement
-- Filter by state
-
-## apps/web/src/routes/_chat.tsx (3)
+## apps/web/src/routes/_chat.tsx (1)
 - Escape
-- Open Piπot in the desktop app to use the in-app preview.
-- Preview is desktop-only
 
 ## apps/web/src/routes/capabilities.tsx (1)
 - Escape
@@ -967,9 +954,8 @@ Files with candidate unmapped UI strings: 197
 ## apps/web/src/routes/settings.tsx (1)
 - Escape
 
-## apps/web/src/session-logic.ts (4)
+## apps/web/src/session-logic.ts (3)
 - [\s\S]*?)(?:\s*
-- Checkpoint captured
 - ExitPlanMode:
 - Kicked off N subagents
 
