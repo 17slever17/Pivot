@@ -200,7 +200,10 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/,
     (month) => `${capitalizedTranslatedMonth(month)}.`,
   ],
-  [/^(\d{1,2})(?::(\d{2}))? (AM|PM)$/, (hour, minute, period) => formatRussianClock(hour, minute, period)],
+  [
+    /^(\d{1,2})(?::(\d{2}))? (AM|PM)$/,
+    (hour, minute, period) => formatRussianClock(hour, minute, period),
+  ],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
   [/^Changes in (.+)$/, (version) => `Изменения в ${version}`],
   [/^(\d+) threads?$/, (count) => russianPlural(count, "чат", "чата", "чатов")],
@@ -215,19 +218,48 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
       ),
   ],
   [/^(.+) downloads$/, (count) => `${count} скачиваний`],
-  [/^(\d+) tool calls?$/, (count) => russianPlural(count, "вызов инструмента", "вызова инструмента", "вызовов инструмента")],
-  [/^(\d+) conversations?$/, (count) => russianPlural(count, "обсуждение", "обсуждения", "обсуждений")],
+  [
+    /^(\d+) tool calls?$/,
+    (count) =>
+      russianPlural(count, "вызов инструмента", "вызова инструмента", "вызовов инструмента"),
+  ],
+  [
+    /^(\d+) conversations?$/,
+    (count) => russianPlural(count, "обсуждение", "обсуждения", "обсуждений"),
+  ],
   [/^Show fewer tool calls$/, () => "Показать меньше вызовов инструментов"],
   [/^Show fewer log entries$/, () => "Показать меньше записей журнала"],
-  [/^\+(\d+) previous tool calls?$/, (count) => count === "1" ? "+1 предыдущий вызов инструмента" : `+${count} предыдущих вызовов инструментов`],
-  [/^\+(\d+) previous log entries?$/, (count) => count === "1" ? "+1 предыдущая запись журнала" : `+${count} предыдущих записей журнала`],
-  [/^Kicked off (\d+) subagents?$/, (count) => `Запущено: ${russianPlural(count, "субагент", "субагента", "субагентов")}`],
-  [/^Ran (\d+) subagents?$/, (count) => `Работало: ${russianPlural(count, "субагент", "субагента", "субагентов")}`],
+  [
+    /^\+(\d+) previous tool calls?$/,
+    (count) =>
+      count === "1"
+        ? "+1 предыдущий вызов инструмента"
+        : `+${count} предыдущих вызовов инструментов`,
+  ],
+  [
+    /^\+(\d+) previous log entries?$/,
+    (count) =>
+      count === "1" ? "+1 предыдущая запись журнала" : `+${count} предыдущих записей журнала`,
+  ],
+  [
+    /^Kicked off (\d+) subagents?$/,
+    (count) => `Запущено: ${russianPlural(count, "субагент", "субагента", "субагентов")}`,
+  ],
+  [
+    /^Ran (\d+) subagents?$/,
+    (count) => `Работало: ${russianPlural(count, "субагент", "субагента", "субагентов")}`,
+  ],
   [/^(\d+) working$/, (count) => `${count} в работе`],
   [/^(\d+) failed$/, (count) => `С ошибкой: ${count}`],
   [/^(.+): failed$/, (name) => `${name}: ошибка`],
-  [/^Model slugs must be (\d+) characters or less\.$/, (count) => `Slug модели должен содержать не более ${count} символов.`],
-  [/^An instance named '(.+)' already exists\.$/, (name) => `Инстанс с именем «${name}» уже существует.`],
+  [
+    /^Model slugs must be (\d+) characters or less\.$/,
+    (count) => `Slug модели должен содержать не более ${count} символов.`,
+  ],
+  [
+    /^An instance named '(.+)' already exists\.$/,
+    (name) => `Инстанс с именем «${name}» уже существует.`,
+  ],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
   [/^Reachable at (.+)$/, (address) => `Доступно по адресу ${address}`],
@@ -270,7 +302,10 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     /^Use (.+), (.+) variant, currently active$/,
     (collection, variant) => `Использовать ${collection}, вариант ${variant}, сейчас активен`,
   ],
-  [/^Use (.+), (.+) variant$/, (collection, variant) => `Использовать ${collection}, вариант ${variant}`],
+  [
+    /^Use (.+), (.+) variant$/,
+    (collection, variant) => `Использовать ${collection}, вариант ${variant}`,
+  ],
   [/^Default \((.+)\)$/, (detail) => `По умолчанию (${translateValue(detail) ?? detail})`],
   [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
   [/^Lives in (.+)$/, (path) => `Хранится в ${path}`],
