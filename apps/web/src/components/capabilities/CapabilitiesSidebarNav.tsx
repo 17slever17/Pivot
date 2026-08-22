@@ -88,7 +88,10 @@ export function CapabilitiesSidebarNav({ pathname }: { pathname: string }) {
   const navigate = useNavigate();
   const canGoBack = useCanGoBack();
   const { isMobile, setOpenMobile, open, setOpen } = useSidebar();
-  const { projectKey } = useSearch({ from: "/capabilities" });
+  // The sidebar can survive for one transition render after leaving /capabilities.
+  // A strict route-bound search hook throws in that window, so read the merged
+  // search schema and narrow the only parameter this sidebar cares about.
+  const { projectKey } = useSearch({ strict: false }) as { readonly projectKey?: string };
   const groups = useSettingsProjectGroups();
   const projectGroup =
     projectKey === undefined
