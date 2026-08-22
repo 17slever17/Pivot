@@ -11,8 +11,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_B: Readonly<Record<string, string>> = {
     "Минимальная задержка между запросами веб-поиска Exa в миллисекундах; 0 отключает ограничение частоты",
   "Move the full system prompt to images, when that saves tokens.":
     "Переносить весь system prompt в изображения, когда это экономит токены.",
-  "One shared Mnemopi bank for every project":
-    "Один общий банк Mnemopi для всех проектов",
+  "One shared Mnemopi bank for every project": "Один общий банк Mnemopi для всех проектов",
   "One shared bank — every project sees the same memories":
     "Один общий банк — все проекты видят одну и ту же память",
   "Only move loaded context-file instructions to images, when that saves tokens.":
@@ -43,8 +42,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_B: Readonly<Record<string, string>> = {
     "По умолчанию добавлять номера строк к выводу инструмента read",
   "Prevent editing of files that appear to be auto-generated (protoc, sqlc, swagger, etc.)":
     "Запрещать редактирование файлов, похожих на автоматически сгенерированные (protoc, sqlc, swagger и т. п.)",
-  "Prevent images from being sent to LLM providers":
-    "Не отправлять изображения LLM-провайдерам",
+  "Prevent images from being sent to LLM providers": "Не отправлять изображения LLM-провайдерам",
   "Priority: native > trafilatura > lynx > parallel > jina":
     "Приоритет: native > trafilatura > lynx > parallel > jina",
   "Project-local Mnemopi bank per cwd basename":
@@ -61,8 +59,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_B: Readonly<Record<string, string>> = {
     "Приоритет backend-ов чтения для загрузки URL через fetch/read",
   "Recall memories on the first turn of each session":
     "Восстанавливать память на первом ходу каждой сессии",
-  "Register skills as /skill:name commands":
-    "Регистрировать скиллы как команды /skill:name",
+  "Register skills as /skill:name commands": "Регистрировать скиллы как команды /skill:name",
   "Reject edits anchored on lines a prior read/search never displayed in full":
     "Отклонять правки, привязанные к строкам, которые предыдущий read/search не показывал полностью",
   "Remind the agent to complete todos before stopping":

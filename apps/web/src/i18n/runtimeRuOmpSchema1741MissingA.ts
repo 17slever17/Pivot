@@ -21,8 +21,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_A: Readonly<Record<string, string>> = {
     "Автоматически разрешать инструменты только для чтения; для записи и выполнения требовать подтверждение.",
   "Automatically compact context when it gets too large":
     "Автоматически выполнять compaction, когда контекст становится слишком большим",
-  "BAAI/bge-base-en-v1.5 (768d), English-only":
-    "BAAI/bge-base-en-v1.5 (768d), только английский",
+  "BAAI/bge-base-en-v1.5 (768d), English-only": "BAAI/bge-base-en-v1.5 (768d), только английский",
   "Base URL of a self-hosted SearXNG instance used for web search":
     "Базовый URL собственного экземпляра SearXNG для веб-поиска",
   "*** for authenticated Hindsight servers": "*** для авторизованных серверов Hindsight",
@@ -48,8 +47,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_A: Readonly<Record<string, string>> = {
     "Число строк по умолчанию, возвращаемых read, если агент не указал limit",
   "Delay before completed or abandoned todos are removed from the todo widget":
     "Задержка перед удалением завершённых или брошенных todo из виджета задач",
-  "Densest cell with sentence-hue ink.":
-    "Самая плотная ячейка с окраской текста по предложениям.",
+  "Densest cell with sentence-hue ink.": "Самая плотная ячейка с окраской текста по предложениям.",
   "Display hook status messages below the status line":
     "Показывать сообщения состояния hooks под строкой состояния",
   "Display the actual model ID used by each subagent in the task widget status line":
@@ -83,8 +81,7 @@ export const RU_OMP_SCHEMA_1741_MISSING_A: Readonly<Record<string, string>> = {
     "Включить инструмент tts для синтеза аудиофайлов локально через Kokoro или через xAI Grok Voice",
   "Filled one-row field anchored by a single accent rail":
     "Заполненное однострочное поле с одной акцентной линией",
-  "Filled one-row field with accent end caps":
-    "Заполненное однострочное поле с акцентными краями",
+  "Filled one-row field with accent end caps": "Заполненное однострочное поле с акцентными краями",
   "Fixed token limit for context maintenance; overrides percentage if set":
     "Фиксированный лимит токенов для обслуживания контекста; если задан, имеет приоритет над процентным порогом",
   "Framed horizontal rules with status line at bottom":
