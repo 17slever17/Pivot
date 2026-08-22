@@ -1,58 +1,61 @@
-name: Apply settings i18n round 2
+name: Format final localization files
 
 on:
   push:
     branches:
-      - test/ru-i18n-omp-telemetry
+      - test/ru-i18n-omp-telemetry-direct
     paths:
-      - scripts/apply_settings_i18n_round2.py
       - .github/workflows/apply-settings-i18n-round2.yml
+      - .github/workflows/ci.yml
+      - apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
+      - apps/web/src/i18n/runtimeRuAuditRound2.ts
+      - apps/web/src/i18n/runtimeRuOmpSchema1741MissingA.ts
+      - apps/web/src/i18n/runtimeRuOmpSchema1741MissingB.ts
 
 permissions:
   contents: write
 
 concurrency:
-  group: settings-i18n-round2
+  group: format-final-localization
   cancel-in-progress: false
 
 jobs:
-  apply:
+  format:
     if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout localization branch
+        uses: actions/checkout@v6
         with:
-          ref: test/ru-i18n-omp-telemetry
+          ref: test/ru-i18n-omp-telemetry-direct
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
-          version: 11.10.0
+          node-version-file: package.json
+          cache: true
+          run-install: true
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.13.1
-          cache: pnpm
+      - name: Format touched files
+        run: >-
+          pnpm exec oxfmt --write
+          .github/workflows/ci.yml
+          apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
+          apps/web/src/i18n/runtimeRuAuditRound2.ts
+          apps/web/src/i18n/runtimeRuOmpSchema1741MissingA.ts
+          apps/web/src/i18n/runtimeRuOmpSchema1741MissingB.ts
 
-      - name: Apply patch
-        run: python3 scripts/apply_settings_i18n_round2.py
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Focused tests
-        run: pnpm exec vp test run apps/web/src/i18n.test.ts apps/desktop/src/shell/DesktopShellEnvironment.test.ts
-
-      - name: Check
-        run: pnpm exec vp check
-
-      - name: Remove bootstrap files and commit
+      - name: Remove temporary formatter and commit
         shell: bash
         run: |
-          rm -f scripts/apply_settings_i18n_round2.py .github/workflows/apply-settings-i18n-round2.yml
+          rm -f .github/workflows/apply-settings-i18n-round2.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
           git diff --cached --check
-          git commit -m "feat(i18n): expand Russian settings coverage and quiet pwsh fallback"
-          git push origin HEAD:test/ru-i18n-omp-telemetry
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore(i18n): format complete localization catalog"
+          git push origin HEAD:test/ru-i18n-omp-telemetry-direct
