@@ -1,9 +1,13 @@
 import { RU_OMP_SCHEMA_1741 } from "./runtimeRuOmpSchema1741";
 import { RU_OMP_SCHEMA_1741_EXTRA } from "./runtimeRuOmpSchema1741Extra";
+import { RU_OMP_SCHEMA_1741_MISSING_A } from "./runtimeRuOmpSchema1741MissingA";
+import { RU_OMP_SCHEMA_1741_MISSING_B } from "./runtimeRuOmpSchema1741MissingB";
 
 export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   ...RU_OMP_SCHEMA_1741,
   ...RU_OMP_SCHEMA_1741_EXTRA,
+  ...RU_OMP_SCHEMA_1741_MISSING_A,
+  ...RU_OMP_SCHEMA_1741_MISSING_B,
 
   // Source control / repository rules.
   "Repository rules": "Правила репозитория",
