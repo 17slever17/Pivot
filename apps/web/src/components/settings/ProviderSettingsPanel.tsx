@@ -471,6 +471,12 @@ export function EnvironmentProviderSettings({
           }),
         );
       }
+      if (result._tag !== "Failure") {
+        // The update command can finish before the provider subscription
+        // publishes its post-update probe. Refresh explicitly so stale
+        // server updateState cannot leave the inline spinner running.
+        await refreshServerProviders({ environmentId, input: {} });
+      }
       updatingDriversRef.current.delete(candidate.driver);
       setUpdatingProviderDrivers((previous) => {
         if (!previous.has(candidate.driver)) {
@@ -481,7 +487,7 @@ export function EnvironmentProviderSettings({
         return next;
       });
     },
-    [environmentId, updateProvider],
+    [environmentId, refreshServerProviders, updateProvider],
   );
 
   interface InstanceRow {
