@@ -58,6 +58,15 @@ const RU_MONTHS: Readonly<Record<string, string>> = {
   Dec: "дек",
 };
 
+function normalizeMonthKey(month: string): string {
+  return `${month[0] ?? ""}${month.slice(1).toLowerCase()}`;
+}
+
+function translatedMonth(month: string): string {
+  const normalized = normalizeMonthKey(month);
+  return RU_MONTHS[normalized] ?? month.toLowerCase();
+}
+
 function formatRussianClock(
   hourText: string,
   minuteText: string | undefined,
@@ -80,8 +89,7 @@ function formatRussianUsageDate(
   minute: string | undefined,
   period: string,
 ): string {
-  const translatedMonth = RU_MONTHS[month] ?? month.toLowerCase();
-  return `${day} ${translatedMonth}., ${formatRussianClock(hour, minute, period)}`;
+  return `${day} ${translatedMonth(month)}., ${formatRussianClock(hour, minute, period)}`;
 }
 
 function russianPlural(rawCount: string, one: string, few: string, many: string): string {
@@ -167,9 +175,25 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
       `${formatRussianUsageDate(fromMonth, fromDay, fromHour, fromMinute, fromPeriod)} — ${formatRussianUsageDate(toMonth, toDay, toHour, toMinute, toPeriod)}`,
   ],
   [
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{1,2})(?::(\d{2}))? (AM|PM)$/,
+    (month, day, hour, minute, period) => formatRussianUsageDate(month, day, hour, minute, period),
+  ],
+  [
     /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}) to (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/,
     (fromMonth, fromDay, toMonth, toDay) =>
-      `${fromDay} ${RU_MONTHS[fromMonth] ?? fromMonth.toLowerCase()}. — ${toDay} ${RU_MONTHS[toMonth] ?? toMonth.toLowerCase()}.`,
+      `${fromDay} ${translatedMonth(fromMonth)}. — ${toDay} ${translatedMonth(toMonth)}.`,
+  ],
+  [
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/,
+    (month, day) => `${day} ${translatedMonth(month)}.`,
+  ],
+  [
+    /^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC) (\d{1,2})$/,
+    (month, day) => `${day} ${translatedMonth(month)}.`,
+  ],
+  [
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/,
+    (month) => `${translatedMonth(month)}.`,
   ],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
