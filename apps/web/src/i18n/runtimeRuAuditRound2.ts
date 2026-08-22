@@ -1,4 +1,8 @@
+import { RU_OMP_SCHEMA_1741 } from "./runtimeRuOmpSchema1741";
+
 export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
+  ...RU_OMP_SCHEMA_1741,
+
   // Source control / repository rules.
   "Repository rules": "Правила репозитория",
   "Conventional Commits": "Стандарт Conventional Commits",
@@ -11,6 +15,7 @@ export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   // Provider update lifecycle.
   Updating: "Обновление",
   Installing: "Установка",
+  Install: "Установить",
   "Update now": "Обновить сейчас",
   "Updating provider": "Обновление провайдера",
   "Updating providers": "Обновление провайдеров",
@@ -33,6 +38,9 @@ export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   Archived: "Архивирован",
   Created: "Создан",
   Checked: "Проверено",
+  ago: "назад",
+  yesterday: "вчера",
+  today: "сегодня",
   "Checked unavailable": "Время проверки недоступно",
 
   // Usage.
@@ -40,6 +48,19 @@ export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   Hour: "Час",
   Hourly: "По часам",
   Daily: "По дням",
+  Model: "Модель",
+  Cost: "Стоимость",
+  Share: "Доля",
+  Tokens: "Токены",
+  Total: "Итого",
+  cost: "стоимость",
+  tokens: "токены",
+  model: "модель",
+  day: "день",
+  hour: "час",
+  "7 days": "7 дней",
+  "30 days": "30 дней",
+  "90 days": "90 дней",
   "Past 24h": "Последние 24 ч",
   "Raw token cost": "Стоимость токенов без кэша",
   "Processed tokens": "Обработанные токены",
@@ -62,6 +83,8 @@ export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   "I/O writes": "Запись I/O",
   "Identity: PID +": "Идентификатор: PID +",
   "start time": "время запуска",
+  "Native counters identify which process is reading or writing. These application-level counters identify known T3 operations so process spikes can be correlated with specific persistence and logging paths.":
+    "Нативные счётчики показывают, какой процесс читает или пишет данные. Счётчики уровня приложения отмечают известные операции T3, чтобы всплески нагрузки можно было сопоставить с конкретными путями хранения и журналирования.",
   "Last errors": "Последние ошибки",
   "Most frequent errors": "Самые частые ошибки",
   "Show full error": "Показать полную ошибку",
