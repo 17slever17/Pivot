@@ -1,0 +1,91 @@
+name: Audit untranslated descriptions
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+      - name: Scan user-facing descriptions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path("apps/web/src"), Path("packages/contracts/src")]
+          catalogs = list(Path("apps/web/src/i18n").glob("runtimeRu*.ts"))
+          catalogs += [Path("apps/web/src/i18n.ts")]
+
+          known = set()
+          key_patterns = [
+              re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*:', re.M),
+              re.compile(r"^\s*'((?:[^'\\]|\\.)*)'\s*:", re.M),
+          ]
+          for path in catalogs:
+              text = path.read_text(encoding="utf-8", errors="replace")
+              for pattern in key_patterns:
+                  for m in pattern.finditer(text):
+                      known.add(bytes(m.group(1), "utf-8").decode("unicode_escape", errors="ignore"))
+
+          prop_pattern = re.compile(
+              r'\b(?:description|helperText|helpText|hint|subtitle|emptyDescription|scopeHint|shadowHint|projectScopeHint|projectShadowHint)\s*(?:=|:)\s*["\']([^"\'\n]{8,})["\']'
+          )
+          jsx_text_pattern = re.compile(r'>([^<>{}\n]{25,}[A-Za-z][^<>{}\n]*)<')
+          template_pattern = re.compile(
+              r'\b(?:description|helperText|helpText|hint|subtitle|emptyDescription)\s*(?:=|:)\s*`([^`\n]{8,})`'
+          )
+
+          skip_fragments = (
+              "http://", "https://", "@t3tools/", "className", "var(--", "calc(",
+              "Schema.", "Effect.", "Readonly", "Promise", "function", "=>", "{", "}",
+          )
+          rows = []
+          for root in roots:
+              for path in root.rglob("*"):
+                  if path.suffix not in {".ts", ".tsx"}:
+                      continue
+                  if ".test." in path.name or ".spec." in path.name or path.name.startswith("runtimeRu"):
+                      continue
+                  text = path.read_text(encoding="utf-8", errors="replace")
+                  found = set()
+                  for pattern in (prop_pattern, template_pattern, jsx_text_pattern):
+                      for m in pattern.finditer(text):
+                          value = re.sub(r"\s+", " ", m.group(1)).strip()
+                          if value in known or len(value) < 8 or len(value) > 500:
+                              continue
+                          if not re.search(r"[A-Za-z]", value):
+                              continue
+                          if any(fragment in value for fragment in skip_fragments):
+                              continue
+                          if re.fullmatch(r"[A-Za-z0-9_.:/ -]+", value) and " " not in value:
+                              continue
+                          found.add(value)
+                  if found:
+                      rows.append((str(path), sorted(found, key=str.lower)))
+
+          out = [f"Unmapped description-oriented files: {len(rows)}", ""]
+          for path, values in rows:
+              out.append(f"## {path}")
+              out.extend(f"- {value}" for value in values)
+              out.append("")
+          Path("i18n-description-audit.txt").write_text("\n".join(out), encoding="utf-8")
+          PY
+      - name: Commit audit report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add i18n-description-audit.txt
+          git commit -m "chore(i18n): capture description audit"
+          git push --no-verify origin HEAD:test/ru-i18n-omp-telemetry-direct
