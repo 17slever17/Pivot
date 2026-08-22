@@ -1576,7 +1576,7 @@ const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props: {
 });
 
 export default function Sidebar() {
-  const { t } = useTranslation();
+  const { language, t } = useTranslation();
   const projects = useProjects();
   const projectOrder = useUiStateStore((store) => store.projectOrder);
   const threads = useThreadShells();
@@ -1596,6 +1596,7 @@ export default function Sidebar() {
     pinThread,
     unpinThread,
     reorderPinnedThread,
+    archiveThread,
     deleteThread,
   } = useThreadActions();
   const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {
@@ -2833,14 +2834,18 @@ export default function Sidebar() {
       }
       if (clicked.value !== "delete") return;
       if (confirmThreadDelete) {
+        const deleteMessage =
+          language === "ru"
+            ? [
+                `Удалить чаты (${count})?`,
+                "История выбранных чатов будет удалена без возможности восстановления.",
+              ]
+            : [
+                `Delete ${count} thread${count === 1 ? "" : "s"}?`,
+                "This permanently clears conversation history for these threads.",
+              ];
         const confirmed = await settlePromise(() =>
-          api.dialogs.confirm(
-            [
-              `Delete ${count} thread${count === 1 ? "" : "s"}?`,
-              "This permanently clears conversation history for these threads.",
-            ].join("\n"),
-            { variant: "destructive" },
-          ),
+          api.dialogs.confirm(deleteMessage.join("\n"), { variant: "destructive" }),
         );
         if (confirmed._tag === "Failure" || !confirmed.value) return;
       }
@@ -2878,6 +2883,7 @@ export default function Sidebar() {
       clearSelection,
       confirmThreadDelete,
       deleteThread,
+      language,
       markThreadUnread,
       performSnooze,
       removeFromSelection,
@@ -2929,6 +2935,7 @@ export default function Sidebar() {
           api.contextMenu.show(
             buildThreadActionMenuItems({
               branch: thread.branch ?? null,
+              language,
               isPinned,
               isSettled,
               isSnoozed,
@@ -2992,6 +2999,20 @@ export default function Sidebar() {
           case "unpin":
             attemptUnpin(threadRef);
             return;
+          case "archive": {
+            const result = await archiveThread(threadRef);
+            if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+              const error = squashAtomCommandFailure(result);
+              toastManager.add(
+                stackedThreadToast({
+                  type: "error",
+                  title: "Failed to archive thread",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                }),
+              );
+            }
+            return;
+          }
           case "rename":
             startThreadRename(threadRef, thread.title);
             return;
@@ -3039,14 +3060,18 @@ export default function Sidebar() {
             return;
           case "delete": {
             if (confirmThreadDelete) {
+              const deleteMessage =
+                language === "ru"
+                  ? [
+                      `Удалить чат «${thread.title}»?`,
+                      "История этого чата будет удалена без возможности восстановления.",
+                    ]
+                  : [
+                      `Delete thread "${thread.title}"?`,
+                      "This permanently clears conversation history for this thread.",
+                    ];
               const confirmed = await settlePromise(() =>
-                api.dialogs.confirm(
-                  [
-                    `Delete thread "${thread.title}"?`,
-                    "This permanently clears conversation history for this thread.",
-                  ].join("\n"),
-                  { variant: "destructive" },
-                ),
+                api.dialogs.confirm(deleteMessage.join("\n"), { variant: "destructive" }),
               );
               if (confirmed._tag === "Failure" || !confirmed.value) return;
             }
@@ -3070,6 +3095,7 @@ export default function Sidebar() {
       })();
     },
     [
+      archiveThread,
       attemptPin,
       attemptSettle,
       attemptSnooze,
@@ -3082,6 +3108,7 @@ export default function Sidebar() {
       copyThreadIdToClipboard,
       deleteThread,
       handleMultiSelectContextMenu,
+      language,
       markThreadUnread,
       projectCwdByKey,
       serverConfigs,

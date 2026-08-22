@@ -42,7 +42,11 @@ export interface ThreadActionMenuState {
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
 }
 
-function menuLabel(language: DisplayLanguage | undefined, english: string, russian: string): string {
+function menuLabel(
+  language: DisplayLanguage | undefined,
+  english: string,
+  russian: string,
+): string {
   return language === "ru" ? russian : english;
 }
 
@@ -145,8 +149,15 @@ export function buildThreadActionMenuItems(
           },
         ]
       : []),
-    { id: "mark-unread", label: menuLabel(state.language, "Mark unread", "Отметить непрочитанным") },
-    { id: "copy-path", label: menuLabel(state.language, "Copy path", "Копировать путь"), icon: "copy" },
+    {
+      id: "mark-unread",
+      label: menuLabel(state.language, "Mark unread", "Отметить непрочитанным"),
+    },
+    {
+      id: "copy-path",
+      label: menuLabel(state.language, "Copy path", "Копировать путь"),
+      icon: "copy",
+    },
     ...(state.branch
       ? [
           {

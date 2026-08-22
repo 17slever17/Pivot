@@ -355,6 +355,45 @@ describe("environment RPC", () => {
     }),
   );
 
+  it.effect("can stop retrying a handled expected failure", () =>
+    Effect.gen(function* () {
+      const domainError = new Error("thread is permanently gone");
+      const subscriptionCount = yield* Ref.make(0);
+      const expectedFailureCount = yield* Ref.make(0);
+      const client = {
+        [WS_METHODS.subscribeTerminalEvents]: () =>
+          Stream.fromEffect(Ref.update(subscriptionCount, (count) => count + 1)).pipe(
+            Stream.drain,
+            Stream.concat(Stream.fail(domainError)),
+          ),
+      } as unknown as WsRpcProtocolClient;
+      const { activeSession, supervisor } = yield* makeHarness();
+      yield* SubscriptionRef.set(activeSession, Option.some(session(client)));
+      const subscriptionFiber = yield* subscribe(
+        WS_METHODS.subscribeTerminalEvents,
+        {},
+        {
+          onExpectedFailure: () => Ref.update(expectedFailureCount, (count) => count + 1),
+          retryExpectedFailureAfter: "100 millis",
+          shouldRetryExpectedFailure: () => false,
+        },
+      ).pipe(
+        Stream.runDrain,
+        Effect.provideService(EnvironmentSupervisor.EnvironmentSupervisor, supervisor),
+        Effect.forkChild,
+      );
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        if ((yield* Ref.get(expectedFailureCount)) >= 1) break;
+        yield* Effect.yieldNow;
+      }
+      yield* TestClock.adjust("1 second");
+      yield* Effect.yieldNow;
+      yield* Fiber.interrupt(subscriptionFiber);
+      expect(yield* Ref.get(subscriptionCount)).toBe(1);
+      expect(yield* Ref.get(expectedFailureCount)).toBe(1);
+    }),
+  );
+
   it.effect("does not classify subscription defects as expected failures", () =>
     Effect.gen(function* () {
       const defect = new Error("subscription invariant failed");

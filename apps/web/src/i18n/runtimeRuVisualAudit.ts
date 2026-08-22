@@ -37,7 +37,8 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
     "Скиллы хранятся в папке .omp этого проекта и запускаются, когда задача соответствует их описанию.",
   "A project skill with the same name is available in addition to the one in the omp agent directory.":
     "Проектный скилл с тем же именем доступен вместе со скиллом из каталога агента omp.",
-  "Connect an environment to manage its skills.": "Подключите окружение для управления его скиллами.",
+  "Connect an environment to manage its skills.":
+    "Подключите окружение для управления его скиллами.",
   "Loading skills…": "Загрузка скиллов…",
   "Could not load omp skills": "Не удалось загрузить скиллы omp",
   "No skills match the current search.": "Скиллы по текущему запросу не найдены.",
@@ -60,7 +61,8 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
     "Правила хранятся в папке .omp этого проекта и загружаются в каждую сессию.",
   "A project rule with the same name shadows the rule in the omp agent directory.":
     "Правило проекта с тем же именем перекрывает правило из каталога агента omp.",
-  "Connect an environment to manage its rules.": "Подключите окружение для управления его правилами.",
+  "Connect an environment to manage its rules.":
+    "Подключите окружение для управления его правилами.",
   "Loading rules…": "Загрузка правил…",
   "Could not load omp rules": "Не удалось загрузить правила omp",
   "No rules match the current search.": "Правила по текущему запросу не найдены.",
@@ -73,6 +75,7 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
   "Letters, digits, dots, dashes and underscores — no spaces or slashes.":
     "Допустимы буквы, цифры, точки, дефисы и подчёркивания — без пробелов и слешей.",
   "Move to omp": "Переместить в omp",
+  "The chat isn't ready to accept input right now.": "Чат сейчас не готов принимать ввод.",
   "Overrides global": "Перекрывает глобальное",
 
   // Models and roles.
@@ -118,7 +121,8 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
   "Enable the omp advisor secondary model.": "Включить дополнительную модель advisor в omp.",
   "omp memory.backend value (off, local, mnemopi, hindsight).":
     "Значение omp memory.backend (off, local, mnemopi, hindsight).",
-  "Enable the omp github tool (github.enabled).": "Включить инструмент GitHub в omp (github.enabled).",
+  "Enable the omp github tool (github.enabled).":
+    "Включить инструмент GitHub в omp (github.enabled).",
   "Enable the omp security_scan tool (security.enabled).":
     "Включить инструмент security_scan в omp (security.enabled).",
   "Automatically resume the most recent session in the current directory":
@@ -173,6 +177,9 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
 
   // Usage.
   cost: "стоимость",
+  tokens: "токены",
+  model: "модель",
+  day: "день",
   COST: "СТОИМОСТЬ",
   TOKENS: "ТОКЕНЫ",
   MODEL: "МОДЕЛЬ",

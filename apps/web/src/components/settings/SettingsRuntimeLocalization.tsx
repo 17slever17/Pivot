@@ -71,6 +71,7 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   ],
   [/^Reset (.+) to its default\?$/, (name) => `Сбросить ${name} к значению по умолчанию?`],
   [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
+  [/^Lives in (.+)$/, (path) => `Хранится в ${path}`],
   [/^(.+) files$/, (project) => `Файлы: ${project}`],
   [/^(\d+) of (\d+) failing$/, (count, total) => `Не пройдено проверок: ${count} из ${total}`],
   [/^(\d+) of (\d+) running$/, (count, total) => `Выполняется проверок: ${count} из ${total}`],

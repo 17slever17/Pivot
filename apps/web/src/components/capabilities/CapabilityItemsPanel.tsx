@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 
 import { useActiveEnvironmentId } from "../../state/entities";
+import { useClientSettings } from "../../hooks/useSettings";
 import { serverEnvironment } from "../../state/server";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useSettingsProjectGroups } from "../settings/ProjectSettingsPanel";
@@ -365,6 +366,29 @@ function ItemRowActions({
   );
 }
 
+const RUSSIAN_WELL_KNOWN_SKILL_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  "create-rule":
+    "Создаёт постоянные правила Cursor для инструкций ИИ: стандарты кодирования, соглашения проекта, шаблоны для отдельных файлов и RULE.md.",
+  "create-skill":
+    "Помогает создавать Agent Skills для Cursor: структуру, инструкции, лучшие практики и файлы SKILL.md.",
+  "create-subagent":
+    "Создаёт пользовательских субагентов для специализированных задач ИИ, включая ревью кода, отладку и доменные сценарии.",
+  "migrate-to-skills":
+    "Преобразует правила Cursor и slash-команды в формат Agent Skills (.cursor/skills/).",
+  "update-cursor-settings":
+    "Изменяет пользовательские настройки Cursor/VS Code: settings.json, темы, шрифты и другие параметры редактора.",
+};
+
+function localizedItemDescription(
+  kind: OmpCapabilityEditableKind,
+  name: string,
+  description: string | undefined,
+  language: string,
+): string | undefined {
+  if (language !== "ru" || kind !== "skills") return description;
+  return RUSSIAN_WELL_KNOWN_SKILL_DESCRIPTIONS[name] ?? description;
+}
+
 /** Per-kind copy for the rules/skills editor. Keyed by kind so both panels share one source. */
 const PANEL_COPY: Readonly<
   Record<
@@ -431,6 +455,7 @@ export function CapabilityItemsPanel({
     projectShadowHint,
   } = PANEL_COPY[kind];
   const environmentId = useActiveEnvironmentId();
+  const displayLanguage = useClientSettings((settings) => settings.displayLanguage);
   const groups = useSettingsProjectGroups();
   const projectId = resolveCapabilitiesProjectIdForView(groups, environmentId, projectKey);
   const projectLocked = projectKey !== null;
@@ -638,7 +663,14 @@ export function CapabilityItemsPanel({
                         ) : null}
                       </td>
                       <td className="max-w-96 px-3 py-2 text-muted-foreground">
-                        <span className="line-clamp-2">{row.description}</span>
+                        <span className="line-clamp-2">
+                          {localizedItemDescription(
+                            kind,
+                            row.name,
+                            row.description,
+                            displayLanguage,
+                          )}
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{row.scopeLabel}</td>
                       <td className="sticky right-0 z-10 bg-background py-2 pe-6 ps-5 text-right">
