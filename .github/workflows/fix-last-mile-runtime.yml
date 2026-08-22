@@ -1,3 +1,4 @@
+# Trigger focused last-mile patch after workflow registration.
 name: Apply last-mile runtime fixes
 
 on:
