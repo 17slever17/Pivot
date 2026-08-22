@@ -1,0 +1,106 @@
+name: Apply last-mile runtime fixes
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+    paths:
+      - .github/workflows/fix-last-mile-runtime.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+          fetch-depth: 0
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+      - name: Apply focused fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected 1 match, found {count}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          provider = "apps/web/src/components/settings/ProviderSettingsPanel.tsx"
+          replace_once(
+              provider,
+              '''      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+                  const error = squashAtomCommandFailure(result);
+                  toastManager.add(
+                    stackedThreadToast({
+                      type: "error",
+                      title: `Could not update ${PROVIDER_DISPLAY_NAMES[candidate.driver] ?? candidate.driver}`,
+                      description:
+                        error instanceof Error
+                          ? error.message
+                          : "The provider update command could not be started.",
+                    }),
+                  );
+                }
+                updatingDriversRef.current.delete(candidate.driver);''',
+              '''      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+                  const error = squashAtomCommandFailure(result);
+                  toastManager.add(
+                    stackedThreadToast({
+                      type: "error",
+                      title: `Could not update ${PROVIDER_DISPLAY_NAMES[candidate.driver] ?? candidate.driver}`,
+                      description:
+                        error instanceof Error
+                          ? error.message
+                          : "The provider update command could not be started.",
+                    }),
+                  );
+                } else if (result._tag !== "Failure") {
+                  // The update command can finish before the providers subscription has
+                  // published its post-update probe. Refresh explicitly so a stale
+                  // `isProviderUpdateActive` flag cannot leave the inline spinner stuck.
+                  await refreshServerProviders({ environmentId, input: {} });
+                }
+                updatingDriversRef.current.delete(candidate.driver);''',
+          )
+          replace_once(
+              provider,
+              '''    [environmentId, updateProvider],''',
+              '''    [environmentId, refreshServerProviders, updateProvider],''',
+          )
+
+          route = "apps/web/src/routes/_chat.$environmentId.$threadId.tsx"
+          replace_once(
+              route,
+              '''  const serverThreadShell = useThreadShell(threadRef);
+                const serverThreadDetail = useThreadDetail(threadRef);''',
+              '''  const serverThreadShell = useThreadShell(threadRef);
+                // A stale deep-link can survive a restart after its thread was deleted.
+                // Wait for the environment shell catalog before subscribing to detail;
+                // missing shell entries can then redirect without issuing a guaranteed
+                // 404 detail request first.
+                const serverThreadDetail = useThreadDetail(serverThreadShell === null ? null : threadRef);''',
+          )
+      - name: Format and verify
+        run: |
+          vp check --fix apps/web/src/components/settings/ProviderSettingsPanel.tsx 'apps/web/src/routes/_chat.$environmentId.$threadId.tsx'
+          vp test run apps/web/src/components/settings/ProviderSettingsPanel.logic.test.ts
+      - name: Commit focused fixes and remove bootstrap workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fix-last-mile-runtime.yml
+          git add apps/web/src/components/settings/ProviderSettingsPanel.tsx 'apps/web/src/routes/_chat.$environmentId.$threadId.tsx'
+          git commit -m "fix: settle provider updates and stale thread routes"
+          git push --no-verify origin HEAD:test/ru-i18n-omp-telemetry-direct
