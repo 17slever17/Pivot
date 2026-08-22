@@ -39,26 +39,6 @@ jobs:
       - name: Ensure Electron runtime is installed
         run: vp run --filter @t3tools/desktop ensure:electron
 
-      - name: Format localization candidates
-        run: >-
-          vp fmt
-          apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
-          apps/web/src/i18n/runtimeRuAuditRound2.ts
-          apps/web/src/i18n/runtimeRuOmpSchema1741MissingA.ts
-          apps/web/src/i18n/runtimeRuOmpSchema1741MissingB.ts
-          --write
-
-      - name: Upload formatted localization candidates
-        uses: actions/upload-artifact@v7
-        with:
-          name: formatted-localization
-          path: |
-            apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
-            apps/web/src/i18n/runtimeRuAuditRound2.ts
-            apps/web/src/i18n/runtimeRuOmpSchema1741MissingA.ts
-            apps/web/src/i18n/runtimeRuOmpSchema1741MissingB.ts
-          retention-days: 1
-
       - name: Check
         run: vp check
 
