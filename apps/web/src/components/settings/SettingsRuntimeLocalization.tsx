@@ -215,6 +215,17 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
       ),
   ],
   [/^(.+) downloads$/, (count) => `${count} скачиваний`],
+  [/^(\d+) tool calls?$/, (count) => russianPlural(count, "вызов инструмента", "вызова инструмента", "вызовов инструмента")],
+  [/^(\d+) conversations?$/, (count) => russianPlural(count, "обсуждение", "обсуждения", "обсуждений")],
+  [/^Show fewer tool calls$/, () => "Показать меньше вызовов инструментов"],
+  [/^Show fewer log entries$/, () => "Показать меньше записей журнала"],
+  [/^\+(\d+) previous tool calls?$/, (count) => count === "1" ? "+1 предыдущий вызов инструмента" : `+${count} предыдущих вызовов инструментов`],
+  [/^\+(\d+) previous log entries?$/, (count) => count === "1" ? "+1 предыдущая запись журнала" : `+${count} предыдущих записей журнала`],
+  [/^Kicked off (\d+) subagents?$/, (count) => `Запущено: ${russianPlural(count, "субагент", "субагента", "субагентов")}`],
+  [/^Ran (\d+) subagents?$/, (count) => `Работало: ${russianPlural(count, "субагент", "субагента", "субагентов")}`],
+  [/^(\d+) working$/, (count) => `${count} в работе`],
+  [/^(\d+) failed$/, (count) => `С ошибкой: ${count}`],
+  [/^(.+): failed$/, (name) => `${name}: ошибка`],
   [/^Model slugs must be (\d+) characters or less\.$/, (count) => `Slug модели должен содержать не более ${count} символов.`],
   [/^An instance named '(.+)' already exists\.$/, (name) => `Инстанс с именем «${name}» уже существует.`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
@@ -231,16 +242,16 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     (name) => `Восстановить значение по умолчанию: ${STATIC_TRANSLATIONS[name] ?? name}`,
   ],
   [/^Reset (.+) to its default\?$/, (name) => `Сбросить ${name} к значению по умолчанию?`],
-  [/^Could not save (.+)$/, (name) => `Не удалось сохранить ${name}`],
-  [/^Saved (.+)$/, (name) => `${name} сохранено`],
-  [/^Could not reset (.+)$/, (name) => `Не удалось сбросить ${name}`],
-  [/^Reset (.+)$/, (name) => `${name} сброшено`],
-  [/^Could not move (.+)$/, (name) => `Не удалось переместить ${name}`],
-  [/^Moved (.+) to project$/, (name) => `${name} перенесено в проект`],
-  [/^Could not add (.+)$/, (name) => `Не удалось добавить ${name}`],
-  [/^Added (.+)$/, (name) => `${name} добавлено`],
-  [/^Value for (.+)$/, (name) => `Значение для ${name}`],
-  [/^Edit (.+)$/, (name) => `Изменить ${name}`],
+  [/^Could not save ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Не удалось сохранить ${name}`],
+  [/^Saved ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `${name} сохранено`],
+  [/^Could not reset ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Не удалось сбросить ${name}`],
+  [/^Reset ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `${name} сброшено`],
+  [/^Could not move ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Не удалось переместить ${name}`],
+  [/^Moved ([A-Za-z][A-Za-z0-9_.-]*) to project$/, (name) => `${name} перенесено в проект`],
+  [/^Could not add ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Не удалось добавить ${name}`],
+  [/^Added ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `${name} добавлено`],
+  [/^Value for ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Значение для ${name}`],
+  [/^Edit ([A-Za-z][A-Za-z0-9_.-]*)$/, (name) => `Изменить ${name}`],
   [/^Details for (.+)$/, (name) => `Сведения о ${name}`],
   [/^Add (.+) to favorites$/, (name) => `Добавить ${name} в избранное`],
   [/^Remove (.+) from favorites$/, (name) => `Удалить ${name} из избранного`],
@@ -260,7 +271,7 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     (collection, variant) => `Использовать ${collection}, вариант ${variant}, сейчас активен`,
   ],
   [/^Use (.+), (.+) variant$/, (collection, variant) => `Использовать ${collection}, вариант ${variant}`],
-  [/^Default \((.+)\)$/, (detail) => `По умолчанию (${STATIC_TRANSLATIONS[detail] ?? detail})`],
+  [/^Default \((.+)\)$/, (detail) => `По умолчанию (${translateValue(detail) ?? detail})`],
   [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
   [/^Lives in (.+)$/, (path) => `Хранится в ${path}`],
   [/^(.+) files$/, (project) => `Файлы: ${project}`],
@@ -337,8 +348,8 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [
     /^(.+) · (.+)$/,
     (left, right) => {
-      const translatedLeft = STATIC_TRANSLATIONS[left] ?? left;
-      const translatedRight = STATIC_TRANSLATIONS[right] ?? right;
+      const translatedLeft = translateValue(left) ?? left;
+      const translatedRight = translateValue(right) ?? right;
       return translatedLeft === left && translatedRight === right
         ? `${left} · ${right}`
         : `${translatedLeft} · ${translatedRight}`;
