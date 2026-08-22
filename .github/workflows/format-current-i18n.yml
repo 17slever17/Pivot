@@ -1,0 +1,56 @@
+name: Format current i18n changes
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+    paths:
+      - .github/workflows/format-current-i18n.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+      - name: Format touched files
+        run: >-
+          vp check --fix
+          apps/web/src/components/ProviderUpdatePrimaryNotification.tsx
+          apps/web/src/components/capabilities/CapabilitiesSidebarNav.tsx
+          apps/web/src/components/settings/KeybindingsSettings.tsx
+          apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
+          apps/web/src/i18n/ompSettingsRu.ts
+          apps/web/src/i18n/runtimeRuAuditRound2.ts
+          apps/web/src/i18n/runtimeRuOmpSchema1741.ts
+          apps/web/src/i18n/runtimeRuOmpSchema1741Extra.ts
+          'apps/web/src/routes/_chat.$environmentId.$threadId.tsx'
+      - name: Commit formatting and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/format-current-i18n.yml
+          git add apps/web/src/components/ProviderUpdatePrimaryNotification.tsx \
+            apps/web/src/components/capabilities/CapabilitiesSidebarNav.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx \
+            apps/web/src/components/settings/SettingsRuntimeLocalization.tsx \
+            apps/web/src/i18n/ompSettingsRu.ts \
+            apps/web/src/i18n/runtimeRuAuditRound2.ts \
+            apps/web/src/i18n/runtimeRuOmpSchema1741.ts \
+            apps/web/src/i18n/runtimeRuOmpSchema1741Extra.ts \
+            'apps/web/src/routes/_chat.$environmentId.$threadId.tsx'
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "style: format current localization changes"
+          git push --no-verify origin HEAD:test/ru-i18n-omp-telemetry-direct
