@@ -84,6 +84,23 @@ describe("buildSettingRows", () => {
     expect(row).toMatchObject({ key: "theme.dark", type: "boolean", scope: "project" });
   });
 
+  it("localizes known omp descriptions by setting key", () => {
+    const [row] = buildSettingRows([
+      entry({
+        key: "theme.dark",
+        description: "Theme used when the terminal has a dark background",
+      }),
+    ]);
+    expect(row?.description).toBe("Тема терминала для тёмного фона.");
+  });
+
+  it("preserves the server description for unknown setting keys", () => {
+    const [row] = buildSettingRows([
+      entry({ key: "plugin.futureSetting", description: "Future plugin setting description" }),
+    ]);
+    expect(row?.description).toBe("Future plugin setting description");
+  });
+
   it("carries enum choices through to the row", () => {
     const source = entry({
       key: "symbolPreset",
