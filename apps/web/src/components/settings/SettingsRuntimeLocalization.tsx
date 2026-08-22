@@ -9,6 +9,7 @@ import { RU_AUDIT_EXTRA_E } from "../../i18n/runtimeRuAuditExtraE";
 import { RU_AUDIT_EXTRA_F } from "../../i18n/runtimeRuAuditExtraF";
 import { RU_AUDIT_EXTRA_G } from "../../i18n/runtimeRuAuditExtraG";
 import { RU_AUDIT_EXTRA_H } from "../../i18n/runtimeRuAuditExtraH";
+import { RU_AUDIT_ROUND2 } from "../../i18n/runtimeRuAuditRound2";
 import { RU_CAPABILITIES } from "../../i18n/runtimeRuCapabilities";
 import { RU_CHAT_EXTRA } from "../../i18n/runtimeRuChatExtra";
 import { RU_COMMON } from "../../i18n/runtimeRuCommon";
@@ -39,16 +40,94 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_AUDIT_EXTRA_H,
   ...RU_FINAL_POLISH,
   ...RU_VISUAL_AUDIT,
+  ...RU_AUDIT_ROUND2,
 };
+
+const RU_MONTHS: Readonly<Record<string, string>> = {
+  Jan: "янв",
+  Feb: "фев",
+  Mar: "мар",
+  Apr: "апр",
+  May: "май",
+  Jun: "июн",
+  Jul: "июл",
+  Aug: "авг",
+  Sep: "сен",
+  Oct: "окт",
+  Nov: "ноя",
+  Dec: "дек",
+};
+
+function formatRussianClock(hourText: string, minuteText: string | undefined, period: string): string {
+  let hour = Number.parseInt(hourText, 10);
+  if (period === "AM") {
+    if (hour === 12) hour = 0;
+  } else if (hour !== 12) {
+    hour += 12;
+  }
+  const minute = minuteText ?? "00";
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+}
+
+function formatRussianUsageDate(
+  month: string,
+  day: string,
+  hour: string,
+  minute: string | undefined,
+  period: string,
+): string {
+  const translatedMonth = RU_MONTHS[month] ?? month.toLowerCase();
+  return `${day} ${translatedMonth}., ${formatRussianClock(hour, minute, period)}`;
+}
+
+function russianPlural(
+  rawCount: string,
+  one: string,
+  few: string,
+  many: string,
+): string {
+  const count = Number.parseInt(rawCount, 10);
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  const form = mod10 === 1 && mod100 !== 11 ? one : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? few : many;
+  return `${rawCount} ${form}`;
+}
+
+function translateSamplingInterval(interval: string): string {
+  const normalized = interval.trim();
+  const match = /^(\d+)\s+(second|seconds|minute|minutes|hour|hours)$/.exec(normalized);
+  if (!match) return normalized;
+  const [, count = "", unit = ""] = match;
+  switch (unit) {
+    case "second":
+    case "seconds":
+      return russianPlural(count, "секунду", "секунды", "секунд");
+    case "minute":
+    case "minutes":
+      return russianPlural(count, "минуту", "минуты", "минут");
+    case "hour":
+    case "hours":
+      return russianPlural(count, "час", "часа", "часов");
+    default:
+      return normalized;
+  }
+}
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
   [/^(\d+) bindings$/, (count) => `${count} привязок`],
   [/^(\d+) processes$/, (count) => `${count} процессов`],
   [/^(\d+) process$/, (count) => `${count} процесс`],
   [/^(\d+) starts · (\d+) exits$/, (starts, exits) => `${starts} запусков · ${exits} завершений`],
-  [/^Sampling every (.+)$/, (interval) => `Опрос каждые ${interval}`],
+  [/^Sampling every (.+)$/, (interval) => `Опрос каждые ${translateSamplingInterval(interval)}`],
   [/^Updated (.+)$/, (when) => `Обновлено ${translateRelativeTime(when)}`],
   [/^Checked (.+)$/, (when) => `Проверено ${translateRelativeTime(when)}`],
+  [/^Updating (.+)$/, (name) => `Обновление ${name}`],
+  [/^Installing (.+)$/, (name) => `Установка ${name}`],
+  [/^(.+) update in progress\.$/, (name) => `Обновление ${name} выполняется.`],
+  [/^(.+) updates are in progress\.$/, (names) => `Обновления ${names} выполняются.`],
+  [/^(\d+) providers updated$/, (count) => `Обновлено провайдеров: ${count}`],
+  [/^(\d+) providers still need updates$/, (count) => `Провайдеров всё ещё требуют обновления: ${count}`],
+  [/^(\d+) provider updates failed$/, (count) => `Не удалось обновить провайдеров: ${count}`],
   [/^just now$/, () => "только что"],
   [/^now$/, () => "сейчас"],
   [/^(\d+)s ago$/, (count) => `${count}с назад`],
@@ -56,6 +135,18 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+)h ago$/, (count) => `${count}ч назад`],
   [/^(\d+)d ago$/, (count) => `${count}д назад`],
   [/^(\d+)w ago$/, (count) => `${count}н назад`],
+  [/^(\d{1,2})(?::(\d{2}))? (AM|PM) yesterday$/, (hour, minute, period) => `${formatRussianClock(hour, minute, period)} вчера`],
+  [/^(\d{1,2})(?::(\d{2}))? (AM|PM) today$/, (hour, minute, period) => `${formatRussianClock(hour, minute, period)} сегодня`],
+  [
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{1,2})(?::(\d{2}))? (AM|PM) to (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{1,2})(?::(\d{2}))? (AM|PM)$/,
+    (fromMonth, fromDay, fromHour, fromMinute, fromPeriod, toMonth, toDay, toHour, toMinute, toPeriod) =>
+      `${formatRussianUsageDate(fromMonth, fromDay, fromHour, fromMinute, fromPeriod)} — ${formatRussianUsageDate(toMonth, toDay, toHour, toMinute, toPeriod)}`,
+  ],
+  [
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}) to (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/,
+    (fromMonth, fromDay, toMonth, toDay) =>
+      `${fromDay} ${RU_MONTHS[fromMonth] ?? fromMonth.toLowerCase()}. — ${toDay} ${RU_MONTHS[toMonth] ?? toMonth.toLowerCase()}.`,
+  ],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
@@ -77,6 +168,7 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+) of (\d+) running$/, (count, total) => `Выполняется проверок: ${count} из ${total}`],
   [/^(\d+) of (\d+) passing$/, (count, total) => `Пройдено проверок: ${count} из ${total}`],
   [/^(.+) per active day$/, (value) => `${value} за активный день`],
+  [/^(.+) per active hour$/, (value) => `${value} за активный час`],
   [/^(.+)% of observed input$/, (value) => `${value}% наблюдаемого ввода`],
   [/^(\d+) cache writes?$/, (count) => `${count} записей в кэш`],
   [/^includes (.+) reasoning$/, (value) => `включая ${value} токенов рассуждений`],
@@ -315,6 +407,7 @@ export function SettingsRuntimeLocalization() {
 
   useEffect(() => {
     const root = document.body;
+    document.documentElement.lang = language;
     if (language !== "ru") {
       restoreSubtree(root);
       return;
