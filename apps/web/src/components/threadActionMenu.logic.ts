@@ -55,14 +55,14 @@ function snoozePresetLabel(language: DisplayLanguage | undefined, preset: Snooze
   switch (preset.id) {
     case "hour":
       return "Через 1 час";
-    case "tomorrow-morning":
-      return "Завтра утром";
-    case "tomorrow-afternoon":
-      return "Завтра днём";
+    case "three-hours":
+      return "Через 3 часа";
+    case "evening":
+      return "Сегодня вечером";
+    case "tomorrow":
+      return "Завтра";
     case "next-week":
       return "На следующей неделе";
-    default:
-      return preset.label;
   }
 }
 
