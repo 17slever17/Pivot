@@ -39,12 +39,13 @@ jobs:
 
       - name: Format touched files
         run: >-
-          pnpm exec oxfmt --write
+          vp fmt
           .github/workflows/ci.yml
           apps/web/src/components/settings/SettingsRuntimeLocalization.tsx
           apps/web/src/i18n/runtimeRuAuditRound2.ts
           apps/web/src/i18n/runtimeRuOmpSchema1741MissingA.ts
           apps/web/src/i18n/runtimeRuOmpSchema1741MissingB.ts
+          --write
 
       - name: Remove temporary formatter and commit
         shell: bash
