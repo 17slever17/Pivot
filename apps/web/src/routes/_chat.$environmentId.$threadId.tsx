@@ -25,7 +25,10 @@ function ChatThreadRouteView() {
     threadRef === null ? null : environmentShell.stateAtom(threadRef.environmentId),
   );
   const serverThreadShell = useThreadShell(threadRef);
-  const serverThreadDetail = useThreadDetail(threadRef);
+  // A stale deep-link can survive a restart after its thread was deleted. Wait
+  // for the environment shell catalog before subscribing to thread detail, so
+  // a missing shell entry can redirect without issuing a guaranteed 404 first.
+  const serverThreadDetail = useThreadDetail(serverThreadShell === null ? null : threadRef);
   const serverThreadStatus = useThreadStatus(threadRef);
   const environmentThreadRefs = useEnvironmentThreadRefs(threadRef?.environmentId ?? null);
   const bootstrapComplete = shell.data?.snapshot._tag === "Some";
