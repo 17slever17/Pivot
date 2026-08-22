@@ -1,0 +1,163 @@
+Unmapped description-oriented files: 25
+
+## apps/web/src/appearanceFonts.ts
+- !Number.isFinite(advance) || advance
+- Math.abs(advance - reference)
+
+## apps/web/src/versionSkew.ts
+- Version mismatch. Try syncing the client and server to the same Piπot version.
+
+## apps/web/src/composerDraftStore.ts
+- ComposerDraftStoreState | Partial
+
+## apps/web/src/modelOrdering.ts
+- number | undefined): Order.Order
+
+## apps/web/src/connection/platform.ts
+- cached.expiresAtEpochMs !== undefined && nowEpochMs
+
+## apps/web/src/routes/_chat.tsx
+- Open Piπot in the desktop app to use the in-app preview.
+
+## apps/web/src/components/composerInlineTokenPaste.ts
+- token.type === "mention" && token.end
+
+## apps/web/src/terminal/ghostty/surface.ts
+- = value.startIndex && match.end - 1
+- = value.startIndex && match.start
+
+## apps/web/src/components/capabilities/CapabilityItemsPanel.tsx
+- A project rule with the same name shadows the global rule for that project.
+- A project rule with the same name shadows the rule in the omp agent directory.
+- A project skill with the same name is available in addition to the one in the omp agent directory.
+- Global rules live in the omp agent directory; project rules live under the project
+- Global skills live in the omp agent directory; project skills live under the project
+- Project and global skills coexist — a project skill is available in addition to the same-named global one.
+- Rules live in this project
+- Skills live in this project
+
+## apps/web/src/components/preview/previewAutomationRequestConsumer.ts
+- = AsyncResult.AsyncResult
+
+## apps/web/src/components/settings/SettingsPanels.tsx
+- Leave empty to use
+- Render text with thinner grayscale anti-aliasing instead of macOS
+
+## apps/web/src/components/settings/ThemeEditorHost.tsx
+- It’s now active.
+
+## apps/web/src/components/settings/ThemeSettings.tsx
+- It’s now active.
+
+## apps/web/src/components/settings/NotificationsSettingsPanel.tsx
+- Toast when a subscription window (Codex, OpenCode Go, Cursor, …) crosses into warning or exhausted, and again after it resets.
+
+## apps/web/src/components/settings/ThemeColorPicker.tsx
+- !Number.isInteger(channel) || channel
+
+## apps/web/src/components/settings/ConnectionsSettings.tsx
+- Stop the Windows backend and run only the WSL backend. Useful if you develop entirely inside WSL and don
+
+## apps/web/src/components/files/FileBrowserPanel.tsx
+- The chat isn
+
+## apps/web/src/components/files/projectFilesQueryState.ts
+- (result: AsyncResult.AsyncResult
+
+## apps/web/src/components/pullRequest/PullRequestReviewAnnotation.tsx
+- Pending — sent when you submit the review
+
+## apps/web/src/components/pullRequest/PullRequestDetailPanel.tsx
+- The checkout is ready on \
+- The task is in the composer — read it over, then send.
+
+## apps/web/src/components/pullRequest/pullRequestDiff.logic.ts
+- = hunk.additionStart && line
+- = hunk.deletionStart && line
+
+## packages/contracts/src/previewAutomation.ts
+- Case-sensitive substring that must appear in visible document text.
+- Clear the existing input value before inserting text. Defaults to false.
+- Clicks one target. Provide exactly one of locator, selector, or the x/y coordinate pair.
+- Deprecated alias for open. Whether to reveal the thread-bound inline preview to the human.
+- Dev-server protocol. Defaults to http.
+- Dev-server TCP port inside the current environment.
+- Emulated prefers-color-scheme for the page: light, dark, or system to follow the OS appearance.
+- Emulates prefers-color-scheme in the active browser tab without changing the OS or app theme.
+- Evaluates JavaScript in the page. Prefer snapshot and semantic actions; use evaluate for inspection or unsupported interactions.
+- Exact collaborative browser tab to target. Omit to use this agent session
+- Freeform viewport height in CSS pixels. Required only in freeform mode.
+- Freeform viewport width in CSS pixels. Required only in freeform mode.
+- Horizontal scroll delta in CSS pixels. Positive scrolls right. Defaults to 0.
+- JavaScript expression evaluated in the page
+- Keyboard key name such as Enter, Escape, Tab, ArrowDown, Backspace, or a single character.
+- Legacy CSS selector for a scrollable container. Omit to scroll the viewport.
+- Legacy CSS selector for the input. Prefer locator.
+- Legacy CSS selector such as button[type=
+- Legacy CSS selector that must match an element. Prefer locator.
+- Literal text to insert.
+- Maximum wait in milliseconds. Defaults to 15000; maximum 60000.
+- Modifier keys held while pressing key.
+- Named device size. Required only when mode is preset.
+- Named viewport from Chrome DevTools
+- Navigates the active browser tab. Provide exactly one of url or target; for most public pages use url.
+- Opens the collaborative browser for the current thread. Use preview_navigate afterward when readiness waiting matters.
+- Optional path, query, and fragment, for example /settings?tab=account.
+- Orientation for a fixed device preset. Defaults to the preset
+- Orientation for a named device preset. It is not accepted in fill or freeform mode.
+- Playwright selector for a scrollable container. Omit to scroll the viewport.
+- Playwright selector for the input, for example role=textbox[name=
+- Playwright selector that must match an element, for example role=button[name=
+- Playwright selector, preferably role/text based, for example role=button[name=
+- Presses one keyboard key in the active browser tab.
+- Readiness milestone before returning.
+- Reuse tabId when supplied, otherwise this agent session
+- Scrolls the viewport, or a locator/selector container. Provide deltaX, deltaY, or both.
+- Selects a dev-server port relative to the current execution environment.
+- Selects direct URL navigation.
+- Serialize and return the value instead of a remote object reference. Defaults to true.
+- Sets the active browser tab to fill-panel, independently resizable freeform, or named device-preset sizing.
+- Substring that must appear in the current absolute URL.
+- Types into locator/selector, or into the currently focused element when neither target is provided.
+- Vertical scroll delta in CSS pixels. Positive scrolls down. Defaults to 0.
+- Viewport mode: fill follows the preview panel, freeform uses exact independently resizable dimensions, and preset uses a named device size.
+- Viewport-relative X coordinate in CSS pixels. Must be paired with y.
+- Viewport-relative Y coordinate in CSS pixels. Must be paired with x.
+- Waits until all provided conditions match. Use after click/type when the page changes asynchronously.
+- Whether to open the thread-bound inline preview for the human. Defaults to true; set false for background-only automation.
+
+## packages/contracts/src/relay.ts
+- Clerk bearer token for the signed-in cloud user.
+- Current agent-awareness state, or null to remove the published state.
+- Deprecated alias for clientProofKeyThumbprint.
+- Environment-signed JWT covering this published activity state.
+- Environment-signed proof bound to a previously issued link challenge.
+- JWK thumbprint that the minted environment credential must be bound to.
+- Links an authenticated cloud user to a T3 environment.
+- OAuth token exchange request for a DPoP-bound relay access token.
+- Optional client device identifier associated with this link.
+- Optional client device identifier requesting the connection.
+- Publishes a signed agent-awareness update from an environment.
+- Relay issuer URL that will receive the DPoP-bound access token.
+- Requested capabilities for a new environment-link challenge.
+- Requests a short-lived credential for connecting to an environment.
+- Space-separated relay scopes requested by the client.
+- Whether the relay should provision a managed tunnel for this environment.
+- Whether this link may deliver push notifications.
+- Whether this link may update Live Activities.
+
+## packages/contracts/src/t3ProjectFile.ts
+- A project script that team members can import into T3 Code.
+- Display name for the script, shown in the T3 Code scripts menu.
+- Icon shown next to the script in the scripts menu. Defaults to
+- Project scripts shared with everyone who opens this repository in T3 Code.
+- Shell command executed in a T3 Code terminal at the project root.
+- URL opened in the in-app browser preview when this script runs. Only honored on the desktop build.
+- When true, automatically open the preview panel at `previewUrl` the moment the script starts.
+- When true, the script runs automatically after a worktree is created for a new thread.
+- Where new threads start for this repository:
+- Workspace-relative path to the project icon (e.g.
+
+## packages/contracts/src/settings.ts
+- omp memory.backend value (off, local, mnemopi, hindsight).
+- Path to the omp binary used by this instance.
