@@ -1,4 +1,5 @@
 import type { ContextMenuItem } from "@t3tools/contracts";
+import type { DisplayLanguage } from "@t3tools/contracts/settings";
 import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
 
 /**
@@ -15,6 +16,7 @@ export type ThreadActionMenuId =
   | "snooze"
   | `snooze:${string}`
   | "unsnooze"
+  | "archive"
   | "rename"
   | "regenerate-title"
   | "mark-unread"
@@ -30,6 +32,7 @@ export interface ThreadActionMenuState {
   readonly isSnoozed: boolean;
   readonly canSnoozeNow: boolean;
   readonly isRegeneratingTitle: boolean;
+  readonly language?: DisplayLanguage;
   readonly supports: {
     readonly settlement: boolean;
     readonly snooze: boolean;
@@ -37,6 +40,26 @@ export interface ThreadActionMenuState {
     readonly titleRegeneration: boolean;
   };
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
+}
+
+function menuLabel(language: DisplayLanguage | undefined, english: string, russian: string): string {
+  return language === "ru" ? russian : english;
+}
+
+function snoozePresetLabel(language: DisplayLanguage | undefined, preset: SnoozePreset): string {
+  if (language !== "ru") return preset.label;
+  switch (preset.id) {
+    case "hour":
+      return "Через 1 час";
+    case "tomorrow-morning":
+      return "Завтра утром";
+    case "tomorrow-afternoon":
+      return "Завтра днём";
+    case "next-week":
+      return "На следующей неделе";
+    default:
+      return preset.label;
+  }
 }
 
 /**
@@ -52,15 +75,24 @@ export function buildThreadActionMenuItems(
       ? [
           {
             id: "new-thread-on-branch" as const,
-            label: `New thread on ${state.branch}`,
+            label:
+              state.language === "ru"
+                ? `Новый чат в ветке ${state.branch}`
+                : `New thread on ${state.branch}`,
           },
         ]
       : []),
     ...(state.supports.pinning
       ? [
           state.isPinned
-            ? { id: "unpin" as const, label: "Unpin thread" }
-            : { id: "pin" as const, label: "Pin thread" },
+            ? {
+                id: "unpin" as const,
+                label: menuLabel(state.language, "Unpin thread", "Открепить чат"),
+              }
+            : {
+                id: "pin" as const,
+                label: menuLabel(state.language, "Pin thread", "Закрепить чат"),
+              },
         ]
       : []),
     // Both lifecycle actions stay available on pinned threads: settling
@@ -69,39 +101,71 @@ export function buildThreadActionMenuItems(
     ...(state.supports.settlement
       ? [
           state.isSettled
-            ? { id: "unsettle" as const, label: "Un-settle thread" }
-            : { id: "settle" as const, label: "Settle thread" },
+            ? {
+                id: "unsettle" as const,
+                label: menuLabel(state.language, "Un-settle thread", "Вернуть чат в активные"),
+              }
+            : {
+                id: "settle" as const,
+                label: menuLabel(state.language, "Settle thread", "Завершить чат"),
+              },
         ]
       : []),
     ...(state.supports.snooze
       ? [
           state.isSnoozed
-            ? { id: "unsnooze" as const, label: "Wake thread" }
+            ? {
+                id: "unsnooze" as const,
+                label: menuLabel(state.language, "Wake thread", "Вернуть отложенный чат"),
+              }
             : {
                 id: "snooze" as const,
-                label: "Snooze",
+                label: menuLabel(state.language, "Snooze", "Отложить"),
                 disabled: !state.canSnoozeNow,
                 children: state.snoozePresets.map((preset) => ({
                   id: `snooze:${preset.id}` as const,
-                  label: `${preset.label} (${preset.whenLabel})`,
+                  label: `${snoozePresetLabel(state.language, preset)} (${preset.whenLabel})`,
                 })),
               },
         ]
       : []),
-    { id: "rename", label: "Rename thread" },
+    {
+      id: "archive",
+      label: menuLabel(state.language, "Archive thread", "Архивировать чат"),
+    },
+    { id: "rename", label: menuLabel(state.language, "Rename thread", "Переименовать чат") },
     ...(state.supports.titleRegeneration
       ? [
           {
             id: "regenerate-title" as const,
-            label: state.isRegeneratingTitle ? "Regenerating…" : "Regenerate title",
+            label: state.isRegeneratingTitle
+              ? menuLabel(state.language, "Regenerating…", "Создание названия…")
+              : menuLabel(state.language, "Regenerate title", "Создать название заново"),
             disabled: state.isRegeneratingTitle,
           },
         ]
       : []),
-    { id: "mark-unread", label: "Mark unread" },
-    { id: "copy-path", label: "Copy path", icon: "copy" },
-    ...(state.branch ? [{ id: "copy-branch" as const, label: "Copy branch", icon: "copy" }] : []),
-    { id: "copy-thread-id", label: "Copy thread ID", icon: "copy" },
-    { id: "delete", label: "Delete", destructive: true, icon: "trash" },
+    { id: "mark-unread", label: menuLabel(state.language, "Mark unread", "Отметить непрочитанным") },
+    { id: "copy-path", label: menuLabel(state.language, "Copy path", "Копировать путь"), icon: "copy" },
+    ...(state.branch
+      ? [
+          {
+            id: "copy-branch" as const,
+            label: menuLabel(state.language, "Copy branch", "Копировать ветку"),
+            icon: "copy" as const,
+          },
+        ]
+      : []),
+    {
+      id: "copy-thread-id",
+      label: menuLabel(state.language, "Copy thread ID", "Копировать ID чата"),
+      icon: "copy",
+    },
+    {
+      id: "delete",
+      label: menuLabel(state.language, "Delete", "Удалить"),
+      destructive: true,
+      icon: "trash",
+    },
   ];
 }
