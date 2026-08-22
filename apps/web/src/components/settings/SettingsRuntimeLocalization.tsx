@@ -58,7 +58,11 @@ const RU_MONTHS: Readonly<Record<string, string>> = {
   Dec: "дек",
 };
 
-function formatRussianClock(hourText: string, minuteText: string | undefined, period: string): string {
+function formatRussianClock(
+  hourText: string,
+  minuteText: string | undefined,
+  period: string,
+): string {
   let hour = Number.parseInt(hourText, 10);
   if (period === "AM") {
     if (hour === 12) hour = 0;
@@ -80,16 +84,16 @@ function formatRussianUsageDate(
   return `${day} ${translatedMonth}., ${formatRussianClock(hour, minute, period)}`;
 }
 
-function russianPlural(
-  rawCount: string,
-  one: string,
-  few: string,
-  many: string,
-): string {
+function russianPlural(rawCount: string, one: string, few: string, many: string): string {
   const count = Number.parseInt(rawCount, 10);
   const mod10 = count % 10;
   const mod100 = count % 100;
-  const form = mod10 === 1 && mod100 !== 11 ? one : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? few : many;
+  const form =
+    mod10 === 1 && mod100 !== 11
+      ? one
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? few
+        : many;
   return `${rawCount} ${form}`;
 }
 
@@ -126,7 +130,10 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(.+) update in progress\.$/, (name) => `Обновление ${name} выполняется.`],
   [/^(.+) updates are in progress\.$/, (names) => `Обновления ${names} выполняются.`],
   [/^(\d+) providers updated$/, (count) => `Обновлено провайдеров: ${count}`],
-  [/^(\d+) providers still need updates$/, (count) => `Провайдеров всё ещё требуют обновления: ${count}`],
+  [
+    /^(\d+) providers still need updates$/,
+    (count) => `Провайдеров всё ещё требуют обновления: ${count}`,
+  ],
   [/^(\d+) provider updates failed$/, (count) => `Не удалось обновить провайдеров: ${count}`],
   [/^just now$/, () => "только что"],
   [/^now$/, () => "сейчас"],
@@ -135,11 +142,28 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^(\d+)h ago$/, (count) => `${count}ч назад`],
   [/^(\d+)d ago$/, (count) => `${count}д назад`],
   [/^(\d+)w ago$/, (count) => `${count}н назад`],
-  [/^(\d{1,2})(?::(\d{2}))? (AM|PM) yesterday$/, (hour, minute, period) => `${formatRussianClock(hour, minute, period)} вчера`],
-  [/^(\d{1,2})(?::(\d{2}))? (AM|PM) today$/, (hour, minute, period) => `${formatRussianClock(hour, minute, period)} сегодня`],
+  [
+    /^(\d{1,2})(?::(\d{2}))? (AM|PM) yesterday$/,
+    (hour, minute, period) => `${formatRussianClock(hour, minute, period)} вчера`,
+  ],
+  [
+    /^(\d{1,2})(?::(\d{2}))? (AM|PM) today$/,
+    (hour, minute, period) => `${formatRussianClock(hour, minute, period)} сегодня`,
+  ],
   [
     /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{1,2})(?::(\d{2}))? (AM|PM) to (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2}), (\d{1,2})(?::(\d{2}))? (AM|PM)$/,
-    (fromMonth, fromDay, fromHour, fromMinute, fromPeriod, toMonth, toDay, toHour, toMinute, toPeriod) =>
+    (
+      fromMonth,
+      fromDay,
+      fromHour,
+      fromMinute,
+      fromPeriod,
+      toMonth,
+      toDay,
+      toHour,
+      toMinute,
+      toPeriod,
+    ) =>
       `${formatRussianUsageDate(fromMonth, fromDay, fromHour, fromMinute, fromPeriod)} — ${formatRussianUsageDate(toMonth, toDay, toHour, toMinute, toPeriod)}`,
   ],
   [

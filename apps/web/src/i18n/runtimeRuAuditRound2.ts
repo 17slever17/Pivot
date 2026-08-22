@@ -108,7 +108,7 @@ export const RU_AUDIT_ROUND2: Readonly<Record<string, string>> = {
   "Move to project": "Перенести в проект",
   "Add setting": "Добавить настройку",
   "Search settings": "Поиск настроек",
-  "Global": "Глобально",
+  Global: "Глобально",
   Project: "Проект",
   "Connect an environment to edit its omp settings.":
     "Подключите окружение, чтобы редактировать его настройки omp.",

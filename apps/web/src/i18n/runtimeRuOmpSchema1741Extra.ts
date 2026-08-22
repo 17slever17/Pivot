@@ -44,12 +44,16 @@ export const RU_OMP_SCHEMA_1741_EXTRA: Readonly<Record<string, string>> = {
     "Что делать, когда все аккаунты coding plan того же провайдера вошли в резервный порог.",
   "Keep interactive sessions on the primary until confirmed; background agents auto-fallback":
     "В интерактивных сессиях оставаться на основной модели до подтверждения; фоновые агенты переключаются автоматически",
-  "Always select the next eligible configured fallback": "Всегда выбирать следующий подходящий настроенный fallback",
-  "Do not spend reserve quota or select a fallback": "Не расходовать резервную квоту и не выбирать fallback",
-  "When to return to the primary model after a fallback": "Когда возвращаться к основной модели после fallback",
+  "Always select the next eligible configured fallback":
+    "Всегда выбирать следующий подходящий настроенный fallback",
+  "Do not spend reserve quota or select a fallback":
+    "Не расходовать резервную квоту и не выбирать fallback",
+  "When to return to the primary model after a fallback":
+    "Когда возвращаться к основной модели после fallback",
   "Return to the primary model after its suppression window ends":
     "Возвращаться к основной модели после окончания окна подавления",
-  "Stay on the fallback model until manually changed": "Оставаться на fallback-модели до ручного переключения",
+  "Stay on the fallback model until manually changed":
+    "Оставаться на fallback-модели до ручного переключения",
   "When a Claude Fable 5 / Mythos 5 request is blocked by Anthropic's safety classifier, retry it on Claude Opus 4.8 server-side (Anthropic `server-side-fallback-2026-06-01` beta). Opt-in — leaving this off preserves the pre-fallback behavior for every request.":
     "Если запрос Claude Fable 5 / Mythos 5 блокируется классификатором безопасности Anthropic, повторять его на Claude Opus 4.8 через server-side fallback Anthropic. Опция включается явно; выключенное состояние сохраняет прежнее поведение.",
 

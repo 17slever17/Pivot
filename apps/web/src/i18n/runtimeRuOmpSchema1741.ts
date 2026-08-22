@@ -70,8 +70,10 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
   "Standard symbols (default)": "Стандартные символы (по умолчанию)",
   "Requires Nerd Font": "Требуется Nerd Font",
   "Maximum compatibility": "Максимальная совместимость",
-  "Use blue instead of green for diff additions": "Использовать синий вместо зелёного для добавлений в diff",
-  "Visual layout of the input editor and status line": "Внешний вид редактора ввода и строки состояния",
+  "Use blue instead of green for diff additions":
+    "Использовать синий вместо зелёного для добавлений в diff",
+  "Visual layout of the input editor and status line":
+    "Внешний вид редактора ввода и строки состояния",
   "Pre-built status line configurations": "Готовые конфигурации строки состояния",
   "Style of separators between segments": "Стиль разделителей между сегментами",
   "How the line between the left and right segments reflects context usage (box composer only)":
@@ -102,7 +104,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Плавно показывать текст ассистента и потоковый ввод инструментов по мере поступления чанков",
   "Hide model-initiated tool calls and results from the transcript":
     "Скрывать вызовы инструментов моделью и их результаты из истории",
-  "Show per-turn token usage on assistant messages": "Показывать расход токенов каждого хода в сообщениях ассистента",
+  "Show per-turn token usage on assistant messages":
+    "Показывать расход токенов каждого хода в сообщениях ассистента",
   "Show a divider above an assistant turn whose request lost (missed) the prompt cache":
     "Показывать разделитель перед ходом ассистента, запрос которого не попал в кэш промпта",
   "Collapse pre-compaction history behind the summary divider on the live transcript; disable to keep the full transcript inline with dividers at each compaction point":
@@ -112,7 +115,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Переносить нижнюю границу промпта в отдельную строку, чтобы preedit macOS IME не смещал её",
 
   // Model / reasoning / prompt / sampling.
-  "Reasoning depth for thinking-capable models": "Глубина рассуждения для моделей с поддержкой thinking",
+  "Reasoning depth for thinking-capable models":
+    "Глубина рассуждения для моделей с поддержкой thinking",
   "Hide thinking blocks in assistant responses": "Скрывать блоки thinking в ответах ассистента",
   "Omit code blocks from thinking summaries and replace them with an ellipsis":
     "Убирать блоки кода из сводок thinking и заменять их многоточием",
@@ -155,7 +159,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Температура сэмплирования (0 = детерминированно, 1 = творчески, -1 = значение провайдера)",
   "Nucleus sampling cutoff (0-1, -1 = provider default)":
     "Порог nucleus sampling (0–1, -1 = значение провайдера)",
-  "Sample from top-K tokens (-1 = provider default)": "Выбирать из top-K токенов (-1 = значение провайдера)",
+  "Sample from top-K tokens (-1 = provider default)":
+    "Выбирать из top-K токенов (-1 = значение провайдера)",
   "Minimum probability threshold (0-1, -1 = provider default)":
     "Минимальный порог вероятности (0–1, -1 = значение провайдера)",
   "Use provider default": "Использовать значение провайдера",
@@ -167,20 +172,26 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
   Broad: "Широко",
 
   // Input / startup / notifications / collaboration.
-  "When steering messages interrupt tool execution": "Когда steering-сообщения прерывают выполнение инструментов",
+  "When steering messages interrupt tool execution":
+    "Когда steering-сообщения прерывают выполнение инструментов",
   "What happens between /loop iterations before re-submitting the prompt":
     "Что происходит между итерациями /loop перед повторной отправкой промпта",
-  "Action when pressing Escape twice with empty editor": "Действие при двойном Escape в пустом редакторе",
-  "Default filter mode when opening the session tree": "Фильтр по умолчанию при открытии дерева сессии",
-  "Max visible items in autocomplete dropdown (3-20)": "Максимум видимых пунктов в автодополнении (3–20)",
+  "Action when pressing Escape twice with empty editor":
+    "Действие при двойном Escape в пустом редакторе",
+  "Default filter mode when opening the session tree":
+    "Фильтр по умолчанию при открытии дерева сессии",
+  "Max visible items in autocomplete dropdown (3-20)":
+    "Максимум видимых пунктов в автодополнении (3–20)",
   "Suggest emojis from `:name:` shortcodes and expand text emoticons like `:D` or `:-)`":
     "Предлагать эмодзи по коротким кодам `:name:` и разворачивать текстовые смайлы вроде `:D` или `:-)`",
   "When a paste reaches this many lines, offer a menu to wrap it in a code block, wrap it in XML tags, or save it to a file. 0 disables the menu (large pastes still collapse to a [Paste] marker).":
     "Если вставка достигает указанного числа строк, предлагать обернуть её в блок кода/XML или сохранить в файл. 0 отключает меню; большие вставки всё равно сворачиваются в маркер [Paste].",
-  "Skip welcome screen and startup status messages": "Пропускать приветственный экран и сообщения состояния при запуске",
+  "Skip welcome screen and startup status messages":
+    "Пропускать приветственный экран и сообщения состояния при запуске",
   "Show the full animated setup splash on normal interactive startup without rerunning setup. Quiet Startup still suppresses it.":
     "Показывать полный анимированный setup-экран при обычном интерактивном запуске без повторного setup. Quiet Startup по-прежнему скрывает его.",
-  "Show newly added onboarding steps once per setup version": "Показывать новые шаги знакомства один раз для каждой версии setup",
+  "Show newly added onboarding steps once per setup version":
+    "Показывать новые шаги знакомства один раз для каждой версии setup",
   "Check for omp updates on startup": "Проверять обновления omp при запуске",
   "Check for plugin updates on startup": "Проверять обновления плагинов при запуске",
   "Choose whether update notes start as a summary, full details, or stay hidden":
@@ -200,13 +211,15 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
   "Notify when the ask tool is waiting for input": "Уведомлять, когда инструмент ask ожидает ввод",
   "Generate a brief LLM recap of where things stand after the terminal has been idle":
     "Создавать краткую LLM-сводку состояния после простоя терминала",
-  "Seconds to wait while idle before showing the recap": "Сколько секунд простоя ждать перед показом сводки",
+  "Seconds to wait while idle before showing the recap":
+    "Сколько секунд простоя ждать перед показом сводки",
   "Relay used by /collab (wss://host[:port])": "Relay, используемый /collab (wss://host[:port])",
   "Browser UI used by /collab links; empty derives from collab.relayUrl; explicit http:// is localhost-only":
     "Веб-интерфейс для ссылок /collab; пустое значение выводится из collab.relayUrl; явный http:// разрешён только для localhost",
   "Name shown to other collab participants (default: OS username)":
     "Имя, показываемое другим участникам collab (по умолчанию имя пользователя ОС)",
-  "Where /share uploads the encrypted session blob": "Куда /share загружает зашифрованный blob сессии",
+  "Where /share uploads the encrypted session blob":
+    "Куда /share загружает зашифрованный blob сессии",
   "Run the secret obfuscator over /share snapshots before upload (uses the secrets.* config)":
     "Обфусцировать секреты в снимках /share перед загрузкой (используются настройки secrets.*)",
 
@@ -215,7 +228,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
   "Off, local summary pipeline, Mnemopi SQLite, or Hindsight remote memory":
     "Без памяти, локальная сводка, Mnemopi SQLite или удалённая память Hindsight",
   "No memory subsystem runs": "Подсистема памяти отключена",
-  "Local rollout summarisation pipeline (memory_summary.md)": "Локальная система сводок rollout (memory_summary.md)",
+  "Local rollout summarisation pipeline (memory_summary.md)":
+    "Локальная система сводок rollout (memory_summary.md)",
   "Vectorize Hindsight remote memory service": "Удалённый сервис памяти Hindsight",
   "Local SQLite recall/retain backend with optional embeddings":
     "Локальный SQLite-бэкенд recall/retain с необязательными embeddings",
@@ -231,22 +245,26 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "global = один общий банк; per-project = отдельный банк для каждого cwd; per-project-tagged = локальные записи проекта с видимостью глобального recall",
   "Local embedding model family. en = stronger English model; multilingual = cross-language model. Changing this rebuilds existing memory embeddings on next start.":
     "Семейство локальной embedding-модели. en = более сильная английская модель; multilingual = многоязычная. Изменение пересоберёт существующие embeddings памяти при следующем запуске.",
-  "Recall local memories into the first turn of each session": "Добавлять локальные воспоминания в первый ход каждой сессии",
-  "Retain completed conversation turns into local Mnemopi memory": "Сохранять завершённые ходы разговора в локальную память Mnemopi",
+  "Recall local memories into the first turn of each session":
+    "Добавлять локальные воспоминания в первый ход каждой сессии",
+  "Retain completed conversation turns into local Mnemopi memory":
+    "Сохранять завершённые ходы разговора в локальную память Mnemopi",
   "Enable 4-voice recall (vector, graph, fact, temporal) fused with reciprocal rank fusion":
     "Включить четырёхканальный recall (vector, graph, fact, temporal) с reciprocal rank fusion",
   "Enable the tiered query result cache for repeated and similar recall queries":
     "Включить многоуровневый кэш результатов для повторных и похожих recall-запросов",
   "Ingest new memories into the episodic graph as they are stored, linking them to related entities and memories":
     "При сохранении добавлять новые воспоминания в эпизодический граф и связывать их с релевантными сущностями и воспоминаниями",
-  "Force deterministic FTS-only recall instead of vector embeddings": "Использовать детерминированный FTS-only recall вместо векторных embeddings",
+  "Force deterministic FTS-only recall instead of vector embeddings":
+    "Использовать детерминированный FTS-only recall вместо векторных embeddings",
 
   // Files / LSP / shell / runtimes.
   "Render Markdown read results as formatted terminal Markdown previews instead of raw source":
     "Показывать результаты чтения Markdown как форматированный предпросмотр вместо исходного текста",
   "Return structural code summaries when read is called without an explicit selector":
     "Возвращать структурные сводки кода, если read вызывается без явного селектора",
-  "Return structural summaries for Markdown and plain text reads": "Возвращать структурные сводки для Markdown и обычного текста",
+  "Return structural summaries for Markdown and plain text reads":
+    "Возвращать структурные сводки для Markdown и обычного текста",
   "Minimum multiline body or literal length before read summaries collapse it":
     "Минимальная длина многострочного тела или литерала, после которой сводка read сворачивает его",
   "Minimum multiline block comment length before read summaries collapse it":
@@ -265,17 +283,22 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Запускать language server при первом использовании вместо запуска вместе с сессией",
   "Share one language server per project across omp instances via the daemon broker (falls back to private servers when unavailable)":
     "Совместно использовать один language server на проект между экземплярами omp через daemon broker; при недоступности использовать отдельные серверы",
-  "Automatically format code files using LSP after writing": "Автоматически форматировать файлы кода через LSP после записи",
-  "Return LSP diagnostics after writing code files": "Возвращать диагностику LSP после записи файлов кода",
-  "Return LSP diagnostics after editing code files": "Возвращать диагностику LSP после редактирования файлов кода",
+  "Automatically format code files using LSP after writing":
+    "Автоматически форматировать файлы кода через LSP после записи",
+  "Return LSP diagnostics after writing code files":
+    "Возвращать диагностику LSP после записи файлов кода",
+  "Return LSP diagnostics after editing code files":
+    "Возвращать диагностику LSP после редактирования файлов кода",
   "Suppress post-edit LSP diagnostics already shown for a file; only surface new or changed ones":
     "Не повторять уже показанную диагностику LSP после редактирования; показывать только новую или изменившуюся",
-  "Enable the bash tool for shell command execution": "Включить инструмент bash для выполнения команд оболочки",
+  "Enable the bash tool for shell command execution":
+    "Включить инструмент bash для выполнения команд оболочки",
   "Automatically background long-running bash commands and deliver the result later":
     "Автоматически отправлять долгие команды bash в фон и возвращать результат позже",
   "Ordered bash command approval rules. Each item has match and approval fields; only '*' wildcards are supported.":
     "Упорядоченные правила подтверждения команд bash. Каждый пункт содержит match и approval; поддерживаются только wildcard `*`.",
-  "Block shell commands that have dedicated tools": "Блокировать shell-команды, для которых есть отдельные инструменты",
+  "Block shell commands that have dedicated tools":
+    "Блокировать shell-команды, для которых есть отдельные инструменты",
   "Auto-load a repo's direnv/devenv `.envrc` into the bash session so devenv tools and env vars are present without manual `direnv exec`. Honors direnv's allow list: an `.envrc` you haven't `direnv allow`ed is never executed":
     "Автоматически загружать `.envrc` direnv/devenv репозитория в bash-сессию, чтобы инструменты и переменные окружения были доступны без `direnv exec`. Учитывается allow-list direnv: `.envrc`, для которого не выполнен `direnv allow`, не запускается.",
   "Max wait for the first `direnv export` (a cold devenv shell can be slow); on timeout the session runs without the direnv env":
@@ -284,10 +307,14 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Сжимать многословный вывод shell (git, npm, cargo и т. п.) перед передачей агенту",
   "Source outline mode for cat/read of source files: default or aggressive":
     "Режим outline исходников для cat/read: обычный или агрессивный",
-  "Allow the eval tool to dispatch Python cells to the IPython kernel": "Разрешить eval выполнять Python-ячейки в ядре IPython",
-  "Allow the eval tool to dispatch JavaScript cells to the in-process runtime": "Разрешить eval выполнять JavaScript-ячейки во встроенной среде",
-  "Allow the eval tool to dispatch Ruby cells to the persistent Ruby kernel": "Разрешить eval выполнять Ruby-ячейки в постоянном ядре Ruby",
-  "Allow the eval tool to dispatch Julia cells to the persistent Julia kernel": "Разрешить eval выполнять Julia-ячейки в постоянном ядре Julia",
+  "Allow the eval tool to dispatch Python cells to the IPython kernel":
+    "Разрешить eval выполнять Python-ячейки в ядре IPython",
+  "Allow the eval tool to dispatch JavaScript cells to the in-process runtime":
+    "Разрешить eval выполнять JavaScript-ячейки во встроенной среде",
+  "Allow the eval tool to dispatch Ruby cells to the persistent Ruby kernel":
+    "Разрешить eval выполнять Ruby-ячейки в постоянном ядре Ruby",
+  "Allow the eval tool to dispatch Julia cells to the persistent Julia kernel":
+    "Разрешить eval выполнять Julia-ячейки в постоянном ядре Julia",
   "Automatically background long-running eval cells and deliver the result later":
     "Автоматически отправлять долгие eval-ячейки в фон и возвращать результат позже",
   "Keep the IPython kernel alive across eval calls or start fresh each time":
@@ -300,18 +327,22 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Необязательный путь к конкретному Julia. Если указан, автоматический поиск Julia отключается.",
 
   // Tool execution / browser / MCP / tasks.
-  "Enable the web_search tool for live web results": "Включить инструмент web_search для актуальных результатов из интернета",
+  "Enable the web_search tool for live web results":
+    "Включить инструмент web_search для актуальных результатов из интернета",
   "Enable OMP-native security scan planning, execution, and the read-only security:// resource namespace":
     "Включить встроенное в OMP планирование и выполнение security scan, а также read-only пространство security://",
-  "Enable the ask tool for interactive user questions": "Включить инструмент ask для интерактивных вопросов пользователю",
+  "Enable the ask tool for interactive user questions":
+    "Включить инструмент ask для интерактивных вопросов пользователю",
   "Enable the browser tool for scripted Chromium automation (puppeteer)":
     "Включить инструмент browser для автоматизации Chromium через puppeteer",
   "Default HTTP CDP discovery endpoint (for example http://127.0.0.1:9222) to attach to instead of launching a browser. Explicit app.cdp_url or app.path on the tool call take precedence.":
     "HTTP CDP endpoint по умолчанию (например http://127.0.0.1:9222) для подключения вместо запуска браузера. Явные app.cdp_url или app.path в вызове инструмента имеют приоритет.",
   "Drive your own Chrome tabs through the omp browser relay. Install the extension once (`omp browser-relay install`); the relay server auto-starts when the browser tool needs it. Takes precedence over Browser CDP URL; set PI_BROWSER_RELAY=0 or PI_BROWSER_RELAY=1 to override.":
     "Управлять своими вкладками Chrome через browser relay omp. Расширение устанавливается один раз (`omp browser-relay install`); relay-сервер запускается автоматически по запросу browser. Имеет приоритет над Browser CDP URL; PI_BROWSER_RELAY=0/1 переопределяет настройку.",
-  "omp browser relay endpoint (default http://127.0.0.1:9224).": "Endpoint browser relay omp (по умолчанию http://127.0.0.1:9224).",
-  "Launch browser in headless mode (disable to show browser UI)": "Запускать браузер в headless-режиме (отключите, чтобы видеть UI браузера)",
+  "omp browser relay endpoint (default http://127.0.0.1:9224).":
+    "Endpoint browser relay omp (по умолчанию http://127.0.0.1:9224).",
+  "Launch browser in headless mode (disable to show browser UI)":
+    "Запускать браузер в headless-режиме (отключите, чтобы видеть UI браузера)",
   "Use cmux WKWebView surfaces for browser automation when a cmux socket is available. Set PI_BROWSER_CMUX=0 or PI_BROWSER_CMUX=1 to override.":
     "Использовать поверхности cmux WKWebView для автоматизации браузера при доступном сокете cmux. PI_BROWSER_CMUX=0/1 переопределяет настройку.",
   "Directory to save screenshots. If unset, screenshots go to a temp file. Supports ~. Examples: ~/Downloads, ~/Desktop, /sdcard/Download (Android)":
@@ -322,7 +353,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "При in-band вызовах инструментов немедленно останавливать модель, если она начинает выдумывать результат инструмента. Если отключено, модель завершает генерацию, а выдуманное продолжение отбрасывается.",
   "Maximum timeout in seconds the agent can set for any tool (0 = no limit)":
     "Максимальный таймаут в секундах, который агент может задать для инструмента (0 = без ограничения)",
-  "Enable async bash commands and background task execution": "Включить асинхронные bash-команды и фоновые задачи",
+  "Enable async bash commands and background task execution":
+    "Включить асинхронные bash-команды и фоновые задачи",
   "How long a `hub` wait watches background jobs before returning the current state. A fixed value waits that exact duration every time. `smart` adapts: it starts at 5s and lengthens with each back-to-back wait (up to 5m), then resets to 5s after about a minute without waiting.":
     "Сколько `hub wait` следит за фоновыми задачами перед возвратом текущего состояния. Фиксированное значение используется каждый раз. `smart` начинает с 5 с, увеличивает ожидание при повторных wait до 5 мин и сбрасывается до 5 с примерно через минуту без ожидания.",
   "Default timeout for hub message waits (and send await:true) in milliseconds; 0 disables the timeout":
@@ -334,16 +366,22 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
   "When xd:// Prompt Docs is Built-ins Only, inline dynamic devices whose names match these glob patterns (for example mcp__context_mode_*). Catalog Only ignores this setting.":
     "В режиме xd:// Prompt Docs = Built-ins Only встраивать динамические устройства, чьи имена соответствуют этим glob-шаблонам (например mcp__context_mode_*). Catalog Only игнорирует настройку.",
   "Load .mcp.json/mcp.json from project root": "Загружать .mcp.json/mcp.json из корня проекта",
-  "Render non-JSON MCP text results as Markdown in the transcript": "Показывать текстовые результаты MCP не в JSON как Markdown в истории",
-  "Inject MCP resource updates into the agent conversation": "Добавлять обновления ресурсов MCP в разговор агента",
+  "Render non-JSON MCP text results as Markdown in the transcript":
+    "Показывать текстовые результаты MCP не в JSON как Markdown в истории",
+  "Inject MCP resource updates into the agent conversation":
+    "Добавлять обновления ресурсов MCP в разговор агента",
   "Debounce window in milliseconds for MCP resource updates before injecting them into the conversation":
     "Окно debounce в миллисекундах для обновлений ресурсов MCP перед добавлением в разговор",
   "Enable plan mode for read-only exploration and planning before execution":
     "Включить plan mode для read-only исследования и планирования перед выполнением",
-  "Automatically enter plan mode at the start of every new session": "Автоматически включать plan mode в начале каждой новой сессии",
-  "Enable per-session goal mode and the hidden goal tool": "Включить goal mode для сессии и скрытый инструмент goal",
-  "Show token budget alongside the goal indicator in the status line": "Показывать бюджет токенов рядом с индикатором goal в строке состояния",
-  "Run modes where active goals may auto-continue between turns": "Режимы запуска, в которых активные цели могут автоматически продолжаться между ходами",
+  "Automatically enter plan mode at the start of every new session":
+    "Автоматически включать plan mode в начале каждой новой сессии",
+  "Enable per-session goal mode and the hidden goal tool":
+    "Включить goal mode для сессии и скрытый инструмент goal",
+  "Show token budget alongside the goal indicator in the status line":
+    "Показывать бюджет токенов рядом с индикатором goal в строке состояния",
+  "Run modes where active goals may auto-continue between turns":
+    "Режимы запуска, в которых активные цели могут автоматически продолжаться между ходами",
   "Refresh generated session titles after todo init replans unless the title was set by the user":
     "Обновлять сгенерированные заголовки сессий после replanning todo init, если заголовок не был задан пользователем",
 
@@ -354,7 +392,8 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Максимум одновременных запусков субагентов Ollama Cloud на процесс; 0 отключает ограничение провайдера",
   "Prioritized providers for the web_search tool; unlisted providers retain their default order afterward":
     "Приоритетный порядок провайдеров для web_search; неуказанные провайдеры сохраняют стандартный порядок после них",
-  "Providers that web_search should never use, even as fallbacks": "Провайдеры, которые web_search не должен использовать даже как fallback",
+  "Providers that web_search should never use, even as fallbacks":
+    "Провайдеры, которые web_search не должен использовать даже как fallback",
   "Model ID for Gemini Google Search grounding. Defaults to gemini-2.5-flash.":
     "ID модели для grounding Google Search в Gemini. По умолчанию gemini-2.5-flash.",
   "Endpoint routing strategy for google-antigravity providers (chat, search, image, discovery)":
@@ -363,19 +402,22 @@ export const RU_OMP_SCHEMA_1741: Readonly<Record<string, string>> = {
     "Приоритетный порядок провайдеров генерации изображений; неуказанные следуют за провайдером активной сессии и встроенным порядком",
   'Serving path for Fireworks requests. Priority sends `service_tier: "priority"` for higher reliability during peak traffic at a higher price; Standard omits it. Fast (`-fast`) models ignore this — Fast is its own serving path.':
     'Маршрут обслуживания запросов Fireworks. Priority отправляет `service_tier: "priority"` для большей надёжности в часы пик за более высокую цену; Standard не отправляет его. Модели Fast (`-fast`) игнорируют настройку.',
-  "Voice used by Codex-backed realtime voice sessions": "Голос для realtime voice-сессий на базе Codex",
+  "Voice used by Codex-backed realtime voice sessions":
+    "Голос для realtime voice-сессий на базе Codex",
   "Backend for the tts tool: local on-device neural TTS (Kokoro-82M) or xAI Grok Voice":
     "Бэкенд инструмента tts: локальный нейросетевой TTS на устройстве (Kokoro-82M) или xAI Grok Voice",
   "On-device neural TTS model (Kokoro-82M) used by the local TTS backend":
     "Локальная нейросетевая TTS-модель (Kokoro-82M), используемая локальным TTS-бэкендом",
   "Kokoro voice used by the local TTS backend (American/British, female/male)":
     "Голос Kokoro для локального TTS-бэкенда (американский/британский, женский/мужской)",
-  "Speak the assistant's output aloud through the speakers as it streams": "Озвучивать потоковый вывод ассистента через динамики",
+  "Speak the assistant's output aloud through the speakers as it streams":
+    "Озвучивать потоковый вывод ассистента через динамики",
   "What to speak: all = assistant messages + thinking; assistant = messages only; yield = only the final message at turn end":
     "Что озвучивать: all = сообщения ассистента + thinking; assistant = только сообщения; yield = только финальное сообщение в конце хода",
   "Rewrite assistant output into natural spoken prose with the tiny/smol model before synthesis (describes code, drops links and markdown). Falls back to mechanical cleanup on failure":
     "Перед синтезом переписывать вывод ассистента в естественную устную речь моделью tiny/smol (описывать код, убирать ссылки и Markdown). При ошибке использовать механическую очистку.",
-  "Kokoro voice used when speaking the assistant's output aloud": "Голос Kokoro для озвучивания вывода ассистента",
+  "Kokoro voice used when speaking the assistant's output aloud":
+    "Голос Kokoro для озвучивания вывода ассистента",
   "Session-title model: online (the TINY role from /models, else @smol) by default, or a local on-device model":
     "Модель заголовков сессий: по умолчанию онлайн (роль TINY из /models, иначе @smol) либо локальная модель на устройстве",
   "ONNX execution provider for local tiny models (titles + memory). Default uses CPU-only inference. The PI_TINY_DEVICE env var overrides this.":
