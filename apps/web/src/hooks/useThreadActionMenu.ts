@@ -47,14 +47,15 @@ function failureToast(title: string, error: unknown) {
 }
 
 /**
- * The per-thread action menu (pin, settle, snooze, rename, copy, delete…) as
+ * The per-thread action menu (pin, settle, snooze, archive, rename, copy, delete…) as
  * a self-contained hook, for surfaces other than the sidebar row — today the
  * chat header. Renders through the native context-menu bridge and dispatches
  * through the same mutations the sidebar uses.
  *
  * Unlike the sidebar, settle and snooze here never navigate away: the caller
  * is acting on the thread they are reading, and ChatView's parked-thread
- * banner already offers the way back.
+ * banner already offers the way back. Archive owns its established navigation
+ * behavior inside useThreadActions.
  */
 export function useThreadActionMenu(input: {
   readonly threadRef: ScopedThreadRef | null;
@@ -66,6 +67,7 @@ export function useThreadActionMenu(input: {
 }) {
   const { threadRef, projectCwd, changeRequestState, onStartRename } = input;
   const {
+    archiveThread,
     settleThread,
     unsettleThread,
     snoozeThread,
@@ -81,6 +83,7 @@ export function useThreadActionMenu(input: {
   const markThreadUnread = useUiStateStore((s) => s.markThreadUnread);
   const autoSettleAfterDays = useClientSettings((s) => s.sidebarAutoSettleAfterDays);
   const confirmThreadDelete = useClientSettings((s) => s.confirmThreadDelete);
+  const displayLanguage = useClientSettings((s) => s.displayLanguage);
   const timestampFormat = useClientSettings((s) => s.timestampFormat);
   const { copyToClipboard: copyPathToClipboard } = useCopyToClipboard<{ path: string }>({
     onCopy: ({ path }) => {
@@ -137,6 +140,7 @@ export function useThreadActionMenu(input: {
           isSnoozed: supports.snooze && effectiveSnoozed(thread, { now: now.toISOString() }),
           canSnoozeNow: canSnooze(thread, { now: now.toISOString() }),
           isRegeneratingTitle,
+          language: displayLanguage,
           supports,
           snoozePresets,
         });
@@ -213,6 +217,9 @@ export function useThreadActionMenu(input: {
           case "unpin":
             await reportFailure("Failed to unpin thread", () => unpinThread(threadRef));
             return;
+          case "archive":
+            await reportFailure("Failed to archive thread", () => archiveThread(threadRef));
+            return;
           case "rename":
             onStartRename();
             return;
@@ -253,14 +260,18 @@ export function useThreadActionMenu(input: {
             return;
           case "delete": {
             if (confirmThreadDelete) {
+              const message =
+                displayLanguage === "ru"
+                  ? [
+                      `Удалить чат «${thread.title}»?`,
+                      "История этого чата будет удалена без возможности восстановления.",
+                    ]
+                  : [
+                      `Delete thread "${thread.title}"?`,
+                      "This permanently clears conversation history for this thread.",
+                    ];
               const confirmed = await settlePromise(() =>
-                api.dialogs.confirm(
-                  [
-                    `Delete thread "${thread.title}"?`,
-                    "This permanently clears conversation history for this thread.",
-                  ].join("\n"),
-                  { variant: "destructive" },
-                ),
+                api.dialogs.confirm(message.join("\n"), { variant: "destructive" }),
               );
               if (confirmed._tag === "Failure" || !confirmed.value) return;
             }
@@ -283,6 +294,7 @@ export function useThreadActionMenu(input: {
       })();
     },
     [
+      archiveThread,
       autoSettleAfterDays,
       changeRequestState,
       confirmThreadDelete,
@@ -290,6 +302,7 @@ export function useThreadActionMenu(input: {
       copyPathToClipboard,
       copyThreadIdToClipboard,
       deleteThread,
+      displayLanguage,
       handleNewThread,
       markThreadUnread,
       onStartRename,
