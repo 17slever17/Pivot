@@ -1,4 +1,4 @@
-Unmapped description-oriented files: 25
+Unmapped description-oriented files: 24
 
 ## apps/web/src/appearanceFonts.ts
 - !Number.isFinite(advance) || advance
@@ -27,9 +27,6 @@ Unmapped description-oriented files: 25
 - = value.startIndex && match.start
 
 ## apps/web/src/components/capabilities/CapabilityItemsPanel.tsx
-- A project rule with the same name shadows the global rule for that project.
-- A project rule with the same name shadows the rule in the omp agent directory.
-- A project skill with the same name is available in addition to the one in the omp agent directory.
 - Global rules live in the omp agent directory; project rules live under the project
 - Global skills live in the omp agent directory; project skills live under the project
 - Project and global skills coexist — a project skill is available in addition to the same-named global one.
@@ -147,17 +144,6 @@ Unmapped description-oriented files: 25
 - Whether this link may update Live Activities.
 
 ## packages/contracts/src/t3ProjectFile.ts
-- A project script that team members can import into T3 Code.
-- Display name for the script, shown in the T3 Code scripts menu.
 - Icon shown next to the script in the scripts menu. Defaults to
-- Project scripts shared with everyone who opens this repository in T3 Code.
-- Shell command executed in a T3 Code terminal at the project root.
-- URL opened in the in-app browser preview when this script runs. Only honored on the desktop build.
-- When true, automatically open the preview panel at `previewUrl` the moment the script starts.
-- When true, the script runs automatically after a worktree is created for a new thread.
 - Where new threads start for this repository:
 - Workspace-relative path to the project icon (e.g.
-
-## packages/contracts/src/settings.ts
-- omp memory.backend value (off, local, mnemopi, hindsight).
-- Path to the omp binary used by this instance.
