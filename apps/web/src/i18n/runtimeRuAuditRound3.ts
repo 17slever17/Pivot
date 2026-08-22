@@ -24,7 +24,8 @@ export const RU_AUDIT_ROUND3: Readonly<Record<string, string>> = {
   default: "по умолчанию",
   none: "нет",
   "Instance ID is required.": "Укажите ID инстанса.",
-  "Instance ID must be 64 characters or fewer.": "ID инстанса должен содержать не более 64 символов.",
+  "Instance ID must be 64 characters or fewer.":
+    "ID инстанса должен содержать не более 64 символов.",
   "Instance ID must start with a letter and use only letters, digits, '-', or '_'.":
     "ID инстанса должен начинаться с буквы и содержать только буквы, цифры, «-» или «_».",
 
