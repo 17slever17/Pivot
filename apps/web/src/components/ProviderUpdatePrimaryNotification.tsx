@@ -17,6 +17,7 @@ import {
   getProviderUpdateProgressToastView,
   getProviderUpdateRejectedToastView,
   getProviderUpdateRunningToastView,
+  isProviderUpdateActive,
   providerUpdateNotificationKey,
   type ProviderUpdateToastView,
 } from "./ProviderUpdateLaunchNotification.logic";
@@ -117,6 +118,9 @@ export function ProviderUpdatePrimaryNotification() {
   const updateProvider = useAtomCommand(serverEnvironment.updateProvider, {
     reportFailure: false,
   });
+  const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
+    reportFailure: false,
+  });
   const activeToastRef = useRef<ActiveProviderUpdateToast | null>(null);
   const { dismissedNotificationKeys, dismissNotificationKey } =
     useDismissedProviderUpdateNotificationKeys();
@@ -143,6 +147,37 @@ export function ProviderUpdatePrimaryNotification() {
       updateProviders.filter((provider) => canOneClickUpdateProviderCandidate(provider, providers)),
     [providers, updateProviders],
   );
+  const hasActiveProviderUpdate = useMemo(
+    () => providers.some((provider) => isProviderUpdateActive(provider)),
+    [providers],
+  );
+
+  // `updateProvider` can finish while the provider list still contains the
+  // last streamed queued/running snapshot. Re-check the provider while that
+  // state is visible so cards and update toasts converge to the terminal
+  // snapshot instead of leaving a permanent spinner behind.
+  useEffect(() => {
+    if (!hasActiveProviderUpdate || !primaryEnvironment) return;
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      if (cancelled) return;
+      await refreshProviders({
+        environmentId: primaryEnvironment.environmentId,
+        input: {},
+      });
+      if (!cancelled) {
+        timeoutId = setTimeout(() => void poll(), 1500);
+      }
+    };
+
+    timeoutId = setTimeout(() => void poll(), 500);
+    return () => {
+      cancelled = true;
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    };
+  }, [hasActiveProviderUpdate, primaryEnvironment, refreshProviders]);
 
   const openProviderSettings = useCallback(
     (toastId?: ProviderUpdateToastId) => {
@@ -263,6 +298,14 @@ export function ProviderUpdatePrimaryNotification() {
           return;
         }
 
+        // The update command may return before the subscribed provider snapshot
+        // has been re-checked. Trigger one refresh immediately; the active-state
+        // poll above continues only if that refreshed snapshot is still running.
+        await refreshProviders({
+          environmentId: primaryEnvironment.environmentId,
+          input: {},
+        });
+
         const updatedProviderSnapshots = collectUpdatedProviderSnapshots({
           results,
           providerInstanceIds,
@@ -322,6 +365,7 @@ export function ProviderUpdatePrimaryNotification() {
     activeToastRef.current = { kind: "prompt", key: notificationKey, toastId };
   }, [
     updateProvider,
+    refreshProviders,
     dismissNotificationKey,
     dismissedNotificationKeys,
     notificationKey,
