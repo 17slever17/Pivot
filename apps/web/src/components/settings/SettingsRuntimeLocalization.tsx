@@ -18,6 +18,7 @@ import { RU_PULL_REQUESTS } from "../../i18n/runtimeRuPullRequests";
 import { RU_REMAINING } from "../../i18n/runtimeRuRemaining";
 import { RU_SETTINGS } from "../../i18n/runtimeRuSettings";
 import { RU_SURFACES } from "../../i18n/runtimeRuSurfaces";
+import { RU_VISUAL_AUDIT } from "../../i18n/runtimeRuVisualAudit";
 
 const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_COMMON,
@@ -37,6 +38,7 @@ const STATIC_TRANSLATIONS: Readonly<Record<string, string>> = {
   ...RU_AUDIT_EXTRA_G,
   ...RU_AUDIT_EXTRA_H,
   ...RU_FINAL_POLISH,
+  ...RU_VISUAL_AUDIT,
 };
 
 const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]) => string]> = [
@@ -47,6 +49,13 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   [/^Sampling every (.+)$/, (interval) => `Опрос каждые ${interval}`],
   [/^Updated (.+)$/, (when) => `Обновлено ${translateRelativeTime(when)}`],
   [/^Checked (.+)$/, (when) => `Проверено ${translateRelativeTime(when)}`],
+  [/^just now$/, () => "только что"],
+  [/^now$/, () => "сейчас"],
+  [/^(\d+)s ago$/, (count) => `${count}с назад`],
+  [/^(\d+)m ago$/, (count) => `${count}м назад`],
+  [/^(\d+)h ago$/, (count) => `${count}ч назад`],
+  [/^(\d+)d ago$/, (count) => `${count}д назад`],
+  [/^(\d+)w ago$/, (count) => `${count}н назад`],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
@@ -60,11 +69,31 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     /^Reset (.+) to default$/,
     (name) => `Восстановить значение по умолчанию: ${STATIC_TRANSLATIONS[name] ?? name}`,
   ],
+  [/^Reset (.+) to its default\?$/, (name) => `Сбросить ${name} к значению по умолчанию?`],
   [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
   [/^(.+) files$/, (project) => `Файлы: ${project}`],
   [/^(\d+) of (\d+) failing$/, (count, total) => `Не пройдено проверок: ${count} из ${total}`],
   [/^(\d+) of (\d+) running$/, (count, total) => `Выполняется проверок: ${count} из ${total}`],
   [/^(\d+) of (\d+) passing$/, (count, total) => `Пройдено проверок: ${count} из ${total}`],
+  [/^(.+) per active day$/, (value) => `${value} за активный день`],
+  [/^(.+)% of observed input$/, (value) => `${value}% наблюдаемого ввода`],
+  [/^(\d+) cache writes?$/, (count) => `${count} записей в кэш`],
+  [/^includes (.+) reasoning$/, (value) => `включая ${value} токенов рассуждений`],
+  [/^(.+) observed CPU time$/, (value) => `${value} процессорного времени за период наблюдения`],
+  [/^(.+) combined process peaks$/, (value) => `${value} — суммарный пик памяти процессов`],
+  [/^Delete thread "(.+)"\?$/, (title) => `Удалить чат «${title}»?`],
+  [/^Delete skill “(.+)”\?$/, (name) => `Удалить скилл «${name}»?`],
+  [/^Delete rule “(.+)”\?$/, (name) => `Удалить правило «${name}»?`],
+  [/^Move skill (.+) to omp$/, (name) => `Переместить скилл ${name} в omp`],
+  [/^Move rule (.+) to omp$/, (name) => `Переместить правило ${name} в omp`],
+  [/^Edit skill (.+)$/, (name) => `Изменить скилл ${name}`],
+  [/^Edit rule (.+)$/, (name) => `Изменить правило ${name}`],
+  [/^Delete skill (.+)$/, (name) => `Удалить скилл ${name}`],
+  [/^Delete rule (.+)$/, (name) => `Удалить правило ${name}`],
+  [/^Saved skill (.+)$/, (name) => `Скилл ${name} сохранён`],
+  [/^Saved rule (.+)$/, (name) => `Правило ${name} сохранено`],
+  [/^Deleted skill (.+)$/, (name) => `Скилл ${name} удалён`],
+  [/^Deleted rule (.+)$/, (name) => `Правило ${name} удалено`],
   [/^Expand (.+)$/, (name) => `Развернуть ${name}`],
   [/^Collapse (.+)$/, (name) => `Свернуть ${name}`],
   [/^Edit shortcut for (.+)$/, (name) => `Изменить сочетание для ${name}`],
@@ -168,6 +197,17 @@ function translateRelativeTime(value: string): string {
   const normalized = normalizeValue(value);
   if (normalized === "just now") return "только что";
   if (normalized === "now") return "сейчас";
+  const compactAgo = /^(\d+)(s|m|h|d|w) ago$/.exec(normalized);
+  if (compactAgo) {
+    const units: Readonly<Record<string, string>> = {
+      s: "с",
+      m: "м",
+      h: "ч",
+      d: "д",
+      w: "н",
+    };
+    return `${compactAgo[1]}${units[compactAgo[2]!] ?? compactAgo[2]} назад`;
+  }
   if (normalized.endsWith(" ago")) return `${normalized.slice(0, -4)} назад`;
   return normalized;
 }
