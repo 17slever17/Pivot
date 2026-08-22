@@ -10,6 +10,7 @@ export const RU_AUDIT_ROUND3: Readonly<Record<string, string>> = {
     "WSL-бэкенд будет остановлен. Чаты и проекты, открытые в WSL, останутся в дистрибутиве, но будут недоступны в Piπot, пока вы снова не включите WSL.",
   "Piπot will restart and start only the WSL backend. Your Windows-side projects won't be accessible until you turn this off again.":
     "Piπot перезапустится и запустит только WSL-бэкенд. Проекты на стороне Windows будут недоступны, пока вы снова не отключите этот режим.",
+  "this server": "этот сервер",
 
   // Diagnostics strings that live in tooltips/table headers rather than the
   // section chrome caught by the previous pass.
@@ -20,6 +21,8 @@ export const RU_AUDIT_ROUND3: Readonly<Record<string, string>> = {
   // Provider model management and validation.
   hidden: "скрыта",
   custom: "пользовательская",
+  default: "по умолчанию",
+  none: "нет",
   "Instance ID is required.": "Укажите ID инстанса.",
   "Instance ID must be 64 characters or fewer.": "ID инстанса должен содержать не более 64 символов.",
   "Instance ID must start with a letter and use only letters, digits, '-', or '_'.":
@@ -45,13 +48,19 @@ export const RU_AUDIT_ROUND3: Readonly<Record<string, string>> = {
   "Update this environment's Piπot server to browse pull requests.":
     "Обновите сервер Piπot в этом окружении, чтобы просматривать pull requests.",
 
-  // Pull-request checkout / handoff edge states.
+  // Pull-request checkout / handoff edge states and compact badges.
   "The checkout could not be moved onto the pull request's latest commits, so the code there is older than the pull request. Uncommitted work or local commits keep it where it is.":
     "Не удалось переместить checkout на последние коммиты pull request, поэтому код в нём старее. Незакоммиченные изменения или локальные коммиты не позволяют переключить его.",
   "This repository is on the pull request's branch, with a thread open on it.":
     "Репозиторий переключён на ветку pull request, и на ней открыт чат.",
   "Adds the pull request to this thread's composer.":
     "Добавляет pull request в поле ввода этого чата.",
+  outdated: "устарело",
+  team: "команда",
+
+  // Timeline compact states missed by source-string-only passes.
+  Empty: "Пусто",
+  "✓ completed": "✓ завершено",
 
   // Sidebar action failure missed because it is emitted only from an error path.
   "Failed to archive thread": "Не удалось архивировать чат",
