@@ -67,6 +67,11 @@ function translatedMonth(month: string): string {
   return RU_MONTHS[normalized] ?? month.toLowerCase();
 }
 
+function capitalizedTranslatedMonth(month: string): string {
+  const translated = translatedMonth(month);
+  return `${translated[0]?.toUpperCase() ?? ""}${translated.slice(1)}`;
+}
+
 function formatRussianClock(
   hourText: string,
   minuteText: string | undefined,
@@ -193,9 +198,25 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
   ],
   [
     /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$/,
-    (month) => `${translatedMonth(month)}.`,
+    (month) => `${capitalizedTranslatedMonth(month)}.`,
   ],
+  [/^(\d{1,2})(?::(\d{2}))? (AM|PM)$/, (hour, minute, period) => formatRussianClock(hour, minute, period)],
   [/^Show (\d+) more$/, (count) => `Показать ещё ${count}`],
+  [/^Changes in (.+)$/, (version) => `Изменения в ${version}`],
+  [/^(\d+) threads?$/, (count) => russianPlural(count, "чат", "чата", "чатов")],
+  [
+    /^(\d+) devices? still scanning$/,
+    (count) =>
+      russianPlural(
+        count,
+        "устройство ещё сканируется",
+        "устройства ещё сканируются",
+        "устройств ещё сканируются",
+      ),
+  ],
+  [/^(.+) downloads$/, (count) => `${count} скачиваний`],
+  [/^Model slugs must be (\d+) characters or less\.$/, (count) => `Slug модели должен содержать не более ${count} символов.`],
+  [/^An instance named '(.+)' already exists\.$/, (name) => `Инстанс с именем «${name}» уже существует.`],
   [/^No threads in (.+) yet$/, (project) => `В проекте ${project} пока нет чатов`],
   [/^Project settings for (.+)$/, (project) => `Настройки проекта: ${project}`],
   [/^Reachable at (.+)$/, (address) => `Доступно по адресу ${address}`],
@@ -203,12 +224,43 @@ const DYNAMIC_TRANSLATIONS: ReadonlyArray<readonly [RegExp, (...groups: string[]
     /^Exposed on all interfaces\. Pairing links use (.+)\.$/,
     (host) => `Доступно на всех сетевых интерфейсах. Ссылки подключения используют ${host}.`,
   ],
+  [/^Conflicts with (.+), and more\.$/, (bindings) => `Конфликтует с ${bindings} и другими.`],
   [/^Conflicts with (.+)$/, (branch) => `Конфликтует с ${branch}`],
   [
     /^Reset (.+) to default$/,
     (name) => `Восстановить значение по умолчанию: ${STATIC_TRANSLATIONS[name] ?? name}`,
   ],
   [/^Reset (.+) to its default\?$/, (name) => `Сбросить ${name} к значению по умолчанию?`],
+  [/^Could not save (.+)$/, (name) => `Не удалось сохранить ${name}`],
+  [/^Saved (.+)$/, (name) => `${name} сохранено`],
+  [/^Could not reset (.+)$/, (name) => `Не удалось сбросить ${name}`],
+  [/^Reset (.+)$/, (name) => `${name} сброшено`],
+  [/^Could not move (.+)$/, (name) => `Не удалось переместить ${name}`],
+  [/^Moved (.+) to project$/, (name) => `${name} перенесено в проект`],
+  [/^Could not add (.+)$/, (name) => `Не удалось добавить ${name}`],
+  [/^Added (.+)$/, (name) => `${name} добавлено`],
+  [/^Value for (.+)$/, (name) => `Значение для ${name}`],
+  [/^Edit (.+)$/, (name) => `Изменить ${name}`],
+  [/^Details for (.+)$/, (name) => `Сведения о ${name}`],
+  [/^Add (.+) to favorites$/, (name) => `Добавить ${name} в избранное`],
+  [/^Remove (.+) from favorites$/, (name) => `Удалить ${name} из избранного`],
+  [
+    /^Use (.+) for (light|dark) mode, currently active$/,
+    (name, mode) =>
+      `Использовать ${name} для ${mode === "light" ? "светлого" : "тёмного"} режима, сейчас активно`,
+  ],
+  [
+    /^Use (.+) for (light|dark) mode$/,
+    (name, mode) => `Использовать ${name} для ${mode === "light" ? "светлого" : "тёмного"} режима`,
+  ],
+  [/^Use (.+) theme, currently active$/, (name) => `Использовать тему ${name}, сейчас активна`],
+  [/^Use (.+) theme$/, (name) => `Использовать тему ${name}`],
+  [
+    /^Use (.+), (.+) variant, currently active$/,
+    (collection, variant) => `Использовать ${collection}, вариант ${variant}, сейчас активен`,
+  ],
+  [/^Use (.+), (.+) variant$/, (collection, variant) => `Использовать ${collection}, вариант ${variant}`],
+  [/^Default \((.+)\)$/, (detail) => `По умолчанию (${STATIC_TRANSLATIONS[detail] ?? detail})`],
   [/^Search (.+) files$/, (project) => `Поиск файлов: ${project}`],
   [/^Lives in (.+)$/, (path) => `Хранится в ${path}`],
   [/^(.+) files$/, (project) => `Файлы: ${project}`],
