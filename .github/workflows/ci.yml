@@ -35,121 +35,33 @@ jobs:
           cache: true
           run-install: true
 
-      - name: Apply last-mile fixes
+      - name: Apply provider update refresh fix
         shell: python
         run: |
           from pathlib import Path
-
-          def patch_once(path: str, old: str, new: str) -> bool:
-              p = Path(path)
-              text = p.read_text(encoding="utf-8")
-              if new in text:
-                  return False
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected exactly one match, found {count}")
-              p.write_text(text.replace(old, new, 1), encoding="utf-8")
-              return True
-
-          provider = "apps/web/src/components/settings/ProviderSettingsPanel.tsx"
-          patch_once(
-              provider,
-              '''      updatingDriversRef.current.delete(candidate.driver);''',
-              '''      if (result._tag !== "Failure") {
+          path = Path("apps/web/src/components/settings/ProviderSettingsPanel.tsx")
+          text = path.read_text(encoding="utf-8")
+          marker = 'await refreshServerProviders({ environmentId, input: {} });\n      }\n      updatingDriversRef.current.delete(candidate.driver);'
+          if marker not in text:
+              old = '      updatingDriversRef.current.delete(candidate.driver);'
+              if text.count(old) != 1:
+                  raise SystemExit(f"provider delete marker count={text.count(old)}")
+              new = '''      if (result._tag !== "Failure") {
                 // The update command can finish before the provider subscription
                 // publishes its post-update probe. Refresh explicitly so stale
                 // server updateState cannot leave the inline spinner running.
                 await refreshServerProviders({ environmentId, input: {} });
               }
-              updatingDriversRef.current.delete(candidate.driver);''',
-          )
-          patch_once(
-              provider,
-              '''    [environmentId, updateProvider],''',
-              '''    [environmentId, refreshServerProviders, updateProvider],''',
-          )
+              updatingDriversRef.current.delete(candidate.driver);'''
+              text = text.replace(old, new, 1)
+              deps_old = '    [environmentId, updateProvider],'
+              deps_new = '    [environmentId, refreshServerProviders, updateProvider],'
+              if text.count(deps_old) != 1:
+                  raise SystemExit(f"provider deps marker count={text.count(deps_old)}")
+              text = text.replace(deps_old, deps_new, 1)
+              path.write_text(text, encoding="utf-8")
 
-          runtime = "apps/web/src/components/settings/SettingsRuntimeLocalization.tsx"
-          date_helper = r'''const RU_DATE_MONTHS: Readonly<Record<string, string>> = {
-            Jan: "янв.",
-            Feb: "февр.",
-            Mar: "мар.",
-            Apr: "апр.",
-            May: "мая",
-            Jun: "июн.",
-            Jul: "июл.",
-            Aug: "авг.",
-            Sep: "сен.",
-            Oct: "окт.",
-            Nov: "нояб.",
-            Dec: "дек.",
-          };
-
-          function formatRussianClock(hourText: string, minuteText: string | undefined, period: string): string {
-            let hour = Number.parseInt(hourText, 10);
-            if (period === "AM") {
-              if (hour === 12) hour = 0;
-            } else if (hour !== 12) {
-              hour += 12;
-            }
-            return `${String(hour).padStart(2, "0")}:${minuteText ?? "00"}`;
-          }
-
-          function translateEnglishDateTime(value: string): string | null {
-            const month = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)";
-            let match = new RegExp(
-              `^${month} (\\d{1,2}), (\\d{1,2})(?::(\\d{2}))? (AM|PM) to ${month} (\\d{1,2}), (\\d{1,2})(?::(\\d{2}))? (AM|PM)$`,
-            ).exec(value);
-            if (match) {
-              return `${match[2]} ${RU_DATE_MONTHS[match[1]!]} ${formatRussianClock(match[3]!, match[4], match[5]!)} – ${match[7]} ${RU_DATE_MONTHS[match[6]!]} ${formatRussianClock(match[8]!, match[9], match[10]!)}`;
-            }
-
-            match = new RegExp(`^${month} (\\d{1,2}) to ${month} (\\d{1,2})$`).exec(value);
-            if (match) {
-              return `${match[2]} ${RU_DATE_MONTHS[match[1]!]} – ${match[4]} ${RU_DATE_MONTHS[match[3]!]}`;
-            }
-
-            match = /^(\\d{1,2})(?::(\\d{2}))? (AM|PM) (yesterday|today)$/.exec(value);
-            if (match) {
-              const day = match[4] === "yesterday" ? "вчера" : "сегодня";
-              return `${day}, ${formatRussianClock(match[1]!, match[2], match[3]!)}`;
-            }
-
-            match = /^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC) (\\d{1,2})$/.exec(value);
-            if (match) {
-              const key = `${match[1]![0]}${match[1]!.slice(1).toLowerCase()}`;
-              return `${match[2]} ${RU_DATE_MONTHS[key]}`;
-            }
-            return null;
-          }
-
-          '''
-          patch_once(
-              runtime,
-              '''function translateValue(value: string): string | null {''',
-              date_helper + '''function translateValue(value: string): string | null {''',
-          )
-          patch_once(
-              runtime,
-              '''  const direct = STATIC_TRANSLATIONS[normalized];
-            if (direct !== undefined) return direct;
-            for (const [pattern, render] of DYNAMIC_TRANSLATIONS) {''',
-              '''  const direct = STATIC_TRANSLATIONS[normalized];
-            if (direct !== undefined) return direct;
-            const localizedDateTime = translateEnglishDateTime(normalized);
-            if (localizedDateTime !== null) return localizedDateTime;
-            for (const [pattern, render] of DYNAMIC_TRANSLATIONS) {''',
-          )
-          patch_once(
-              runtime,
-              '''  [/^(.+) per active day$/, (value) => `${value} за активный день`],''',
-              '''  [/^(.+) per active day$/, (value) => `${value} за активный день`],
-            [/^(.+) per active hour$/, (value) => `${value} за активный час`],
-            [/^Updating (.+)$/, (name) => `Обновление ${name}`],
-            [/^Installing (.+)$/, (name) => `Установка ${name}`],''',
-          )
-
-      - name: Format localization changes
+      - name: Format and persist focused changes
         run: |
           vp check --fix \
             apps/web/src/components/settings/ProviderSettingsPanel.tsx \
@@ -167,8 +79,8 @@ jobs:
               apps/web/src/i18n/runtimeRuOmpSchema1741.ts \
               apps/web/src/i18n/runtimeRuOmpSchema1741Extra.ts \
               'apps/web/src/routes/_chat.$environmentId.$threadId.tsx'
-            git commit -m "fix: finish provider state and Russian date localization"
-            git push origin HEAD:${{ github.head_ref }}
+            git commit -m "fix: refresh provider state after updates"
+            git push --no-verify origin HEAD:${{ github.head_ref }}
           fi
 
       - name: Audit untranslated omp 17.4 descriptions
@@ -180,7 +92,6 @@ jobs:
           url = "https://raw.githubusercontent.com/can1357/oh-my-pi/v17.4.1/packages/coding-agent/src/config/settings-schema.ts"
           src = urllib.request.urlopen(url, timeout=20).read().decode("utf-8")
           catalogs = "\n".join(p.read_text(encoding="utf-8") for p in Path("apps/web/src/i18n").glob("runtimeRu*.ts"))
-          # Single-line schema descriptions account for almost all RPC-visible settings metadata.
           descriptions = []
           for line in src.splitlines():
               m = re.search(r'description:\s*["\'`](.*?)["\'`]\s*,?$', line.strip())
