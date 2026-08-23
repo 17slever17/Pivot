@@ -5,8 +5,8 @@
  * @module provider/omp/OmpCatalogDecoder
  */
 import {
-  type ModelCapabilities,
   ProviderDriverKind,
+  type ModelCapabilities,
   type ServerProviderModel,
   type ServerProviderSlashCommand,
 } from "@t3tools/contracts";
@@ -43,9 +43,7 @@ function formatThinkingLevelLabel(level: string): string {
   if (knownLabel) {
     return knownLabel;
   }
-  return level
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return level.replace(/[-_]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function decodeModelCapabilities(entry: Record<string, unknown>): ModelCapabilities | null {
