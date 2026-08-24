@@ -1,0 +1,133 @@
+name: Port draft retry fix
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+          fetch-depth: 0
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: true
+      - name: Port upstream stale-draft retry fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          invariant = Path('apps/server/src/orchestration/commandInvariants.ts')
+          text = invariant.read_text(encoding='utf-8')
+          old = '''  if (!findThreadById(input.readModel, input.threadId)) {
+            return Effect.void;
+          }
+          return Effect.fail(
+            invariantError(
+              input.command.type,
+              `Thread '${input.threadId}' already exists and cannot be created twice.`,
+            ),
+          );'''
+          new = '''  const existingThread = findThreadById(input.readModel, input.threadId);
+          if (!existingThread || existingThread.deletedAt !== null) {
+            return Effect.void;
+          }
+          return Effect.fail(
+            invariantError(
+              input.command.type,
+              `Thread '${input.threadId}' already exists and cannot be created twice.`,
+            ),
+          );'''
+          if old not in text:
+            raise SystemExit('requireThreadAbsent anchor not found')
+          invariant.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          test = Path('apps/server/src/orchestration/commandInvariants.test.ts')
+          text = test.read_text(encoding='utf-8')
+          anchor = '''  it("requires non-negative integers", async () => {
+          '''
+          case = '''  it("treats soft-deleted threads as absent for create flows", async () => {
+            const deletedThread = readModel.threads[0]!;
+            const readModelWithDeletedThread: OrchestrationReadModel = {
+              ...readModel,
+              threads: [{ ...deletedThread, deletedAt: now }, ...readModel.threads.slice(1)],
+            };
+
+            await Effect.runPromise(
+              requireThreadAbsent({
+                readModel: readModelWithDeletedThread,
+                command: {
+                  type: "thread.create",
+                  commandId: CommandId.make("cmd-4"),
+                  threadId: deletedThread.id,
+                  projectId: ProjectId.make("project-a"),
+                  title: "recreated",
+                  modelSelection: {
+                    instanceId: ProviderInstanceId.make("codex"),
+                    model: "gpt-5-codex",
+                  },
+                  interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+                  runtimeMode: "full-access",
+                  branch: null,
+                  worktreePath: null,
+                  createdAt: now,
+                },
+                threadId: deletedThread.id,
+              }),
+            );
+          });
+
+          '''
+          if case not in text:
+            if anchor not in text:
+              raise SystemExit('commandInvariants test anchor not found')
+            text = text.replace(anchor, case + anchor, 1)
+          test.write_text(text, encoding='utf-8')
+
+          route = Path('apps/web/src/routes/_chat.draft.$draftId.tsx')
+          text = route.read_text(encoding='utf-8')
+          old = '''  useEffect(() => {
+            if (!inferredThreadRef || draftSession?.promotedTo) {
+              return;
+            }
+            markPromotedDraftThreadByRef(inferredThreadRef);
+          }, [draftSession?.promotedTo, inferredThreadRef]);'''
+          new = '''  useEffect(() => {
+            // A bootstrap send creates the thread before preparing its worktree and
+            // rolls it back when preparation fails. Marking on mere existence would
+            // stick `promotedTo` on the surviving draft, hiding it from the sidebar.
+            if (!inferredThreadRef || draftSession?.promotedTo || !serverThreadStarted) {
+              return;
+            }
+            markPromotedDraftThreadByRef(inferredThreadRef);
+          }, [draftSession?.promotedTo, inferredThreadRef, serverThreadStarted]);'''
+          if old not in text:
+            raise SystemExit('draft route promotion anchor not found')
+          route.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Format
+        run: vp fmt apps/server/src/orchestration/commandInvariants.ts apps/server/src/orchestration/commandInvariants.test.ts 'apps/web/src/routes/_chat.draft.$draftId.tsx'
+      - name: Test invariant
+        run: vp test run apps/server/src/orchestration/commandInvariants.test.ts
+      - name: Typecheck
+        run: vpr typecheck
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/server/src/orchestration/commandInvariants.ts apps/server/src/orchestration/commandInvariants.test.ts 'apps/web/src/routes/_chat.draft.$draftId.tsx'
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "fix(orchestration): recover draft after bootstrap rollback"
+          git push origin HEAD:test/ru-i18n-omp-telemetry-direct
