@@ -44,6 +44,7 @@ import {
   type ThreadListV2Item,
   type ThreadListV2ProjectListItem,
 } from "../threads/threadListV2";
+import { useThreadListV2ShelfPreferences } from "../threads/use-thread-list-v2-shelf-preferences";
 import type { HomeListFilterMenuEnvironment } from "./home-list-filter-menu";
 import { resolveProjectCapabilitiesTarget } from "../projects/ProjectCapabilitiesRouteScreen.logic";
 import { SwipeableScrollGateProvider, useSwipeableScrollGate } from "./thread-swipe-actions";
@@ -398,10 +399,13 @@ export function HomeScreen(props: HomeScreenProps) {
     () => setSettledVisibleCount((count) => count + THREAD_LIST_V2_SETTLED_PAGE_COUNT),
     [],
   );
-  const [snoozedShelfExpanded, setSnoozedShelfExpanded] = useState(false);
-  const toggleSnoozedShelf = useCallback(() => setSnoozedShelfExpanded((value) => !value), []);
-  const [settledShelfExpanded, setSettledShelfExpanded] = useState(true);
-  const toggleSettledShelf = useCallback(() => setSettledShelfExpanded((value) => !value), []);
+  const {
+    loaded: shelfPreferencesLoaded,
+    settledShelfExpanded,
+    snoozedShelfExpanded,
+    toggleSettledShelf,
+    toggleSnoozedShelf,
+  } = useThreadListV2ShelfPreferences();
   // Per-project expansion persists as overrides keyed by logical projectKey
   // (the web sidebar's `t3code:sidebar-v2:project-expanded` map semantics;
   // mobile stores the map in the preferences blob). Local toggles layer on
@@ -709,6 +713,7 @@ export function HomeScreen(props: HomeScreenProps) {
       props.savedConnectionsById,
       props.searchQuery,
       serverConfigs,
+      shelfPreferencesLoaded,
       settlementEnvironmentIds,
       snoozeEnvironmentIds,
       threadSearchMatchByKey,
@@ -761,6 +766,7 @@ export function HomeScreen(props: HomeScreenProps) {
         return (
           <ThreadListV2SnoozedShelfHeader
             count={item.count}
+            disabled={!shelfPreferencesLoaded}
             expanded={item.expanded}
             onToggle={toggleSnoozedShelf}
           />
@@ -777,6 +783,7 @@ export function HomeScreen(props: HomeScreenProps) {
       threadListV2Items,
       toggleProject,
       toggleSnoozedShelf,
+      shelfPreferencesLoaded,
       v2ProjectTitleByProjectKey,
     ],
   );
