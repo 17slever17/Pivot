@@ -2,10 +2,12 @@ import * as NodeAssert from "node:assert/strict";
 
 import { it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { OmpSettings, ProviderInstanceId } from "@t3tools/contracts";
+import { OmpSettings, ProviderInstanceId, TextGenerationError } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
+import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as Queue from "effect/Queue";
 import * as Schema from "effect/Schema";
 import * as Sink from "effect/Sink";
@@ -19,6 +21,7 @@ const decodeOmpSettings = Schema.decodeSync(OmpSettings);
 const UnknownJson = Schema.fromJsonString(Schema.Unknown);
 const decodeUnknownJson = Schema.decodeSync(UnknownJson);
 const encodeUnknownJson = Schema.encodeSync(UnknownJson);
+const isTextGenerationError = Schema.is(TextGenerationError);
 
 function asSpawnedCommand(command: ChildProcess.Command) {
   if (command._tag !== "StandardCommand") {
@@ -31,7 +34,10 @@ function asSpawnedCommand(command: ChildProcess.Command) {
   };
 }
 
-function makeFakeOmpSpawner(sessionFile: string) {
+function makeFakeOmpSpawner(
+  sessionFile: string,
+  options: { readonly providerError?: string } = {},
+) {
   const prompts: string[] = [];
   const setModels: Array<{ provider: string; modelId: string }> = [];
   const encoder = new TextEncoder();
@@ -116,17 +122,31 @@ function makeFakeOmpSpawner(sessionFile: string) {
                     success: true,
                     data: { agentInvoked: true },
                   });
-                  yield* offer({
-                    type: "message_update",
-                    assistantMessageEvent: {
-                      type: "text_delta",
-                      delta: '{"title":"Wire Omp Thread Titles"}',
-                    },
-                  });
-                  yield* offer({
-                    type: "agent_end",
-                    isTerminal: true,
-                  });
+                  if (options.providerError !== undefined) {
+                    yield* offer({
+                      type: "agent_end",
+                      messages: [
+                        {
+                          role: "assistant",
+                          stopReason: "error",
+                          errorMessage: options.providerError,
+                        },
+                      ],
+                      isTerminal: true,
+                    });
+                  } else {
+                    yield* offer({
+                      type: "message_update",
+                      assistantMessageEvent: {
+                        type: "text_delta",
+                        delta: '{"title":"Wire Omp Thread Titles"}',
+                      },
+                    });
+                    yield* offer({
+                      type: "agent_end",
+                      isTerminal: true,
+                    });
+                  }
                 } else {
                   yield* offer({
                     id: rpcCommand.id,
@@ -175,6 +195,64 @@ describe("OmpTextGeneration", () => {
       NodeAssert.equal(fake.setModels.length, 1);
       NodeAssert.deepEqual(fake.setModels[0], { provider: "openai", modelId: "gpt-5" });
       NodeAssert.ok(fake.prompts[0]?.includes("Generate a title"));
+    }),
+  );
+
+  it.effect("qualifies the bare Luna default for omp RPC", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl");
+      const textGeneration = yield* makeOmpTextGeneration(
+        decodeOmpSettings({
+          enabled: true,
+          binaryPath: "/opt/omp",
+        }),
+      ).pipe(
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+        Effect.provide(NodeServices.layer),
+      );
+
+      yield* textGeneration.generateThreadTitle({
+        cwd: "/proj",
+        message: "Please wire omp text generation so thread titles work again",
+        modelSelection: createModelSelection(ProviderInstanceId.make("omp"), "gpt-5.6-luna"),
+      });
+
+      NodeAssert.deepEqual(fake.setModels, [{ provider: "openai-codex", modelId: "gpt-5.6-luna" }]);
+    }),
+  );
+
+  it.effect("surfaces an assistant provider error instead of reporting empty output", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl", {
+        providerError: "Provider rejected the request (status 403).",
+      });
+      const textGeneration = yield* makeOmpTextGeneration(
+        decodeOmpSettings({
+          enabled: true,
+          binaryPath: "/opt/omp",
+        }),
+      ).pipe(
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+        Effect.provide(NodeServices.layer),
+      );
+
+      const outcome = yield* Effect.exit(
+        textGeneration.generateThreadTitle({
+          cwd: "/proj",
+          message: "Please wire omp text generation so thread titles work again",
+          modelSelection: createModelSelection(ProviderInstanceId.make("omp"), "openai/gpt-5"),
+        }),
+      );
+
+      NodeAssert.equal(Exit.isFailure(outcome), true);
+      if (Exit.isFailure(outcome)) {
+        const error = Cause.squash(outcome.cause);
+        NodeAssert.equal(isTextGenerationError(error), true);
+        if (isTextGenerationError(error)) {
+          NodeAssert.match(error.message, /Provider rejected the request \(status 403\)/);
+          NodeAssert.equal(error.message.includes("empty output"), false);
+        }
+      }
     }),
   );
 });

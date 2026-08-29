@@ -18,6 +18,7 @@ import * as Stream from "effect/Stream";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
 import {
+  DEFAULT_TEXT_GENERATION_MODEL,
   type ModelSelection,
   type OmpSettings,
   type ProviderInstanceEnvironment,
@@ -41,6 +42,7 @@ import {
 } from "./TextGenerationUtils.ts";
 
 const OMP_TIMEOUT_MS = 180_000;
+const OMP_ERROR_MESSAGE_MAX_LENGTH = 2_000;
 
 const isTextGenerationError = Schema.is(TextGenerationError);
 
@@ -54,6 +56,37 @@ function parseOmpModelSlug(slug: string): { provider: string; modelId: string } 
     return null;
   }
   return { provider: slug.slice(0, slash), modelId: slug.slice(slash + 1) };
+}
+
+function resolveOmpModelSlug(slug: string): { provider: string; modelId: string } | null {
+  const parsed = parseOmpModelSlug(slug);
+  if (parsed !== null) {
+    return parsed;
+  }
+  if (slug === DEFAULT_TEXT_GENERATION_MODEL) {
+    return { provider: "openai-codex", modelId: slug };
+  }
+  return null;
+}
+
+function readOmpAgentEndError(frame: Record<string, unknown>): string | undefined {
+  if (!Array.isArray(frame.messages)) {
+    return undefined;
+  }
+  for (const message of frame.messages) {
+    if (!isRecord(message) || message.role !== "assistant" || message.stopReason !== "error") {
+      continue;
+    }
+    const rawMessage = typeof message.errorMessage === "string" ? message.errorMessage : "";
+    const normalized = rawMessage.replace(/\s+/g, " ").trim();
+    if (normalized.length === 0) {
+      return "omp provider returned an error without details.";
+    }
+    return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
+      ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
+      : normalized;
+  }
+  return undefined;
 }
 
 function mapOmpError(operation: string, cause: unknown, detail: string): TextGenerationError {
@@ -158,6 +191,16 @@ export const makeOmpTextGeneration = Effect.fn("makeOmpTextGeneration")(function
             return Effect.void;
           }
           if (frame.type === "agent_end" && frame.isTerminal !== false) {
+            const agentErrorMessage = readOmpAgentEndError(frame);
+            if (agentErrorMessage !== undefined) {
+              return Deferred.fail(
+                done,
+                new TextGenerationError({
+                  operation,
+                  detail: `omp provider error: ${agentErrorMessage}`,
+                }),
+              ).pipe(Effect.ignore);
+            }
             return Deferred.succeed(done, undefined).pipe(Effect.ignore);
           }
           if (frame.type === "prompt_result" && frame.agentInvoked === false) {
@@ -174,20 +217,24 @@ export const makeOmpTextGeneration = Effect.fn("makeOmpTextGeneration")(function
         Effect.forkChild,
       );
 
-      const parsedModel = parseOmpModelSlug(modelSelection.model);
-      if (parsedModel) {
-        yield* runtime
-          .send(sessionKey, {
-            type: "set_model",
-            provider: parsedModel.provider,
-            modelId: parsedModel.modelId,
-          })
-          .pipe(
-            Effect.mapError((cause) =>
-              mapOmpError(operation, cause, "Failed to set omp model for text generation."),
-            ),
-          );
+      const parsedModel = resolveOmpModelSlug(modelSelection.model);
+      if (parsedModel === null) {
+        return yield* new TextGenerationError({
+          operation,
+          detail: `Invalid omp model selection "${modelSelection.model}". Expected provider/model.`,
+        });
       }
+      yield* runtime
+        .send(sessionKey, {
+          type: "set_model",
+          provider: parsedModel.provider,
+          modelId: parsedModel.modelId,
+        })
+        .pipe(
+          Effect.mapError((cause) =>
+            mapOmpError(operation, cause, "Failed to set omp model for text generation."),
+          ),
+        );
 
       const response = yield* runtime
         .send(sessionKey, {

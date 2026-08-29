@@ -137,6 +137,37 @@ describe("OmpAdapter", () => {
     }),
   );
 
+  it.effect("fails a T3 turn when terminal agent_end contains an assistant error", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [
+          {
+            role: "assistant",
+            stopReason: "error",
+            errorMessage: "Provider rejected the request (status 403).",
+          },
+        ],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+      const completed = events.filter((event) => event.type === "turn.completed");
+      NodeAssert.equal(completed.length, 1);
+      NodeAssert.equal(completed[0]?.payload.state, "failed");
+      NodeAssert.equal(
+        completed[0]?.payload.errorMessage,
+        "Provider rejected the request (status 403).",
+      );
+    }),
+  );
+
   it.effect("sendTurn emits turn.started before prompt for checkpoint baseline", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

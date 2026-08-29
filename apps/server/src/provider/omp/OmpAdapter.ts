@@ -84,6 +84,7 @@ const PROVIDER = ProviderDriverKind.make("omp");
 const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 const isProviderAdapterProcessError = Schema.is(ProviderAdapterProcessError);
 const isOmpSpawnError = Schema.is(OmpSpawnError);
+const OMP_ERROR_MESSAGE_MAX_LENGTH = 2_000;
 
 // ---------------------------------------------------------------------------
 // Review findings block decoding (issue #42): the persona ends with one
@@ -95,6 +96,26 @@ const isOmpSpawnError = Schema.is(OmpSpawnError);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readOmpAgentEndError(frame: Record<string, unknown>): string | undefined {
+  if (!Array.isArray(frame.messages)) {
+    return undefined;
+  }
+  for (const message of frame.messages) {
+    if (!isRecord(message) || message.role !== "assistant" || message.stopReason !== "error") {
+      continue;
+    }
+    const rawMessage = typeof message.errorMessage === "string" ? message.errorMessage : "";
+    const normalized = rawMessage.replace(/\s+/g, " ").trim();
+    if (normalized.length === 0) {
+      return "omp provider returned an error without details.";
+    }
+    return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
+      ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
+      : normalized;
+  }
+  return undefined;
 }
 
 /** Normalize omp Rule condition/scope fields (string or string[]) to string[]. */
@@ -873,7 +894,7 @@ export class OmpAdapter {
       return this.#onHostUriCancel(session, frame);
     }
     if (frame.type === "agent_end" && frame.isTerminal !== false) {
-      return this.#emitTurnCompleted(session);
+      return this.#emitTurnCompleted(session, readOmpAgentEndError(frame));
     }
     if (frame.type === "prompt_result" && frame.agentInvoked === false) {
       return this.#emitTurnCompleted(session);
@@ -1442,7 +1463,7 @@ export class OmpAdapter {
     });
   }
 
-  #emitTurnCompleted(session: LiveAdapterSession): Effect.Effect<void> {
+  #emitTurnCompleted(session: LiveAdapterSession, agentErrorMessage?: string): Effect.Effect<void> {
     return Effect.gen({ self: this }, function* () {
       // Capture the final assistant text before the flush nulls it; a review
       // turn's findings are decoded from it.
@@ -1475,6 +1496,13 @@ export class OmpAdapter {
           threadId: session.threadId,
           turnId,
           payload: { reason: "user_abort" },
+        });
+      } else if (agentErrorMessage !== undefined) {
+        yield* this.#emit({
+          type: "turn.completed",
+          threadId: session.threadId,
+          turnId,
+          payload: { state: "failed", errorMessage: agentErrorMessage },
         });
       } else if (session.interactionMode === "review") {
         // Emit findings first so the stream carries them before the terminal
