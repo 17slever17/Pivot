@@ -50,6 +50,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+interface OmpAssistantOutcome {
+  readonly stopReason: string | undefined;
+  readonly errorMessage: string | undefined;
+}
+
+function readOmpAssistantOutcome(value: unknown): OmpAssistantOutcome | undefined {
+  if (!isRecord(value) || value.role !== "assistant") {
+    return undefined;
+  }
+  return {
+    stopReason: typeof value.stopReason === "string" ? value.stopReason : undefined,
+    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : undefined,
+  };
+}
+
 function parseOmpModelSlug(slug: string): { provider: string; modelId: string } | null {
   const slash = slug.indexOf("/");
   if (slash <= 0 || slash === slug.length - 1) {
@@ -69,21 +84,23 @@ function resolveOmpModelSlug(slug: string): { provider: string; modelId: string 
   return null;
 }
 
-function readOmpAgentEndError(frame: Record<string, unknown>): string | undefined {
-  if (!Array.isArray(frame.messages)) {
-    return undefined;
-  }
-  let lastAssistant: Record<string, unknown> | undefined;
-  for (const message of frame.messages) {
-    if (isRecord(message) && message.role === "assistant") {
-      lastAssistant = message;
+function readOmpAgentEndError(
+  frame: Record<string, unknown>,
+  fallbackAssistant?: OmpAssistantOutcome,
+): string | undefined {
+  let lastAssistant = fallbackAssistant;
+  if (Array.isArray(frame.messages)) {
+    for (const message of frame.messages) {
+      const outcome = readOmpAssistantOutcome(message);
+      if (outcome !== undefined) {
+        lastAssistant = outcome;
+      }
     }
   }
   if (lastAssistant?.stopReason !== "error") {
     return undefined;
   }
-  const rawMessage =
-    typeof lastAssistant.errorMessage === "string" ? lastAssistant.errorMessage : "";
+  const rawMessage = lastAssistant.errorMessage ?? "";
   const normalized = rawMessage.replace(/\s+/g, " ").trim();
   if (normalized.length === 0) {
     return "omp provider returned an error without details.";
@@ -166,6 +183,7 @@ export const makeOmpTextGeneration = Effect.fn("makeOmpTextGeneration")(function
         );
 
       const outputRef = yield* Ref.make("");
+      const lastAssistantOutcomeRef = yield* Ref.make<OmpAssistantOutcome | undefined>(undefined);
       const done = yield* Deferred.make<void, TextGenerationError>();
 
       const drainFiber = yield* runtime.streamFrames(sessionKey).pipe(
@@ -194,18 +212,26 @@ export const makeOmpTextGeneration = Effect.fn("makeOmpTextGeneration")(function
             }
             return Effect.void;
           }
+          if (frame.type === "message_end") {
+            const outcome = readOmpAssistantOutcome(frame.message);
+            return outcome === undefined ? Effect.void : Ref.set(lastAssistantOutcomeRef, outcome);
+          }
           if (frame.type === "agent_end" && frame.isTerminal !== false) {
-            const agentErrorMessage = readOmpAgentEndError(frame);
-            if (agentErrorMessage !== undefined) {
-              return Deferred.fail(
-                done,
-                new TextGenerationError({
-                  operation,
-                  detail: `omp provider error: ${agentErrorMessage}`,
-                }),
-              ).pipe(Effect.ignore);
-            }
-            return Deferred.succeed(done, undefined).pipe(Effect.ignore);
+            return Ref.get(lastAssistantOutcomeRef).pipe(
+              Effect.flatMap((fallbackAssistant) => {
+                const agentErrorMessage = readOmpAgentEndError(frame, fallbackAssistant);
+                if (agentErrorMessage !== undefined) {
+                  return Deferred.fail(
+                    done,
+                    new TextGenerationError({
+                      operation,
+                      detail: `omp provider error: ${agentErrorMessage}`,
+                    }),
+                  ).pipe(Effect.ignore);
+                }
+                return Deferred.succeed(done, undefined).pipe(Effect.ignore);
+              }),
+            );
           }
           if (frame.type === "prompt_result" && frame.agentInvoked === false) {
             return Deferred.succeed(done, undefined).pipe(Effect.ignore);

@@ -98,21 +98,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readOmpAgentEndError(frame: Record<string, unknown>): string | undefined {
-  if (!Array.isArray(frame.messages)) {
+function readOmpAssistantOutcome(value: unknown): OmpAssistantOutcome | undefined {
+  if (!isRecord(value) || value.role !== "assistant") {
     return undefined;
   }
-  let lastAssistant: Record<string, unknown> | undefined;
-  for (const message of frame.messages) {
-    if (isRecord(message) && message.role === "assistant") {
-      lastAssistant = message;
+  return {
+    stopReason: typeof value.stopReason === "string" ? value.stopReason : undefined,
+    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : undefined,
+  };
+}
+
+function readOmpAgentEndError(
+  frame: Record<string, unknown>,
+  fallbackAssistant?: OmpAssistantOutcome,
+): string | undefined {
+  let lastAssistant = fallbackAssistant;
+  if (Array.isArray(frame.messages)) {
+    for (const message of frame.messages) {
+      const outcome = readOmpAssistantOutcome(message);
+      if (outcome !== undefined) {
+        lastAssistant = outcome;
+      }
     }
   }
   if (lastAssistant?.stopReason !== "error") {
     return undefined;
   }
-  const rawMessage =
-    typeof lastAssistant.errorMessage === "string" ? lastAssistant.errorMessage : "";
+  const rawMessage = lastAssistant.errorMessage ?? "";
   const normalized = rawMessage.replace(/\s+/g, " ").trim();
   if (normalized.length === 0) {
     return "omp provider returned an error without details.";
@@ -164,6 +176,11 @@ interface PendingExtensionUiRequest {
   readonly ompId: string;
 }
 
+interface OmpAssistantOutcome {
+  readonly stopReason: string | undefined;
+  readonly errorMessage: string | undefined;
+}
+
 interface LiveAdapterSession {
   readonly threadId: ThreadId;
   readonly sessionFile: string;
@@ -184,6 +201,8 @@ interface LiveAdapterSession {
   openRunText: string | null;
   /** Text of the most recently closed run, parked as candidate-final. */
   heldBackRunText: string | null;
+  /** Latest assistant outcome for compacted terminal agent_end frames. */
+  lastAssistantOutcome: OmpAssistantOutcome | undefined;
   interactionMode: ProviderTurnInteractionMode;
   prePlanModelSlug: string | undefined;
   preReviewModelSlug: string | undefined;
@@ -382,6 +401,7 @@ export class OmpAdapter {
         lastTokenUsageEmitAtMs: -TOKEN_USAGE_EMIT_MIN_INTERVAL_MS,
         openRunText: null,
         heldBackRunText: null,
+        lastAssistantOutcome: undefined,
         interactionMode: "default",
         prePlanModelSlug: undefined,
         preReviewModelSlug: undefined,
@@ -426,6 +446,7 @@ export class OmpAdapter {
       session.stopRequested = false;
       session.openRunText = null;
       session.heldBackRunText = null;
+      session.lastAssistantOutcome = undefined;
       yield* this.#applyInteractionMode(session, input.interactionMode);
       if (session.interactionMode !== "plan") {
         yield* this.#applyModelSelection(input.threadId, input.modelSelection?.model);
@@ -898,9 +919,12 @@ export class OmpAdapter {
       return this.#onHostUriCancel(session, frame);
     }
     if (frame.type === "agent_end" && frame.isTerminal !== false) {
-      return this.#emitTurnCompleted(session, readOmpAgentEndError(frame));
+      const agentErrorMessage = readOmpAgentEndError(frame, session.lastAssistantOutcome);
+      session.lastAssistantOutcome = undefined;
+      return this.#emitTurnCompleted(session, agentErrorMessage);
     }
     if (frame.type === "prompt_result" && frame.agentInvoked === false) {
+      session.lastAssistantOutcome = undefined;
       return this.#emitTurnCompleted(session);
     }
     if (frame.type === "command_output") {
@@ -1215,9 +1239,11 @@ export class OmpAdapter {
 
   #onMessageEnd(session: LiveAdapterSession, frame: Record<string, unknown>): Effect.Effect<void> {
     const message = frame.message;
-    if (!isRecord(message) || message.role !== "assistant") {
+    const outcome = readOmpAssistantOutcome(message);
+    if (outcome === undefined) {
       return Effect.void;
     }
+    session.lastAssistantOutcome = outcome;
     session.heldBackRunText = session.openRunText;
     session.openRunText = null;
     return Effect.void;

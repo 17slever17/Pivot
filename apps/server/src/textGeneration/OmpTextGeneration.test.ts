@@ -38,6 +38,7 @@ function makeFakeOmpSpawner(
   sessionFile: string,
   options: {
     readonly providerError?: string;
+    readonly streamedAssistantMessage?: Record<string, unknown>;
     readonly terminalMessages?: ReadonlyArray<Record<string, unknown>>;
   } = {},
 ) {
@@ -125,14 +126,22 @@ function makeFakeOmpSpawner(
                     success: true,
                     data: { agentInvoked: true },
                   });
-                  if (options.terminalMessages !== undefined) {
+                  if (options.streamedAssistantMessage !== undefined) {
                     yield* offer({
-                      type: "message_update",
-                      assistantMessageEvent: {
-                        type: "text_delta",
-                        delta: '{"title":"Wire Omp Thread Titles"}',
-                      },
+                      type: "message_end",
+                      message: options.streamedAssistantMessage,
                     });
+                  }
+                  if (options.terminalMessages !== undefined) {
+                    if (options.streamedAssistantMessage?.stopReason !== "error") {
+                      yield* offer({
+                        type: "message_update",
+                        assistantMessageEvent: {
+                          type: "text_delta",
+                          delta: '{"title":"Wire Omp Thread Titles"}',
+                        },
+                      });
+                    }
                     yield* offer({
                       type: "agent_end",
                       messages: options.terminalMessages,
@@ -266,6 +275,46 @@ describe("OmpTextGeneration", () => {
         NodeAssert.equal(isTextGenerationError(error), true);
         if (isTextGenerationError(error)) {
           NodeAssert.match(error.message, /Provider rejected the request \(status 403\)/);
+          NodeAssert.equal(error.message.includes("empty output"), false);
+        }
+      }
+    }),
+  );
+
+  it.effect("surfaces a streamed assistant error when agent_end was compacted", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl", {
+        streamedAssistantMessage: {
+          role: "assistant",
+          stopReason: "error",
+          errorMessage: "Compacted provider error.",
+        },
+        terminalMessages: [],
+      });
+      const textGeneration = yield* makeOmpTextGeneration(
+        decodeOmpSettings({
+          enabled: true,
+          binaryPath: "/opt/omp",
+        }),
+      ).pipe(
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+        Effect.provide(NodeServices.layer),
+      );
+
+      const outcome = yield* Effect.exit(
+        textGeneration.generateThreadTitle({
+          cwd: "/proj",
+          message: "Please wire omp text generation so thread titles work again",
+          modelSelection: createModelSelection(ProviderInstanceId.make("omp"), "openai/gpt-5"),
+        }),
+      );
+
+      NodeAssert.equal(Exit.isFailure(outcome), true);
+      if (Exit.isFailure(outcome)) {
+        const error = Cause.squash(outcome.cause);
+        NodeAssert.equal(isTextGenerationError(error), true);
+        if (isTextGenerationError(error)) {
+          NodeAssert.match(error.message, /Compacted provider error/);
           NodeAssert.equal(error.message.includes("empty output"), false);
         }
       }

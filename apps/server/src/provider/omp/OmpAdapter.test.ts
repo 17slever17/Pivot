@@ -202,6 +202,50 @@ describe("OmpAdapter", () => {
     }),
   );
 
+  it.effect("uses streamed assistant errors for compacted agent_end and resets per turn", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+
+      const firstEventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "first" });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "error",
+          errorMessage: "Compacted provider error.",
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [],
+        isTerminal: true,
+      });
+      const firstEvents = yield* Fiber.join(firstEventsFiber);
+      const firstCompleted = firstEvents.find((event) => event.type === "turn.completed");
+      NodeAssert.equal(firstCompleted?.payload.state, "failed");
+      NodeAssert.equal(firstCompleted?.payload.errorMessage, "Compacted provider error.");
+
+      const secondEventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "second" });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [],
+        isTerminal: true,
+      });
+      const secondEvents = yield* Fiber.join(secondEventsFiber);
+      const secondCompleted = secondEvents.find((event) => event.type === "turn.completed");
+      NodeAssert.equal(secondCompleted?.payload.state, "completed");
+      NodeAssert.equal(secondCompleted?.payload.errorMessage, undefined);
+    }),
+  );
+
   it.effect("sendTurn emits turn.started before prompt for checkpoint baseline", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
