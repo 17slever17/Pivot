@@ -113,16 +113,35 @@ function isAlreadyExists(error: PlatformError.PlatformError): boolean {
   return error.reason._tag === "AlreadyExists";
 }
 
-function isWindowsReplaceConflict(error: unknown): boolean {
+export function isWindowsReplaceConflict(error: unknown): boolean {
   if (typeof error !== "object" || error === null || !("reason" in error)) {
     return false;
   }
-  const reason = (error as { readonly reason?: { readonly _tag?: string } }).reason;
-  return (
+  const reason = (
+    error as {
+      readonly reason?: {
+        readonly _tag?: string;
+        readonly syscall?: string;
+        readonly cause?: unknown;
+      };
+    }
+  ).reason;
+  if (
     reason?._tag === "AlreadyExists" ||
     reason?._tag === "Busy" ||
     reason?._tag === "PermissionDenied"
-  );
+  ) {
+    return true;
+  }
+  if (reason?._tag !== "Unknown" || reason.syscall !== "rename") {
+    return false;
+  }
+  const cause = reason.cause;
+  if (typeof cause !== "object" || cause === null || !("code" in cause)) {
+    return false;
+  }
+  const code = (cause as { readonly code?: string }).code;
+  return code === "EACCES" || code === "EBUSY" || code === "EEXIST" || code === "EPERM";
 }
 
 function executableFileName(platform: NodeJS.Platform): string {
@@ -369,6 +388,7 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       }
 
       const downloaded: Array<OmpManagedBinaryCandidate> = [];
+      let scanStable = true;
       for (const entry of versionEntries) {
         const version = normalizeReleaseVersion(entry);
         if (currentVersion && compareSemverVersions(version, currentVersion) <= 0) {
@@ -381,19 +401,23 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
           exeName,
         );
         if (!(yield* isExecutableFile(candidatePath))) {
+          scanStable = false;
           continue;
         }
         const probedVersion = yield* probeVersion(candidatePath);
         if (probedVersion !== version) {
+          scanStable = false;
           continue;
         }
         downloaded.push({ executablePath: candidatePath, version });
       }
-      yield* Ref.set(downloadedExecutablesCache, {
-        signature,
-        currentVersion,
-        candidates: downloaded,
-      });
+      if (scanStable) {
+        yield* Ref.set(downloadedExecutablesCache, {
+          signature,
+          currentVersion,
+          candidates: downloaded,
+        });
+      }
       return downloaded;
     },
   );

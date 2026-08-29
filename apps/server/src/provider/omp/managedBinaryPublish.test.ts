@@ -4,10 +4,20 @@ import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
+import * as FileSystem from "effect/FileSystem";
 
-import { selectNewestOmpManagedBinary } from "./OmpManagedBinary.ts";
-import { selectNewestRtkManagedBinary } from "./RtkManagedBinary.ts";
+import {
+  isWindowsReplaceConflict as isOmpWindowsReplaceConflict,
+  selectNewestOmpManagedBinary,
+} from "./OmpManagedBinary.ts";
+import {
+  isWindowsReplaceConflict as isRtkWindowsReplaceConflict,
+  selectNewestRtkManagedBinary,
+} from "./RtkManagedBinary.ts";
 
 /** Real-timer wait — `Effect.sleep` is frozen under the test runtime's TestClock. */
 const wait = (ms: number) =>
@@ -130,6 +140,21 @@ describe("managed binary publish over an executing binary", () => {
       expect(NodeFS.readFileSync(currentPath).equals(NodeFS.readFileSync(process.execPath))).toBe(
         true,
       );
+      const fileSystem = yield* FileSystem.FileSystem;
+      const effectRename = yield* fileSystem.rename(publishTemp, currentPath).pipe(Effect.exit);
+      expect(Exit.isFailure(effectRename)).toBe(true);
+      if (Exit.isFailure(effectRename)) {
+        const effectError = Cause.squash(effectRename.cause);
+        expect(effectError).toMatchObject({
+          reason: {
+            _tag: "Unknown",
+            syscall: "rename",
+            cause: { code: "EPERM" },
+          },
+        });
+        expect(isOmpWindowsReplaceConflict(effectError)).toBe(true);
+        expect(isRtkWindowsReplaceConflict(effectError)).toBe(true);
+      }
       expect(
         selectNewestOmpManagedBinary({ executablePath: currentPath, version: "18.0.0" }, [
           { executablePath: "tools/omp/18.0.11/win32-x64/omp.exe", version: "18.0.11" },
@@ -164,6 +189,7 @@ describe("managed binary publish over an executing binary", () => {
             }),
         ),
       ),
+      Effect.provide(NodeServices.layer),
     );
   });
 });

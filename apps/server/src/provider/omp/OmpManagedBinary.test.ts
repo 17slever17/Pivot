@@ -126,4 +126,63 @@ describe("OmpManagedBinary helpers", () => {
       Effect.ensuring(Effect.sync(() => NodeFS.rmSync(baseDir, { recursive: true, force: true }))),
     );
   });
+
+  effectIt.effect("retries a versioned probe after a transient failure", () => {
+    const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-omp-retry-"));
+    const version = "18.0.11";
+    const executablePath = NodePath.join(baseDir, "tools", "omp", version, "win32-x64", "omp.exe");
+    NodeFS.mkdirSync(NodePath.dirname(executablePath), { recursive: true });
+    NodeFS.writeFileSync(executablePath, "validated-placeholder");
+
+    let probeCount = 0;
+    const encoder = new TextEncoder();
+    const spawner = Layer.succeed(
+      ChildProcessSpawner.ChildProcessSpawner,
+      ChildProcessSpawner.make(() => {
+        probeCount += 1;
+        const output = probeCount === 1 ? "transient probe failure\n" : `omp/${version}\n`;
+        return Effect.succeed(
+          ChildProcessSpawner.makeHandle({
+            pid: ChildProcessSpawner.ProcessId(1),
+            exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
+            isRunning: Effect.succeed(false),
+            kill: () => Effect.void,
+            unref: Effect.succeed(Effect.void),
+            stdin: Sink.drain,
+            stdout: Stream.make(encoder.encode(output)),
+            stderr: Stream.empty,
+            all: Stream.empty,
+            getInputFd: () => Sink.drain,
+            getOutputFd: () => Stream.empty,
+          }),
+        );
+      }),
+    );
+
+    return Effect.gen(function* () {
+      const managed = yield* makeOmpManagedBinary({ baseDir });
+      const first = yield* managed.resolve;
+      expect(first).toEqual({ status: "missing" });
+      const second = yield* managed.resolve;
+      expect(second).toEqual({
+        status: "available",
+        executablePath,
+        source: "managed",
+        version,
+      });
+      expect(probeCount).toBe(2);
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          NodeServices.layer,
+          FetchHttpClient.layer,
+          spawner,
+          Layer.succeed(HostProcessPlatform, "win32"),
+          Layer.succeed(HostProcessArchitecture, "x64"),
+        ),
+      ),
+      Effect.scoped,
+      Effect.ensuring(Effect.sync(() => NodeFS.rmSync(baseDir, { recursive: true, force: true }))),
+    );
+  });
 });
