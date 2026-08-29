@@ -78,10 +78,17 @@ function KeybindingPill({ value }: { value: string }) {
   const parts = value.endsWith("++")
     ? [...value.slice(0, -1).split("+").filter(Boolean), "+"]
     : value.split("+").filter(Boolean);
+  const partOccurrences = new Map<string, number>();
+  const keyedParts = parts.map((part) => {
+    const occurrence = (partOccurrences.get(part) ?? 0) + 1;
+    partOccurrences.set(part, occurrence);
+    return { key: `${part}:${occurrence}`, part };
+  });
+
   return (
     <KbdGroup className="bg-transparent p-0 shadow-none">
-      {parts.map((part, index) => (
-        <Kbd key={`${part}:${index}`} className="min-w-6 justify-center px-1.5">
+      {keyedParts.map(({ key, part }) => (
+        <Kbd key={key} className="min-w-6 justify-center px-1.5">
           {part === "mod"
             ? navigator.platform.toLowerCase().includes("mac")
               ? "⌘"
