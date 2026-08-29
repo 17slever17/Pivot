@@ -17,6 +17,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
+import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
@@ -239,6 +240,11 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
   const exeName = executableFileName(platform);
   const currentPath = path.join(options.baseDir, "tools", "omp", "current", exeName);
   const toolsRoot = path.join(options.baseDir, "tools", "omp");
+  const downloadedExecutablesCache = yield* Ref.make<{
+    readonly signature: string;
+    readonly currentVersion: string | null;
+    readonly candidates: ReadonlyArray<OmpManagedBinaryCandidate>;
+  } | null>(null);
 
   /**
    * Publish a freshly validated binary to `current`, which live sessions run
@@ -334,11 +340,36 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       const entries = yield* fileSystem
         .readDirectory(toolsRoot)
         .pipe(Effect.orElseSucceed(() => []));
+      const versionEntries = entries
+        .filter((entry) => /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(entry))
+        .sort();
+      const entrySignatures: Array<string> = [];
+      for (const entry of versionEntries) {
+        const candidatePath = path.join(
+          toolsRoot,
+          entry,
+          platformKey(platform, arch, musl),
+          exeName,
+        );
+        const info = yield* fileSystem.stat(candidatePath).pipe(Effect.option);
+        const fileSignature = Option.match(info, {
+          onNone: () => "missing",
+          onSome: (value) =>
+            `${value.type}:${value.size.toString()}:${Option.match(value.mtime, {
+              onNone: () => "no-mtime",
+              onSome: (mtime) => String(mtime.getTime()),
+            })}`,
+        });
+        entrySignatures.push(`${entry}:${fileSignature}`);
+      }
+      const signature = entrySignatures.join("\u0000");
+      const cached = yield* Ref.get(downloadedExecutablesCache);
+      if (cached?.signature === signature && cached.currentVersion === currentVersion) {
+        return cached.candidates;
+      }
+
       const downloaded: Array<OmpManagedBinaryCandidate> = [];
-      for (const entry of entries) {
-        if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(entry)) {
-          continue;
-        }
+      for (const entry of versionEntries) {
         const version = normalizeReleaseVersion(entry);
         if (currentVersion && compareSemverVersions(version, currentVersion) <= 0) {
           continue;
@@ -358,6 +389,11 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
         }
         downloaded.push({ executablePath: candidatePath, version });
       }
+      yield* Ref.set(downloadedExecutablesCache, {
+        signature,
+        currentVersion,
+        candidates: downloaded,
+      });
       return downloaded;
     },
   );

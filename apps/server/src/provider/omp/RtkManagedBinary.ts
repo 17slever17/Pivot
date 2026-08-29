@@ -2,7 +2,9 @@
  * RtkManagedBinary — download rtk GitHub release archives into T3 home.
  *
  * Layout: `{baseDir}/tools/rtk/{version}/{platformKey}/rtk[.exe]`
- * Active binary: `{baseDir}/tools/rtk/current/rtk[.exe]` (atomic replace).
+ * Active binary: `{baseDir}/tools/rtk/current/rtk[.exe]` when the host can
+ * replace an existing executable. On Windows, a locked current executable is
+ * left in place and the newest validated versioned binary becomes active.
  *
  * @module provider/omp/RtkManagedBinary
  */
@@ -16,6 +18,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
+import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 import * as Semaphore from "effect/Semaphore";
@@ -23,6 +26,7 @@ import * as Stream from "effect/Stream";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { compareSemverVersions } from "@t3tools/shared/semver";
 
 import { parseGenericCliVersion } from "../providerSnapshot.ts";
 import { isLinuxMuslHost, normalizeReleaseVersion, platformKey } from "./OmpManagedBinary.ts";
@@ -72,6 +76,25 @@ export type AvailableRtkManagedBinary = Extract<
   { readonly status: "available" }
 >;
 
+export interface RtkManagedBinaryCandidate {
+  readonly executablePath: string;
+  readonly version: string;
+}
+
+/** Select the newest validated managed binary, retaining current on ties. */
+export function selectNewestRtkManagedBinary(
+  current: RtkManagedBinaryCandidate | null,
+  downloaded: ReadonlyArray<RtkManagedBinaryCandidate>,
+): RtkManagedBinaryCandidate | null {
+  let selected = current;
+  for (const candidate of downloaded) {
+    if (!selected || compareSemverVersions(candidate.version, selected.version) > 0) {
+      selected = candidate;
+    }
+  }
+  return selected;
+}
+
 const GithubReleaseAsset = Schema.Struct({
   name: Schema.String,
   browser_download_url: Schema.String,
@@ -86,6 +109,18 @@ const decodeGithubRelease = Schema.decodeUnknownEffect(GithubRelease);
 
 function isAlreadyExists(error: PlatformError.PlatformError): boolean {
   return error.reason._tag === "AlreadyExists";
+}
+
+function isWindowsReplaceConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("reason" in error)) {
+    return false;
+  }
+  const reason = (error as { readonly reason?: { readonly _tag?: string } }).reason;
+  return (
+    reason?._tag === "AlreadyExists" ||
+    reason?._tag === "Busy" ||
+    reason?._tag === "PermissionDenied"
+  );
 }
 
 function executableFileName(platform: NodeJS.Platform): string {
@@ -186,6 +221,11 @@ export const makeRtkManagedBinary = Effect.fn("rtkManagedBinary.make")(function*
   const currentBinDirectory = path.join(options.baseDir, "tools", "rtk", "current");
   const currentPath = path.join(currentBinDirectory, exeName);
   const toolsRoot = path.join(options.baseDir, "tools", "rtk");
+  const downloadedExecutablesCache = yield* Ref.make<{
+    readonly signature: string;
+    readonly currentVersion: string | null;
+    readonly candidates: ReadonlyArray<RtkManagedBinaryCandidate>;
+  } | null>(null);
 
   const isExecutableFile = Effect.fn("rtkManagedBinary.isExecutableFile")(function* (
     executablePath: string,
@@ -241,13 +281,88 @@ export const makeRtkManagedBinary = Effect.fn("rtkManagedBinary.make")(function*
       }),
     );
 
+  const resolveDownloadedExecutables = Effect.fn("rtkManagedBinary.resolveDownloadedExecutables")(
+    function* (currentVersion: string | null) {
+      const entries = yield* fileSystem
+        .readDirectory(toolsRoot)
+        .pipe(Effect.orElseSucceed(() => []));
+      const versionEntries = entries
+        .filter((entry) => /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(entry))
+        .sort();
+      const entrySignatures: Array<string> = [];
+      for (const entry of versionEntries) {
+        const candidatePath = path.join(
+          toolsRoot,
+          entry,
+          platformKey(platform, arch, musl),
+          exeName,
+        );
+        const info = yield* fileSystem.stat(candidatePath).pipe(Effect.option);
+        const fileSignature = Option.match(info, {
+          onNone: () => "missing",
+          onSome: (value) =>
+            `${value.type}:${value.size.toString()}:${Option.match(value.mtime, {
+              onNone: () => "no-mtime",
+              onSome: (mtime) => String(mtime.getTime()),
+            })}`,
+        });
+        entrySignatures.push(`${entry}:${fileSignature}`);
+      }
+      const signature = entrySignatures.join("\u0000");
+      const cached = yield* Ref.get(downloadedExecutablesCache);
+      if (cached?.signature === signature && cached.currentVersion === currentVersion) {
+        return cached.candidates;
+      }
+
+      const downloaded: Array<RtkManagedBinaryCandidate> = [];
+      for (const entry of versionEntries) {
+        const version = normalizeReleaseVersion(entry);
+        if (currentVersion && compareSemverVersions(version, currentVersion) <= 0) {
+          continue;
+        }
+        const candidatePath = path.join(
+          toolsRoot,
+          entry,
+          platformKey(platform, arch, musl),
+          exeName,
+        );
+        if (!(yield* isExecutableFile(candidatePath))) {
+          continue;
+        }
+        const probedVersion = yield* probeVersion(candidatePath);
+        if (probedVersion !== version) {
+          continue;
+        }
+        downloaded.push({ executablePath: candidatePath, version });
+      }
+      yield* Ref.set(downloadedExecutablesCache, {
+        signature,
+        currentVersion,
+        candidates: downloaded,
+      });
+      return downloaded;
+    },
+  );
+
   const resolve: RtkManagedBinaryApi["resolve"] = Effect.gen(function* () {
-    if (yield* isExecutableFile(currentPath)) {
-      const version = yield* probeVersion(currentPath);
+    const current = yield* isExecutableFile(currentPath).pipe(
+      Effect.flatMap((exists) =>
+        exists
+          ? probeVersion(currentPath).pipe(
+              Effect.map((version) => (version ? { executablePath: currentPath, version } : null)),
+            )
+          : Effect.succeed(null),
+      ),
+    );
+    const selected = selectNewestRtkManagedBinary(
+      current,
+      yield* resolveDownloadedExecutables(current?.version ?? null),
+    );
+    if (selected) {
       return {
         status: "available",
-        executablePath: currentPath,
-        version,
+        executablePath: selected.executablePath,
+        version: selected.version,
       } satisfies RtkManagedBinaryStatus;
     }
     if (!assetName) {
@@ -415,22 +530,40 @@ export const makeRtkManagedBinary = Effect.fn("rtkManagedBinary.make")(function*
     // `currentPath` is the binary live rtk sessions run from; overwriting it
     // in place with copyFile fails with ETXTBSY while any session is active.
     // Copy to a sibling temp and rename it over `currentPath`: rename replaces
-    // the directory entry atomically and running processes keep the old inode.
+    // the directory entry atomically on Unix and on Windows when the
+    // destination is replaceable. A locked Windows image uses the validated
+    // versioned path instead.
     const publishTemp = `${currentPath}.${yield* crypto.randomUUIDv4.pipe(Effect.orDie)}.tmp`;
     yield* fileSystem
       .copyFile(versionedPath, publishTemp)
       .pipe(wrapInstallFailure("write_failed", "Could not stage the managed rtk binary."));
-    yield* fileSystem
-      .rename(publishTemp, currentPath)
-      .pipe(
-        wrapInstallFailure("write_failed", "Could not activate the managed rtk binary."),
-        Effect.ensuring(fileSystem.remove(publishTemp, { force: true }).pipe(Effect.ignore)),
-      );
+    const published = yield* fileSystem.rename(publishTemp, currentPath).pipe(
+      Effect.as(true),
+      Effect.catch((cause) => {
+        if (platform === "win32" && isWindowsReplaceConflict(cause)) {
+          // Windows keeps an executing image open without delete sharing.
+          // Leave current untouched and execute the immutable versioned file.
+          return Effect.succeed(false);
+        }
+        return Effect.fail(
+          new RtkManagedBinaryError({
+            reason: "write_failed",
+            message: "Could not activate the managed rtk binary.",
+            cause,
+          }),
+        );
+      }),
+      Effect.ensuring(fileSystem.remove(publishTemp, { force: true }).pipe(Effect.ignore)),
+    );
+    if (!published) {
+      return versionedPath;
+    }
     if (platform !== "win32") {
       yield* fileSystem
         .chmod(currentPath, 0o755)
         .pipe(wrapInstallFailure("write_failed", "Could not chmod the managed rtk binary."));
     }
+    return currentPath;
   });
 
   const installUnlocked = Effect.fn("rtkManagedBinary.installUnlocked")(function* () {
@@ -478,10 +611,10 @@ export const makeRtkManagedBinary = Effect.fn("rtkManagedBinary.make")(function*
       if (yield* isExecutableFile(versionedPath)) {
         const existingVersion = yield* probeVersion(versionedPath);
         if (existingVersion === version) {
-          yield* activateBinary(versionedPath);
+          const executablePath = yield* activateBinary(versionedPath);
           return {
             status: "available",
-            executablePath: currentPath,
+            executablePath,
             version,
           } satisfies AvailableRtkManagedBinary;
         }
@@ -567,17 +700,25 @@ export const makeRtkManagedBinary = Effect.fn("rtkManagedBinary.make")(function*
       yield* fileSystem
         .rename(extractedBinary, stagedPath)
         .pipe(wrapInstallFailure("write_failed", "Could not stage the rtk binary."));
-      yield* fileSystem
-        .rename(stagedPath, versionedPath)
-        .pipe(
-          wrapInstallFailure("write_failed", "Could not activate the versioned rtk binary."),
-          Effect.ensuring(fileSystem.remove(stagedPath, { force: true }).pipe(Effect.ignore)),
-        );
-      yield* activateBinary(versionedPath);
+      yield* Effect.gen(function* () {
+        const existingVersioned = yield* fileSystem.stat(versionedPath).pipe(Effect.option);
+        if (Option.isSome(existingVersioned)) {
+          // Replace an invalid existing artifact only after the new archive has
+          // been extracted and validated. A locked destination fails without
+          // disturbing the prior versioned file or current binary.
+          yield* fileSystem
+            .remove(versionedPath, { force: true })
+            .pipe(wrapInstallFailure("write_failed", "Could not replace the staged rtk binary."));
+        }
+        yield* fileSystem
+          .rename(stagedPath, versionedPath)
+          .pipe(wrapInstallFailure("write_failed", "Could not activate the versioned rtk binary."));
+      }).pipe(Effect.ensuring(fileSystem.remove(stagedPath, { force: true }).pipe(Effect.ignore)));
+      const executablePath = yield* activateBinary(versionedPath);
 
       return {
         status: "available",
-        executablePath: currentPath,
+        executablePath,
         version,
       } satisfies AvailableRtkManagedBinary;
     }).pipe(

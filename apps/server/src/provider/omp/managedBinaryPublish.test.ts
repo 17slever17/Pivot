@@ -7,6 +7,7 @@ import * as NodePath from "node:path";
 import * as Effect from "effect/Effect";
 
 import { selectNewestOmpManagedBinary } from "./OmpManagedBinary.ts";
+import { selectNewestRtkManagedBinary } from "./RtkManagedBinary.ts";
 
 /** Real-timer wait — `Effect.sleep` is frozen under the test runtime's TestClock. */
 const wait = (ms: number) =>
@@ -136,6 +137,14 @@ describe("managed binary publish over an executing binary", () => {
       ).toEqual({
         executablePath: "tools/omp/18.0.11/win32-x64/omp.exe",
         version: "18.0.11",
+      });
+      expect(
+        selectNewestRtkManagedBinary({ executablePath: currentPath, version: "0.45.0" }, [
+          { executablePath: "tools/rtk/0.46.0/win32-x64/rtk.exe", version: "0.46.0" },
+        ]),
+      ).toEqual({
+        executablePath: "tools/rtk/0.46.0/win32-x64/rtk.exe",
+        version: "0.46.0",
       });
     }).pipe(
       Effect.ensuring(
