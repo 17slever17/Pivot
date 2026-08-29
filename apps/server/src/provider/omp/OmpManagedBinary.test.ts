@@ -5,6 +5,7 @@ import {
   parseOmpVersionOutput,
   platformKey,
   resolveOmpReleaseAssetName,
+  selectNewestOmpManagedBinary,
 } from "./OmpManagedBinary.ts";
 
 describe("OmpManagedBinary helpers", () => {
@@ -29,5 +30,26 @@ describe("OmpManagedBinary helpers", () => {
     expect(parseOmpVersionOutput("something 1.2.3 else")).toBe("1.2.3");
     expect(normalizeReleaseVersion("v17.3.0")).toBe("17.3.0");
     expect(normalizeReleaseVersion("17.3.0")).toBe("17.3.0");
+  });
+
+  it("promotes a newer downloaded artifact when Windows cannot replace current", () => {
+    const current = { executablePath: "tools/omp/current/omp.exe", version: "18.0.0" };
+    const downloaded = {
+      executablePath: "tools/omp/18.0.11/win32-x64/omp.exe",
+      version: "18.0.11",
+    };
+
+    expect(selectNewestOmpManagedBinary(current, [downloaded])).toEqual(downloaded);
+    expect(selectNewestOmpManagedBinary(downloaded, [current])).toEqual(downloaded);
+  });
+
+  it("keeps the current path for an equal-version artifact", () => {
+    const current = { executablePath: "tools/omp/current/omp.exe", version: "18.0.11" };
+    const downloaded = {
+      executablePath: "tools/omp/18.0.11/win32-x64/omp.exe",
+      version: "18.0.11",
+    };
+
+    expect(selectNewestOmpManagedBinary(current, [downloaded])).toEqual(current);
   });
 });

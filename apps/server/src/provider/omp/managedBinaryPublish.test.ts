@@ -6,6 +6,8 @@ import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 import * as Effect from "effect/Effect";
 
+import { selectNewestOmpManagedBinary } from "./OmpManagedBinary.ts";
+
 /** Real-timer wait — `Effect.sleep` is frozen under the test runtime's TestClock. */
 const wait = (ms: number) =>
   Effect.promise<void>(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -71,6 +73,87 @@ describe("managed binary publish over an executing binary", () => {
           }
           NodeFS.rmSync(baseDir, { recursive: true, force: true });
         }),
+      ),
+    );
+  });
+
+  it.effect("keeps the versioned artifact active when Windows locks current", () => {
+    if (!process.execPath.toLowerCase().endsWith(".exe")) {
+      return Effect.void;
+    }
+
+    const baseDir = NodePath.join(NodeOS.tmpdir(), `t3-win-rename-${Date.now()}-${Math.random()}`);
+    const currentPath = NodePath.join(baseDir, "current", "omp.exe");
+    const publishTemp = NodePath.join(baseDir, "current", "omp.exe.tmp");
+    NodeFS.mkdirSync(NodePath.dirname(currentPath), { recursive: true });
+    NodeFS.copyFileSync(process.execPath, currentPath);
+    NodeFS.writeFileSync(publishTemp, "new-binary");
+
+    let child: ReturnType<typeof NodeChildProcess.spawn> | undefined;
+    return Effect.gen(function* () {
+      child = NodeChildProcess.spawn(
+        currentPath,
+        ["-e", "process.stdout.write('ready\\n'); setInterval(() => {}, 1000);"],
+        { stdio: ["ignore", "pipe", "ignore"] },
+      );
+      yield* Effect.promise<void>(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const stdout = child?.stdout;
+            if (!stdout) {
+              reject(new Error("Windows lock probe did not expose stdout."));
+              return;
+            }
+            const onData = (chunk: Buffer) => {
+              if (chunk.toString().includes("ready")) {
+                stdout.off("data", onData);
+                resolve();
+              }
+            };
+            stdout.on("data", onData);
+            child?.once("error", reject);
+          }),
+      );
+
+      let renameCode: string | undefined;
+      try {
+        NodeFS.renameSync(publishTemp, currentPath);
+      } catch (error) {
+        renameCode =
+          typeof error === "object" && error !== null && "code" in error
+            ? (error as { code?: string }).code
+            : undefined;
+      }
+      expect(["EACCES", "EBUSY", "EEXIST", "EPERM"]).toContain(renameCode);
+      expect(NodeFS.existsSync(publishTemp)).toBe(true);
+      expect(NodeFS.readFileSync(currentPath).equals(NodeFS.readFileSync(process.execPath))).toBe(
+        true,
+      );
+      expect(
+        selectNewestOmpManagedBinary({ executablePath: currentPath, version: "18.0.0" }, [
+          { executablePath: "tools/omp/18.0.11/win32-x64/omp.exe", version: "18.0.11" },
+        ]),
+      ).toEqual({
+        executablePath: "tools/omp/18.0.11/win32-x64/omp.exe",
+        version: "18.0.11",
+      });
+    }).pipe(
+      Effect.ensuring(
+        Effect.promise<void>(
+          () =>
+            new Promise<void>((resolve) => {
+              const removeTempTree = () => {
+                NodeFS.rmSync(baseDir, { recursive: true, force: true });
+                resolve();
+              };
+              if (!child || child.exitCode !== null) {
+                removeTempTree();
+                return;
+              }
+              child.once("exit", removeTempTree);
+              child.kill();
+            }),
+        ),
       ),
     );
   });

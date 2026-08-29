@@ -2,7 +2,9 @@
  * OmpManagedBinary — download omp GitHub release assets into T3 home.
  *
  * Layout: `{baseDir}/tools/omp/{version}/{platformKey}/omp[.exe]`
- * Active binary: `{baseDir}/tools/omp/current/omp[.exe]` (atomic replace).
+ * Active binary: `{baseDir}/tools/omp/current/omp[.exe]` when the host can
+ * replace an existing executable. On Windows, a locked current executable is
+ * left in place and the newest validated versioned binary becomes active.
  *
  * @module provider/omp/OmpManagedBinary
  */
@@ -21,6 +23,7 @@ import * as Stream from "effect/Stream";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
+import { compareSemverVersions } from "@t3tools/shared/semver";
 
 import { parseGenericCliVersion } from "../providerSnapshot.ts";
 
@@ -68,6 +71,31 @@ export type AvailableOmpManagedBinary = Extract<
   { readonly status: "available" }
 >;
 
+export interface OmpManagedBinaryCandidate {
+  readonly executablePath: string;
+  readonly version: string;
+}
+
+/**
+ * Select the newest validated managed binary. `current` wins ties so a
+ * successful publish does not cause an unnecessary process restart. A
+ * versioned artifact is also a valid active binary: on Windows the old
+ * `current\omp.exe` may be held open by a running omp session and cannot be
+ * replaced until that session exits.
+ */
+export function selectNewestOmpManagedBinary(
+  current: OmpManagedBinaryCandidate | null,
+  downloaded: ReadonlyArray<OmpManagedBinaryCandidate>,
+): OmpManagedBinaryCandidate | null {
+  let selected = current;
+  for (const candidate of downloaded) {
+    if (!selected || compareSemverVersions(candidate.version, selected.version) > 0) {
+      selected = candidate;
+    }
+  }
+  return selected;
+}
+
 const GithubReleaseAsset = Schema.Struct({
   name: Schema.String,
   browser_download_url: Schema.String,
@@ -82,6 +110,18 @@ const decodeGithubRelease = Schema.decodeUnknownEffect(GithubRelease);
 
 function isAlreadyExists(error: PlatformError.PlatformError): boolean {
   return error.reason._tag === "AlreadyExists";
+}
+
+function isWindowsReplaceConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("reason" in error)) {
+    return false;
+  }
+  const reason = (error as { readonly reason?: { readonly _tag?: string } }).reason;
+  return (
+    reason?._tag === "AlreadyExists" ||
+    reason?._tag === "Busy" ||
+    reason?._tag === "PermissionDenied"
+  );
 }
 
 function executableFileName(platform: NodeJS.Platform): string {
@@ -204,8 +244,10 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
    * Publish a freshly validated binary to `current`, which live sessions run
    * from. Overwriting it in place with copyFile fails with ETXTBSY ("Text file
    * busy") while any session is active, so copy to a sibling temp and rename
-   * it over `current`: rename replaces the directory entry atomically and
-   * running processes keep the old inode.
+   * it over `current`: rename replaces the directory entry atomically on
+   * Unix and on Windows when the destination is replaceable. Windows keeps
+   * an executing image open without delete sharing, so a locked destination
+   * falls back to the validated versioned path.
    */
   const publishToCurrent = Effect.fn("ompManagedBinary.publishToCurrent")(function* (
     versionedPath: string,
@@ -214,17 +256,34 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
     yield* fileSystem
       .copyFile(versionedPath, publishTemp)
       .pipe(wrapInstallFailure("write_failed", "Could not stage the managed omp binary."));
-    yield* fileSystem
-      .rename(publishTemp, currentPath)
-      .pipe(
-        wrapInstallFailure("write_failed", "Could not publish omp to the current path."),
-        Effect.ensuring(fileSystem.remove(publishTemp, { force: true }).pipe(Effect.ignore)),
-      );
+    const published = yield* fileSystem.rename(publishTemp, currentPath).pipe(
+      Effect.as(true),
+      Effect.catch((cause) => {
+        if (platform === "win32" && isWindowsReplaceConflict(cause)) {
+          // Windows refuses to replace an existing executable while an omp
+          // session has it open. The validated versioned path is safe to
+          // execute and resolve() will select it over a stale current file.
+          return Effect.succeed(false);
+        }
+        return Effect.fail(
+          new OmpManagedBinaryError({
+            reason: "write_failed",
+            message: "Could not publish omp to the current path.",
+            cause,
+          }),
+        );
+      }),
+      Effect.ensuring(fileSystem.remove(publishTemp, { force: true }).pipe(Effect.ignore)),
+    );
+    if (!published) {
+      return versionedPath;
+    }
     if (platform !== "win32") {
       yield* fileSystem
         .chmod(currentPath, 0o755)
         .pipe(wrapInstallFailure("write_failed", "Could not chmod the current omp binary."));
     }
+    return currentPath;
   });
 
   const isExecutableFile = Effect.fn("ompManagedBinary.isExecutableFile")(function* (
@@ -270,6 +329,39 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       return parseOmpVersionOutput(output);
     }).pipe(Effect.scoped);
 
+  const resolveDownloadedExecutables = Effect.fn("ompManagedBinary.resolveDownloadedExecutables")(
+    function* (currentVersion: string | null) {
+      const entries = yield* fileSystem
+        .readDirectory(toolsRoot)
+        .pipe(Effect.orElseSucceed(() => []));
+      const downloaded: Array<OmpManagedBinaryCandidate> = [];
+      for (const entry of entries) {
+        if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(entry)) {
+          continue;
+        }
+        const version = normalizeReleaseVersion(entry);
+        if (currentVersion && compareSemverVersions(version, currentVersion) <= 0) {
+          continue;
+        }
+        const candidatePath = path.join(
+          toolsRoot,
+          entry,
+          platformKey(platform, arch, musl),
+          exeName,
+        );
+        if (!(yield* isExecutableFile(candidatePath))) {
+          continue;
+        }
+        const probedVersion = yield* probeVersion(candidatePath);
+        if (probedVersion !== version) {
+          continue;
+        }
+        downloaded.push({ executablePath: candidatePath, version });
+      }
+      return downloaded;
+    },
+  );
+
   const resolvePathExecutable = Effect.gen(function* () {
     const pathValue = options.pathEnv ?? process.env.PATH;
     if (!pathValue) return null;
@@ -297,13 +389,25 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       }
       return { status: "missing" } satisfies OmpManagedBinaryStatus;
     }
-    if (yield* isExecutableFile(currentPath)) {
-      const version = yield* probeVersion(currentPath);
+    const current = yield* isExecutableFile(currentPath).pipe(
+      Effect.flatMap((exists) =>
+        exists
+          ? probeVersion(currentPath).pipe(
+              Effect.map((version) => (version ? { executablePath: currentPath, version } : null)),
+            )
+          : Effect.succeed(null),
+      ),
+    );
+    const selected = selectNewestOmpManagedBinary(
+      current,
+      yield* resolveDownloadedExecutables(current?.version ?? null),
+    );
+    if (selected) {
       return {
         status: "available",
-        executablePath: currentPath,
+        executablePath: selected.executablePath,
         source: "managed",
-        version,
+        version: selected.version,
       } satisfies OmpManagedBinaryStatus;
     }
     const pathExecutable = yield* resolvePathExecutable;
@@ -460,10 +564,10 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       if (yield* isExecutableFile(versionedPath)) {
         const existingVersion = yield* probeVersion(versionedPath);
         if (existingVersion === version) {
-          yield* publishToCurrent(versionedPath);
+          const executablePath = yield* publishToCurrent(versionedPath);
           return {
             status: "available",
-            executablePath: currentPath,
+            executablePath,
             source: "managed",
             version,
           } satisfies AvailableOmpManagedBinary;
@@ -548,17 +652,26 @@ export const makeOmpManagedBinary = Effect.fn("ompManagedBinary.make")(function*
       yield* fileSystem
         .rename(tempBinary, stagedPath)
         .pipe(wrapInstallFailure("write_failed", "Could not stage the omp binary."));
-      yield* fileSystem
-        .rename(stagedPath, versionedPath)
-        .pipe(
-          wrapInstallFailure("write_failed", "Could not activate the versioned omp binary."),
-          Effect.ensuring(fileSystem.remove(stagedPath, { force: true }).pipe(Effect.ignore)),
-        );
-      yield* publishToCurrent(versionedPath);
+      yield* Effect.gen(function* () {
+        const existingVersioned = yield* fileSystem.stat(versionedPath).pipe(Effect.option);
+        if (Option.isSome(existingVersioned)) {
+          // Node's Windows rename does not replace an existing destination in
+          // all supported runtimes. Remove only this invalid destination after
+          // the replacement has been fully downloaded and validated; a locked
+          // destination fails explicitly and leaves the previous state intact.
+          yield* fileSystem
+            .remove(versionedPath, { force: true })
+            .pipe(wrapInstallFailure("write_failed", "Could not replace the staged omp binary."));
+        }
+        yield* fileSystem
+          .rename(stagedPath, versionedPath)
+          .pipe(wrapInstallFailure("write_failed", "Could not activate the versioned omp binary."));
+      }).pipe(Effect.ensuring(fileSystem.remove(stagedPath, { force: true }).pipe(Effect.ignore)));
+      const executablePath = yield* publishToCurrent(versionedPath);
 
       return {
         status: "available",
-        executablePath: currentPath,
+        executablePath,
         source: "managed",
         version,
       } satisfies AvailableOmpManagedBinary;
