@@ -73,20 +73,24 @@ function readOmpAgentEndError(frame: Record<string, unknown>): string | undefine
   if (!Array.isArray(frame.messages)) {
     return undefined;
   }
+  let lastAssistant: Record<string, unknown> | undefined;
   for (const message of frame.messages) {
-    if (!isRecord(message) || message.role !== "assistant" || message.stopReason !== "error") {
-      continue;
+    if (isRecord(message) && message.role === "assistant") {
+      lastAssistant = message;
     }
-    const rawMessage = typeof message.errorMessage === "string" ? message.errorMessage : "";
-    const normalized = rawMessage.replace(/\s+/g, " ").trim();
-    if (normalized.length === 0) {
-      return "omp provider returned an error without details.";
-    }
-    return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
-      ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
-      : normalized;
   }
-  return undefined;
+  if (lastAssistant?.stopReason !== "error") {
+    return undefined;
+  }
+  const rawMessage =
+    typeof lastAssistant.errorMessage === "string" ? lastAssistant.errorMessage : "";
+  const normalized = rawMessage.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0) {
+    return "omp provider returned an error without details.";
+  }
+  return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
+    ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
+    : normalized;
 }
 
 function mapOmpError(operation: string, cause: unknown, detail: string): TextGenerationError {

@@ -168,6 +168,40 @@ describe("OmpAdapter", () => {
     }),
   );
 
+  it.effect("uses the latest assistant message in a terminal agent_end", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [
+          {
+            role: "assistant",
+            stopReason: "error",
+            errorMessage: "Previous attempt failed.",
+          },
+          { role: "toolResult", content: [] },
+          {
+            role: "assistant",
+            stopReason: "stop",
+            content: [{ type: "text", text: "Recovered answer." }],
+          },
+        ],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+      const completed = events.filter((event) => event.type === "turn.completed");
+      NodeAssert.equal(completed.length, 1);
+      NodeAssert.equal(completed[0]?.payload.state, "completed");
+      NodeAssert.equal(completed[0]?.payload.errorMessage, undefined);
+    }),
+  );
+
   it.effect("sendTurn emits turn.started before prompt for checkpoint baseline", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

@@ -36,7 +36,10 @@ function asSpawnedCommand(command: ChildProcess.Command) {
 
 function makeFakeOmpSpawner(
   sessionFile: string,
-  options: { readonly providerError?: string } = {},
+  options: {
+    readonly providerError?: string;
+    readonly terminalMessages?: ReadonlyArray<Record<string, unknown>>;
+  } = {},
 ) {
   const prompts: string[] = [];
   const setModels: Array<{ provider: string; modelId: string }> = [];
@@ -122,7 +125,20 @@ function makeFakeOmpSpawner(
                     success: true,
                     data: { agentInvoked: true },
                   });
-                  if (options.providerError !== undefined) {
+                  if (options.terminalMessages !== undefined) {
+                    yield* offer({
+                      type: "message_update",
+                      assistantMessageEvent: {
+                        type: "text_delta",
+                        delta: '{"title":"Wire Omp Thread Titles"}',
+                      },
+                    });
+                    yield* offer({
+                      type: "agent_end",
+                      messages: options.terminalMessages,
+                      isTerminal: true,
+                    });
+                  } else if (options.providerError !== undefined) {
                     yield* offer({
                       type: "agent_end",
                       messages: [
@@ -253,6 +269,43 @@ describe("OmpTextGeneration", () => {
           NodeAssert.equal(error.message.includes("empty output"), false);
         }
       }
+    }),
+  );
+
+  it.effect("uses the latest assistant message for terminal text generation", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl", {
+        terminalMessages: [
+          {
+            role: "assistant",
+            stopReason: "error",
+            errorMessage: "Previous attempt failed.",
+          },
+          { role: "toolResult", content: [] },
+          {
+            role: "assistant",
+            stopReason: "stop",
+            content: [{ type: "text", text: "Recovered answer." }],
+          },
+        ],
+      });
+      const textGeneration = yield* makeOmpTextGeneration(
+        decodeOmpSettings({
+          enabled: true,
+          binaryPath: "/opt/omp",
+        }),
+      ).pipe(
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+        Effect.provide(NodeServices.layer),
+      );
+
+      const result = yield* textGeneration.generateThreadTitle({
+        cwd: "/proj",
+        message: "Please wire omp text generation so thread titles work again",
+        modelSelection: createModelSelection(ProviderInstanceId.make("omp"), "openai/gpt-5"),
+      });
+
+      NodeAssert.equal(result.title, "Wire Omp Thread Titles");
     }),
   );
 });
