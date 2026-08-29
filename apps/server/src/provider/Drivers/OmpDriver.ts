@@ -42,6 +42,7 @@ import { ProjectionSnapshotQuery } from "../../orchestration/Services/Projection
 import {
   enrichOmpManagedBundleVersionAdvisory,
   makeOmpManagedBinary,
+  makeRtkManagedBinary,
   OMP_MANAGED_UPDATE_EXECUTABLE,
   OMP_MANAGED_UPDATE_LOCK_KEY,
   OMP_NPM_PACKAGE_NAME,
@@ -134,6 +135,8 @@ function makeOmpSnapshot(input: {
     readonly version: string | null;
     readonly source: "override" | "managed" | "path" | "missing" | "unsupported";
   }>;
+  readonly resolveRtkBinary: Effect.Effect<string | null>;
+  readonly rtkCurrentDir: string;
 }): Effect.Effect<
   ServerProviderShape,
   never,
@@ -249,6 +252,12 @@ function makeOmpSnapshot(input: {
           }),
         );
       }
+
+      const rtkExecutablePath = yield* input.resolveRtkBinary;
+      input.runtime.setPathPrefixDirs([
+        rtkExecutablePath ? path.dirname(rtkExecutablePath) : input.rtkCurrentDir,
+        input.rtkCurrentDir,
+      ]);
 
       const resolved = yield* input.resolveBinary;
       if (!resolved.installed || !resolved.binaryPath) {
@@ -389,10 +398,17 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         initialResolved.binaryPath ??
         (hasPathSeparator(binaryPathSetting) ? binaryPathSetting : binaryPathSetting || "omp");
       const pathService = yield* Path.Path;
-      const rtkCurrentDir = pathService.join(serverConfig.baseDir, "tools", "rtk", "current");
+      const rtkManaged = yield* makeRtkManagedBinary({ baseDir: serverConfig.baseDir });
+      const resolveRtkBinary = rtkManaged.resolve.pipe(
+        Effect.map((status) => (status.status === "available" ? status.executablePath : null)),
+      );
+      const initialRtkExecutablePath = yield* resolveRtkBinary;
+      const initialRtkPathPrefix = initialRtkExecutablePath
+        ? pathService.dirname(initialRtkExecutablePath)
+        : rtkManaged.currentBinDirectory;
 
       const runtime = new OmpRpcRuntime(spawner, launchBinary, {
-        pathPrefixDirs: [rtkCurrentDir],
+        pathPrefixDirs: [initialRtkPathPrefix, rtkManaged.currentBinDirectory],
         environment,
       });
       const fs = yield* FileSystem.FileSystem;
@@ -500,10 +516,10 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
       });
       yield* Effect.addFinalizer(() => adapter.stopAll());
 
-      // Keep runtime binaryPath aligned after managed install/refresh by
-      // recreating is heavy; refresh uses the adapter already constructed with
-      // the best-known path at create. Install path restarts the instance via
-      // registry refresh after updateProvider.
+      // Runtime binary and managed RTK PATH are both re-resolved by the
+      // existing snapshot refresh after a managed update. This keeps new
+      // sessions on the active immutable versioned directory when Windows
+      // cannot replace `current`.
       const snapshot = yield* makeOmpSnapshot({
         stampIdentity,
         enabled: effectiveConfig.enabled,
@@ -512,6 +528,8 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         randomUUID,
         baseDir: serverConfig.baseDir,
         resolveBinary,
+        resolveRtkBinary,
+        rtkCurrentDir: rtkManaged.currentBinDirectory,
       });
       // Text generation re-resolves the managed binary per call so Install works
       // without rematerializing the whole provider instance.

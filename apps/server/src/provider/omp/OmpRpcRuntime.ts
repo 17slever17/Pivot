@@ -216,7 +216,7 @@ export class OmpRpcRuntime {
   #nextRequestId = 0;
   readonly #processSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   #binaryPath: string;
-  readonly #pathPrefixDirs: ReadonlyArray<string>;
+  #pathPrefixDirs: ReadonlyArray<string>;
   readonly #environment: ProviderInstanceEnvironment;
   /** Single-flight capability memo: one `--help` probe per binary path. */
   #rpcUiSupport: Deferred.Deferred<boolean, OmpSpawnError> | null = null;
@@ -269,6 +269,18 @@ export class OmpRpcRuntime {
     this.#binaryPath = binaryPath;
     // A refreshed binary may have gained rpc-ui support — re-probe on next session.
     this.#rpcUiSupport = null;
+  }
+
+  /**
+   * Replace the managed PATH prefixes used by future omp child processes.
+   *
+   * A managed binary can remain in its immutable versioned directory when
+   * replacing `current` is blocked on Windows. Keep the runtime object alive,
+   * but make its next child resolve helper commands from the actual active
+   * directory instead of accumulating stale prefixes from earlier refreshes.
+   */
+  public setPathPrefixDirs(pathPrefixDirs: ReadonlyArray<string>): void {
+    this.#pathPrefixDirs = [...pathPrefixDirs];
   }
 
   public ensureSession(

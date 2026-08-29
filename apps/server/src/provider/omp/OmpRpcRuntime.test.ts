@@ -4,6 +4,7 @@ import * as NodeChildProcess from "node:child_process";
 
 import { it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { HostProcessPlatform } from "@t3tools/shared/hostProcess";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -353,6 +354,67 @@ describe("OmpRpcRuntime", () => {
       NodeAssert.deepEqual(fake.spawns[1]?.options.stdin, { stream: "pipe", endOnDone: false });
       const pathEnv = fake.spawns[1]?.options.env?.PATH ?? "";
       NodeAssert.ok(pathEnv.includes("/managed/rtk/current"));
+    }),
+  );
+
+  it.effect("uses the refreshed managed rtk directory for future sessions", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner({ sessionFile: "/tmp/omp-session.jsonl" });
+      const platform = yield* HostProcessPlatform.pipe(Effect.provide(NodeServices.layer));
+      const delimiter = platform === "win32" ? ";" : ":";
+      const currentDir =
+        platform === "win32" ? "C:\\managed\\rtk\\current" : "/managed/rtk/current";
+      const versionedDir =
+        platform === "win32"
+          ? "C:\\managed\\rtk\\18.0.0\\win32-x64"
+          : "/managed/rtk/18.0.0/linux-x64";
+      const runtime = new OmpRpcRuntime(fake.spawner, "/opt/omp", {
+        pathPrefixDirs: [currentDir],
+      });
+
+      yield* runtime.ensureSession({
+        sessionKey: "thread-current",
+        cwd: "/proj",
+        resumeCursor: null,
+      });
+      const currentSession = fake.spawns.find((spawn) => hasModeRpcUi(spawn.args));
+      const currentPath = currentSession?.options.env?.PATH ?? "";
+      NodeAssert.equal(currentPath.split(delimiter)[0], currentDir);
+
+      // A locked Windows current binary makes the managed installer return the
+      // immutable versioned executable. Provider refresh updates the existing
+      // runtime rather than constructing a new one.
+      runtime.setPathPrefixDirs([versionedDir, currentDir, versionedDir]);
+      yield* runtime.ensureSession({
+        sessionKey: "thread-versioned",
+        cwd: "/proj",
+        resumeCursor: null,
+      });
+      const versionedSession = fake.spawns.find(
+        (spawn) => hasModeRpcUi(spawn.args) && spawn !== currentSession,
+      );
+      const versionedPath = versionedSession?.options.env?.PATH ?? "";
+      const versionedEntries = versionedPath.split(delimiter);
+      NodeAssert.equal(versionedEntries[0], versionedDir);
+      NodeAssert.equal(versionedEntries[1], currentDir);
+      NodeAssert.equal(versionedEntries.filter((entry) => entry === versionedDir).length, 1);
+      NodeAssert.equal(versionedEntries.filter((entry) => entry === currentDir).length, 1);
+
+      // Replacing the prefixes, rather than appending, prevents stale active
+      // directories from leaking into later sessions.
+      runtime.setPathPrefixDirs([currentDir]);
+      yield* runtime.ensureSession({
+        sessionKey: "thread-current-again",
+        cwd: "/proj",
+        resumeCursor: null,
+      });
+      const currentAgain = fake.spawns.find(
+        (spawn) =>
+          hasModeRpcUi(spawn.args) && spawn !== currentSession && spawn !== versionedSession,
+      );
+      const currentAgainPath = currentAgain?.options.env?.PATH ?? "";
+      NodeAssert.equal(currentAgainPath.split(delimiter)[0], currentDir);
+      NodeAssert.equal(currentAgainPath.split(delimiter).includes(versionedDir), false);
     }),
   );
 

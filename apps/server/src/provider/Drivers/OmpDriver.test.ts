@@ -7,6 +7,7 @@ import * as NodePath from "node:path";
 
 import { it } from "@effect/vitest";
 import { OmpSettings, ProviderDriverKind, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import { HostProcessArchitecture, HostProcessPlatform } from "@t3tools/shared/hostProcess";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -25,6 +26,7 @@ import * as ProcessRunner from "../../processRunner.ts";
 import * as ServerConfig from "../../config.ts";
 import * as ServerSettings from "../../serverSettings.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
+import { isLinuxMuslHost, platformKey } from "../omp/OmpManagedBinary.ts";
 import { OmpDriver } from "./OmpDriver.ts";
 
 const decodeOmpSettings = Schema.decodeSync(OmpSettings);
@@ -72,11 +74,19 @@ function asSpawnedCommand(command: ChildProcess.Command) {
   };
 }
 
-function makeFakeOmpSpawner(sessionFile: string, agentDir = "/tmp/t3-omp-agent") {
+function makeFakeOmpSpawner(
+  sessionFile: string,
+  agentDir = "/tmp/t3-omp-agent",
+  versionOutput: (command: string) => string = () => "omp/17.3.0\n",
+) {
   const spawns: Array<{
     readonly command: string;
     readonly args: ReadonlyArray<string>;
-    readonly options: { readonly cwd?: string; readonly extendEnv?: boolean };
+    readonly options: {
+      readonly cwd?: string;
+      readonly extendEnv?: boolean;
+      readonly env?: Record<string, string>;
+    };
     killed: boolean;
   }> = [];
   const encoder = new TextEncoder();
@@ -95,6 +105,9 @@ function makeFakeOmpSpawner(sessionFile: string, agentDir = "/tmp/t3-omp-agent")
           ...(typeof spawned.options.extendEnv === "boolean"
             ? { extendEnv: spawned.options.extendEnv }
             : {}),
+          ...(spawned.options.env && typeof spawned.options.env === "object"
+            ? { env: spawned.options.env as Record<string, string> }
+            : {}),
         },
         killed: false,
         exit: yield* Deferred.make<ChildProcessSpawner.ExitCode, never>(),
@@ -111,7 +124,7 @@ function makeFakeOmpSpawner(sessionFile: string, agentDir = "/tmp/t3-omp-agent")
           kill: () => Effect.void,
           unref: Effect.succeed(Effect.void),
           stdin: Sink.drain,
-          stdout: Stream.make(encoder.encode("omp/17.3.0\n")),
+          stdout: Stream.make(encoder.encode(versionOutput(spawned.command))),
           stderr: Stream.empty,
           all: Stream.empty,
           getInputFd: () => Sink.drain,
@@ -245,6 +258,83 @@ function makeFakeOmpSpawner(sessionFile: string, agentDir = "/tmp/t3-omp-agent")
 }
 
 describe("OmpDriver", () => {
+  it.effect("refreshes the active managed rtk PATH after a locked current fallback", () =>
+    Effect.gen(function* () {
+      const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-omp-driver-base-"));
+      const platform = yield* HostProcessPlatform.pipe(Effect.provide(NodeServices.layer));
+      const architecture = yield* HostProcessArchitecture.pipe(Effect.provide(NodeServices.layer));
+      const binaryPath = makeTempOmpBinary();
+      const agentDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-omp-driver-agent-"));
+      const rtkVersion = "18.0.0";
+      const rtkExeName = platform === "win32" ? "rtk.exe" : "rtk";
+      const rtkPlatformKey = platformKey(platform, architecture, isLinuxMuslHost(platform));
+      const rtkRoot = NodePath.join(baseDir, "tools", "rtk");
+      const rtkCurrentDir = NodePath.join(rtkRoot, "current");
+      const rtkCurrentPath = NodePath.join(rtkCurrentDir, rtkExeName);
+      const rtkVersionedDir = NodePath.join(rtkRoot, rtkVersion, rtkPlatformKey);
+      const rtkVersionedPath = NodePath.join(rtkVersionedDir, rtkExeName);
+      NodeFS.mkdirSync(rtkCurrentDir, { recursive: true });
+      NodeFS.writeFileSync(rtkCurrentPath, "managed rtk current", { mode: 0o755 });
+      const fake = makeFakeOmpSpawner("/tmp/omp-session.jsonl", agentDir, (command) => {
+        if (command === rtkCurrentPath) return "rtk 17.0.0\n";
+        if (command === rtkVersionedPath) return `rtk ${rtkVersion}\n`;
+        return "omp/17.3.0\n";
+      });
+      const instance = yield* OmpDriver.create({
+        instanceId: ProviderInstanceId.make("omp"),
+        displayName: "omp",
+        accentColor: undefined,
+        environment: [],
+        enabled: true,
+        config: decodeOmpSettings({ enabled: true, binaryPath }),
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            ServerConfig.layerTest(process.cwd(), baseDir).pipe(
+              Layer.provideMerge(ServerSettings.layerTest()),
+              Layer.provideMerge(NodeServices.layer),
+              Layer.provideMerge(FetchHttpClient.layer),
+              Layer.provideMerge(
+                Layer.mock(ProjectionSnapshotQuery)({
+                  getProjectShellById: () => Effect.succeed(Option.none()),
+                }),
+              ),
+            ),
+            ProcessRunner.layer.pipe(
+              Layer.provide(Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, fake.spawner)),
+            ),
+            Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+          ),
+        ),
+      );
+
+      // Start with the current RTK path, then emulate an install that could
+      // not replace the locked current executable and retained a versioned one.
+      yield* instance.snapshot.refresh;
+      NodeFS.mkdirSync(rtkVersionedDir, { recursive: true });
+      NodeFS.writeFileSync(rtkVersionedPath, "managed rtk versioned", { mode: 0o755 });
+      yield* instance.snapshot.refresh;
+
+      yield* instance.adapter.startSession({
+        threadId: ThreadId.make("thread-versioned-rtk"),
+        provider: ProviderDriverKind.make("omp"),
+        cwd: "/proj",
+        runtimeMode: "full-access",
+      });
+      const sessionSpawn = [...fake.spawns].toReversed().find((spawn) => {
+        const modeIndex = spawn.args.indexOf("--mode");
+        return modeIndex >= 0 && spawn.args[modeIndex + 1] === "rpc-ui";
+      });
+      NodeAssert.ok(sessionSpawn);
+      const delimiter = platform === "win32" ? ";" : ":";
+      const pathEntries = (sessionSpawn?.options.env?.PATH ?? "").split(delimiter);
+      NodeAssert.equal(pathEntries[0], rtkVersionedDir);
+      NodeAssert.equal(pathEntries[1], rtkCurrentDir);
+      NodeAssert.equal(pathEntries.filter((entry) => entry === rtkVersionedDir).length, 1);
+      NodeAssert.equal(pathEntries.filter((entry) => entry === rtkCurrentDir).length, 1);
+    }).pipe(Effect.scoped),
+  );
+
   it.effect("create wires adapter sessions through the configured omp binary", () =>
     Effect.gen(function* () {
       const binaryPath = makeTempOmpBinary();
