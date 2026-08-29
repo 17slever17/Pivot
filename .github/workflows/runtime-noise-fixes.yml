@@ -1,4 +1,4 @@
-name: Runtime noise fixes
+name: Runtime stability fixes
 
 on:
   push:
@@ -10,86 +10,90 @@ permissions:
 
 jobs:
   patch:
-    if: "${{ !contains(github.event.head_commit.message, '[runtime-noise-fixed]') }}"
+    if: "${{ !contains(github.event.head_commit.message, '[runtime-stability-fixed]') }}"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           ref: test/ru-i18n-omp-telemetry-direct
-      - name: Patch runtime warnings
+      - name: Patch runtime stability issues
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          sidebar = Path('apps/web/src/components/ui/sidebar.tsx')
-          text = sidebar.read_text()
-          old = '''      // This sets the cookie to keep the sidebar state.
-      await cookieStore.set({
-        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-        name: SIDEBAR_COOKIE_NAME,
-        path: "/",
-        value: String(openState),
-      });
-'''
-          new = '''      // Persisting the sidebar preference is best-effort. Some Electron/localhost
-      // contexts expose CookieStore but reject writes; the UI state must still update.
-      try {
-        await cookieStore.set({
-          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-          name: SIDEBAR_COOKIE_NAME,
-          path: "/",
-          value: String(openState),
-        });
-      } catch {
-        // Ignore persistence failures: React state is already authoritative for this session.
-      }
-'''
-          if text.count(old) != 1:
-              raise SystemExit(f'sidebar cookie anchor count={text.count(old)}')
-          sidebar.write_text(text.replace(old, new))
+          changed = []
 
-          keybindings = Path('apps/web/src/components/settings/KeybindingsSettings.tsx')
-          text = keybindings.read_text()
-          old = '''  return (
-    <KbdGroup className="bg-transparent p-0 shadow-none">
-      {parts.map((part, index) => (
-        <Kbd key={`${part}:${index}`} className="min-w-6 justify-center px-1.5">
-'''
-          new = '''  const partOccurrences = new Map<string, number>();
-  const keyedParts = parts.map((part) => {
-    const occurrence = (partOccurrences.get(part) ?? 0) + 1;
-    partOccurrences.set(part, occurrence);
-    return { key: `${part}:${occurrence}`, part };
-  });
+          def replace_once(path: str, old: str, new: str, label: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  return
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 anchor, found {count}')
+              p.write_text(text.replace(old, new, 1))
+              changed.append(path)
 
-  return (
-    <KbdGroup className="bg-transparent p-0 shadow-none">
-      {keyedParts.map(({ key, part }) => (
-        <Kbd key={key} className="min-w-6 justify-center px-1.5">
-'''
-          if text.count(old) != 1:
-              raise SystemExit(f'keybinding anchor count={text.count(old)}')
-          keybindings.write_text(text.replace(old, new))
+          replace_once(
+              'apps/server/src/orchestration/Layers/OrchestrationEngine.ts',
+              '''        const eventBase = yield* decideOrchestrationCommand({\n          command: envelope.command,\n          readModel: commandReadModel,\n        }).pipe(\n''',
+              '''        if (envelope.command.type === "thread.create") {\n          const existingThread = commandReadModel.threads.find(\n            (thread) => thread.id === envelope.command.threadId,\n          );\n          if (existingThread !== undefined) {\n            const acceptedAt = yield* nowIso;\n            yield* commandReceiptRepository.upsert({\n              commandId: envelope.command.commandId,\n              aggregateKind: "thread",\n              aggregateId: envelope.command.threadId,\n              acceptedAt,\n              resultSequence: commandReadModel.snapshotSequence,\n              status: "accepted",\n              error: null,\n            });\n            return { sequence: commandReadModel.snapshotSequence };\n          }\n        }\n\n        const eventBase = yield* decideOrchestrationCommand({\n          command: envelope.command,\n          readModel: commandReadModel,\n        }).pipe(\n''',
+              'orchestration duplicate thread.create idempotency',
+          )
+
+          replace_once(
+              'apps/server/src/textGeneration/OmpTextGeneration.ts',
+              '''      const generated = yield* runOmpJson({\n        operation: "generateThreadTitle",\n        cwd: input.cwd,\n        prompt,\n        outputSchemaJson: outputSchema,\n        modelSelection: input.modelSelection,\n      });\n\n      return {\n''',
+              '''      const generated = yield* runOmpJson({\n        operation: "generateThreadTitle",\n        cwd: input.cwd,\n        prompt,\n        outputSchemaJson: outputSchema,\n        modelSelection: input.modelSelection,\n      }).pipe(\n        Effect.catch((cause) => {\n          if (\n            isTextGenerationError(cause) &&\n            cause.detail === "omp returned empty output for text generation."\n          ) {\n            return Effect.succeed({ title: input.previousTitle ?? input.message });\n          }\n          return Effect.fail(cause);\n        }),\n      );\n\n      return {\n''',
+              'thread title empty OMP output fallback',
+          )
+
+          replace_once(
+              'apps/web/src/components/ui/sidebar.tsx',
+              '''      // This sets the cookie to keep the sidebar state.\n      await cookieStore.set({\n        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,\n        name: SIDEBAR_COOKIE_NAME,\n        path: "/",\n        value: String(openState),\n      });\n''',
+              '''      // Persisting the sidebar preference is best-effort. Some Electron/localhost\n      // contexts expose CookieStore but reject writes; the UI state must still update.\n      try {\n        await cookieStore.set({\n          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,\n          name: SIDEBAR_COOKIE_NAME,\n          path: "/",\n          value: String(openState),\n        });\n      } catch {\n        // Ignore persistence failures: React state is already authoritative for this session.\n      }\n''',
+              'sidebar CookieStore best-effort write',
+          )
+
+          replace_once(
+              'apps/web/src/components/settings/KeybindingsSettings.tsx',
+              '''  return (\n    <KbdGroup className="bg-transparent p-0 shadow-none">\n      {parts.map((part, index) => (\n        <Kbd key={`${part}:${index}`} className="min-w-6 justify-center px-1.5">\n''',
+              '''  const partOccurrences = new Map<string, number>();\n  const keyedParts = parts.map((part) => {\n    const occurrence = (partOccurrences.get(part) ?? 0) + 1;\n    partOccurrences.set(part, occurrence);\n    return { key: `${part}:${occurrence}`, part };\n  });\n\n  return (\n    <KbdGroup className="bg-transparent p-0 shadow-none">\n      {keyedParts.map(({ key, part }) => (\n        <Kbd key={key} className="min-w-6 justify-center px-1.5">\n''',
+              'keybinding duplicate React key guard',
+          )
+
+          print('Changed files:')
+          for path in sorted(set(changed)):
+              print(path)
           PY
-
-          echo '=== LegendList / legendapp source references ==='
-          grep -RIn --exclude-dir=node_modules --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' -E 'LegendList|legendapp.*list|recycleItems' apps packages || true
 
       - uses: voidzero-dev/setup-vp@v1
       - name: Format and targeted check
         run: |
-          vp fmt apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
-          vp check apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
+          vp fmt \
+            apps/server/src/orchestration/Layers/OrchestrationEngine.ts \
+            apps/server/src/textGeneration/OmpTextGeneration.ts \
+            apps/web/src/components/ui/sidebar.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx
+          vp check \
+            apps/server/src/orchestration/Layers/OrchestrationEngine.ts \
+            apps/server/src/textGeneration/OmpTextGeneration.ts \
+            apps/web/src/components/ui/sidebar.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx
       - name: Commit
         shell: bash
         run: |
           git config user.name "17slever17"
           git config user.email "123028957+17slever17@users.noreply.github.com"
-          git add apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
+          git add \
+            apps/server/src/orchestration/Layers/OrchestrationEngine.ts \
+            apps/server/src/textGeneration/OmpTextGeneration.ts \
+            apps/web/src/components/ui/sidebar.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx
           if git diff --cached --quiet; then
             echo 'No changes'
             exit 0
           fi
-          git commit -m 'fix(web): handle sidebar persistence and stable keybinding keys [runtime-noise-fixed]'
+          git commit -m 'fix(runtime): tolerate restored threads and UI persistence [runtime-stability-fixed]'
           git push origin HEAD:test/ru-i18n-omp-telemetry-direct
