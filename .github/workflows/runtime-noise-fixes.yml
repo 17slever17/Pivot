@@ -1,0 +1,95 @@
+name: Runtime noise fixes
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[runtime-noise-fixed]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+      - name: Patch runtime warnings
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          sidebar = Path('apps/web/src/components/ui/sidebar.tsx')
+          text = sidebar.read_text()
+          old = '''      // This sets the cookie to keep the sidebar state.
+      await cookieStore.set({
+        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+        name: SIDEBAR_COOKIE_NAME,
+        path: "/",
+        value: String(openState),
+      });
+'''
+          new = '''      // Persisting the sidebar preference is best-effort. Some Electron/localhost
+      // contexts expose CookieStore but reject writes; the UI state must still update.
+      try {
+        await cookieStore.set({
+          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+          name: SIDEBAR_COOKIE_NAME,
+          path: "/",
+          value: String(openState),
+        });
+      } catch {
+        // Ignore persistence failures: React state is already authoritative for this session.
+      }
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'sidebar cookie anchor count={text.count(old)}')
+          sidebar.write_text(text.replace(old, new))
+
+          keybindings = Path('apps/web/src/components/settings/KeybindingsSettings.tsx')
+          text = keybindings.read_text()
+          old = '''  return (
+    <KbdGroup className="bg-transparent p-0 shadow-none">
+      {parts.map((part, index) => (
+        <Kbd key={`${part}:${index}`} className="min-w-6 justify-center px-1.5">
+'''
+          new = '''  const partOccurrences = new Map<string, number>();
+  const keyedParts = parts.map((part) => {
+    const occurrence = (partOccurrences.get(part) ?? 0) + 1;
+    partOccurrences.set(part, occurrence);
+    return { key: `${part}:${occurrence}`, part };
+  });
+
+  return (
+    <KbdGroup className="bg-transparent p-0 shadow-none">
+      {keyedParts.map(({ key, part }) => (
+        <Kbd key={key} className="min-w-6 justify-center px-1.5">
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'keybinding anchor count={text.count(old)}')
+          keybindings.write_text(text.replace(old, new))
+          PY
+
+          echo '=== LegendList / legendapp source references ==='
+          grep -RIn --exclude-dir=node_modules --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' -E 'LegendList|legendapp.*list|recycleItems' apps packages || true
+
+      - uses: voidzero-dev/setup-vp@v1
+      - name: Format and targeted check
+        run: |
+          vp fmt apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
+          vp check apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "17slever17"
+          git config user.email "123028957+17slever17@users.noreply.github.com"
+          git add apps/web/src/components/ui/sidebar.tsx apps/web/src/components/settings/KeybindingsSettings.tsx
+          if git diff --cached --quiet; then
+            echo 'No changes'
+            exit 0
+          fi
+          git commit -m 'fix(web): handle sidebar persistence and stable keybinding keys [runtime-noise-fixed]'
+          git push origin HEAD:test/ru-i18n-omp-telemetry-direct
