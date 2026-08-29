@@ -793,6 +793,7 @@ export function BranchToolbarBranchSelector({
               <LegendList<string>
                 ref={branchListRef}
                 data={filteredBranchPickerItems}
+                recycleItems={false}
                 keyExtractor={(item) => item}
                 getItemType={(item) =>
                   item === checkoutPullRequestItemValue
