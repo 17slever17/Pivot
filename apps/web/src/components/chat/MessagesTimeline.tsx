@@ -586,6 +586,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           <LegendList<MessagesTimelineRow>
             ref={listRef}
             data={rows}
+            recycleItems={false}
             keyExtractor={keyExtractor}
             getItemType={getItemType}
             renderItem={renderItem}

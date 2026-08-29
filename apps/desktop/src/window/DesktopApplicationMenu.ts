@@ -65,17 +65,17 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
   if (updateState.status === "up-to-date") {
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "You're up to date!",
-      message: `Piπot ${updateState.currentVersion} is currently the newest version available.`,
-      buttons: ["OK"],
+      title: "Установлена последняя версия",
+      message: `Piπot ${updateState.currentVersion} — самая новая доступная версия.`,
+      buttons: ["ОК"],
     });
   } else if (updateState.status === "error") {
     yield* electronDialog.showMessageBox({
       type: "warning",
-      title: "Update check failed",
-      message: "Could not check for updates.",
-      detail: updateState.message ?? "An unknown error occurred. Please try again later.",
-      buttons: ["OK"],
+      title: "Не удалось проверить обновления",
+      message: "Не удалось проверить наличие обновлений.",
+      detail: updateState.message ?? "Произошла неизвестная ошибка. Повторите попытку позже.",
+      buttons: ["ОК"],
     });
   }
 }).pipe(Effect.withSpan("desktop.menu.checkForUpdates"));
@@ -90,10 +90,10 @@ const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
     });
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "Updates unavailable",
-      message: "Automatic updates are not available right now.",
+      title: "Обновления недоступны",
+      message: "Автоматические обновления сейчас недоступны.",
       detail: disabledReason.value,
-      buttons: ["OK"],
+      buttons: ["ОК"],
     });
     return;
   }
@@ -143,53 +143,56 @@ export const make = Effect.gen(function* () {
       template.push({
         label: appName,
         submenu: [
-          { role: "about" },
+          { role: "about", label: `О ${appName}` },
           {
-            label: "Check for Updates...",
+            label: "Проверить обновления...",
             click: checkForUpdatesClick,
           },
           { type: "separator" },
           {
-            label: "Settings...",
+            label: "Настройки...",
             accelerator: "CmdOrCtrl+,",
             click: settingsClick,
           },
           { type: "separator" },
-          { role: "services" },
+          { role: "services", label: "Службы" },
           { type: "separator" },
-          { role: "hide" },
-          { role: "hideOthers" },
-          { role: "unhide" },
+          { role: "hide", label: `Скрыть ${appName}` },
+          { role: "hideOthers", label: "Скрыть остальные" },
+          { role: "unhide", label: "Показать все" },
           { type: "separator" },
-          { role: "quit" },
+          { role: "quit", label: `Выйти из ${appName}` },
         ],
       });
     }
 
     template.push(
       {
-        label: "File",
+        label: "Файл",
         submenu: [
           ...(environment.platform === "darwin"
             ? []
             : [
                 {
-                  label: "Settings...",
+                  label: "Настройки...",
                   accelerator: "CmdOrCtrl+,",
                   click: settingsClick,
                 },
                 { type: "separator" as const },
               ]),
-          { role: environment.platform === "darwin" ? "close" : "quit" },
+          {
+            role: environment.platform === "darwin" ? "close" : "quit",
+            label: environment.platform === "darwin" ? "Закрыть окно" : "Выйти",
+          },
         ],
       },
-      { role: "editMenu" },
+      { role: "editMenu", label: "Правка" },
       {
-        label: "View",
+        label: "Вид",
         submenu: [
-          { role: "reload" },
-          { role: "forceReload" },
-          { role: "toggleDevTools" },
+          { role: "reload", label: "Перезагрузить" },
+          { role: "forceReload", label: "Принудительно перезагрузить" },
+          { role: "toggleDevTools", label: "Инструменты разработчика" },
           { type: "separator" },
           /*
             Not the zoom roles: those act on the focused webContents, so with
@@ -197,25 +200,26 @@ export const make = Effect.gen(function* () {
             page and the app UI appears stuck. These always zoom the main
             window (see DesktopWindow.zoomMain).
           */
-          { label: "Actual Size", accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },
-          { label: "Zoom In", accelerator: "CmdOrCtrl+=", click: zoomClick("in") },
+          { label: "Фактический размер", accelerator: "CmdOrCtrl+0", click: zoomClick("reset") },
+          { label: "Увеличить", accelerator: "CmdOrCtrl+=", click: zoomClick("in") },
           {
-            label: "Zoom In",
+            label: "Увеличить",
             accelerator: "CmdOrCtrl+Plus",
             visible: false,
             click: zoomClick("in"),
           },
-          { label: "Zoom Out", accelerator: "CmdOrCtrl+-", click: zoomClick("out") },
+          { label: "Уменьшить", accelerator: "CmdOrCtrl+-", click: zoomClick("out") },
           { type: "separator" },
-          { role: "togglefullscreen" },
+          { role: "togglefullscreen", label: "Полноэкранный режим" },
         ],
       },
-      { role: "windowMenu" },
+      { role: "windowMenu", label: "Окно" },
       {
         role: "help",
+        label: "Справка",
         submenu: [
           {
-            label: "Check for Updates...",
+            label: "Проверить обновления...",
             click: checkForUpdatesClick,
           },
         ],

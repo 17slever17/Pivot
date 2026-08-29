@@ -120,13 +120,18 @@ function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      await cookieStore.set({
-        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-        name: SIDEBAR_COOKIE_NAME,
-        path: "/",
-        value: String(openState),
-      });
+      // Persisting the sidebar preference is best-effort. Some Electron/localhost
+      // contexts expose CookieStore but reject writes; the UI state must still update.
+      try {
+        await cookieStore.set({
+          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+          name: SIDEBAR_COOKIE_NAME,
+          path: "/",
+          value: String(openState),
+        });
+      } catch {
+        // Ignore persistence failures: React state is already authoritative for this session.
+      }
     },
     [setOpenProp, open],
   );

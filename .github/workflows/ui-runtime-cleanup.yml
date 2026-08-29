@@ -1,0 +1,97 @@
+name: UI runtime cleanup
+
+on:
+  push:
+    branches:
+      - test/ru-i18n-omp-telemetry-direct
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ru-i18n-omp-telemetry-direct
+
+      - name: Apply UI-only fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          changed = []
+
+          def replace_once(path: str, old: str, new: str, already: str, label: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if already in text:
+                  return
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 anchor, found {count}')
+              p.write_text(text.replace(old, new, 1))
+              changed.append(path)
+
+          replace_once(
+              'apps/web/src/components/ui/sidebar.tsx',
+              '''      // This sets the cookie to keep the sidebar state.\n      await cookieStore.set({\n        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,\n        name: SIDEBAR_COOKIE_NAME,\n        path: "/",\n        value: String(openState),\n      });\n''',
+              '''      // Persisting the sidebar preference is best-effort. Some Electron/localhost\n      // contexts expose CookieStore but reject writes; the UI state must still update.\n      try {\n        await cookieStore.set({\n          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,\n          name: SIDEBAR_COOKIE_NAME,\n          path: "/",\n          value: String(openState),\n        });\n      } catch {\n        // Ignore persistence failures: React state is already authoritative for this session.\n      }\n''',
+              'Persisting the sidebar preference is best-effort.',
+              'sidebar CookieStore',
+          )
+
+          replace_once(
+              'apps/web/src/components/settings/KeybindingsSettings.tsx',
+              '''  return (\n    <KbdGroup className="bg-transparent p-0 shadow-none">\n      {parts.map((part, index) => (\n        <Kbd key={`${part}:${index}`} className="min-w-6 justify-center px-1.5">\n''',
+              '''  const partOccurrences = new Map<string, number>();\n  const keyedParts = parts.map((part) => {\n    const occurrence = (partOccurrences.get(part) ?? 0) + 1;\n    partOccurrences.set(part, occurrence);\n    return { key: `${part}:${occurrence}`, part };\n  });\n\n  return (\n    <KbdGroup className="bg-transparent p-0 shadow-none">\n      {keyedParts.map(({ key, part }) => (\n        <Kbd key={key} className="min-w-6 justify-center px-1.5">\n''',
+              'const partOccurrences = new Map<string, number>();',
+              'keybinding stable keys',
+          )
+
+          for path, anchor, label in [
+              ('apps/web/src/components/chat/MessagesTimeline.tsx', '            data={rows}\n', 'messages timeline'),
+              ('apps/web/src/components/BranchToolbarBranchSelector.tsx', '                data={filteredBranchPickerItems}\n', 'branch picker'),
+              ('apps/web/src/components/settings/FontFamilyPicker.tsx', '                data={items}\n', 'font picker'),
+          ]:
+              replace_once(
+                  path,
+                  anchor,
+                  anchor + ('            recycleItems={false}\n' if label == 'messages timeline' else '                recycleItems={false}\n'),
+                  'recycleItems={false}',
+                  f'{label} LegendList recycle mode',
+              )
+
+          print('Changed:', *changed, sep='\n- ')
+          PY
+
+      - uses: voidzero-dev/setup-vp@v1
+
+      - name: Format changed files
+        run: |
+          vp fmt \
+            apps/web/src/components/ui/sidebar.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx \
+            apps/web/src/components/chat/MessagesTimeline.tsx \
+            apps/web/src/components/BranchToolbarBranchSelector.tsx \
+            apps/web/src/components/settings/FontFamilyPicker.tsx
+
+      - name: Commit UI fixes
+        shell: bash
+        run: |
+          git config user.name "17slever17"
+          git config user.email "123028957+17slever17@users.noreply.github.com"
+          git add \
+            apps/web/src/components/ui/sidebar.tsx \
+            apps/web/src/components/settings/KeybindingsSettings.tsx \
+            apps/web/src/components/chat/MessagesTimeline.tsx \
+            apps/web/src/components/BranchToolbarBranchSelector.tsx \
+            apps/web/src/components/settings/FontFamilyPicker.tsx
+          if git diff --cached --quiet; then
+            echo 'No UI changes to commit'
+            exit 0
+          fi
+          git commit -m 'fix(web): make LegendList recycling mode explicit'
+          git push origin HEAD:test/ru-i18n-omp-telemetry-direct

@@ -59,6 +59,13 @@ describe("requestLatencyState", () => {
     expect(getSlowRpcAckRequests()).toEqual([]);
   });
 
+  it("ignores interactive omp login while it waits for the user", () => {
+    trackRpcRequestSent("1", WS_METHODS.serverOmpLogin, "server.ompLogin · env-1");
+    vi.advanceTimersByTime(LONG_RUNNING_RPC_ACK_THRESHOLD_MS * 3);
+
+    expect(getSlowRpcAckRequests()).toEqual([]);
+  });
+
   it("keeps ignoring untracked methods when a display tag is supplied", () => {
     trackRpcRequestSent(
       "1",

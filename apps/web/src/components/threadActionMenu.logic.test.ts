@@ -20,13 +20,13 @@ function ids(state: ThreadActionMenuState): string[] {
 }
 
 describe("buildThreadActionMenuItems", () => {
-  it("hides lifecycle items when the environment lacks the capabilities", () => {
+  it("hides capability-gated lifecycle items but keeps archive available", () => {
     expect(
       ids({
         ...baseState,
         supports: { settlement: false, snooze: false, pinning: false, titleRegeneration: false },
       }),
-    ).toEqual(["rename", "mark-unread", "copy-path", "copy-thread-id", "delete"]);
+    ).toEqual(["archive", "rename", "mark-unread", "copy-path", "copy-thread-id", "delete"]);
   });
 
   it("includes branch items only for threads with a branch", () => {
@@ -57,6 +57,15 @@ describe("buildThreadActionMenuItems", () => {
       (candidate) => candidate.id === "regenerate-title",
     );
     expect(item).toMatchObject({ label: "Regenerating…", disabled: true });
+  });
+
+  it("localizes native menu labels in Russian", () => {
+    const items = buildThreadActionMenuItems({ ...baseState, branch: "main", language: "ru" });
+    expect(items.find((item) => item.id === "archive")?.label).toBe("Архивировать чат");
+    expect(items.find((item) => item.id === "rename")?.label).toBe("Переименовать чат");
+    expect(items.find((item) => item.id === "snooze")?.children?.[0]?.label).toBe(
+      "Через 1 час (3:00 PM)",
+    );
   });
 
   it("marks delete as destructive and keeps it last", () => {

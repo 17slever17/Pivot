@@ -23,7 +23,6 @@ import * as Clock from "effect/Clock";
 import * as Config from "effect/Config";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
-import * as Encoding from "effect/Encoding";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
@@ -66,14 +65,6 @@ interface TargetPathAndPosition {
 }
 
 const TARGET_WITH_POSITION_PATTERN = /^(.*?):(\d+)(?::(\d+))?$/;
-const POWERSHELL_ARGUMENTS_PREFIX = [
-  "-NoProfile",
-  "-NonInteractive",
-  "-ExecutionPolicy",
-  "Bypass",
-  "-EncodedCommand",
-] as const;
-
 const DETACHED_IGNORE_STDIO_OPTIONS = {
   detached: true,
   stdin: "ignore",
@@ -171,26 +162,12 @@ const resolveAvailableCommand = Effect.fn("externalLauncher.resolveAvailableComm
   return Option.none();
 });
 
-function encodeUtf16LeBase64(input: string): string {
-  const bytes = new Uint8Array(input.length * 2);
-  for (let index = 0; index < input.length; index += 1) {
-    const code = input.charCodeAt(index);
-    bytes[index * 2] = code & 0xff;
-    bytes[index * 2 + 1] = code >>> 8;
-  }
-  return Encoding.encodeBase64(bytes);
+function resolveWindowsSystemExecutable(executable: string, env: NodeJS.ProcessEnv = {}): string {
+  return `${env.SYSTEMROOT || env.windir || String.raw`C:\Windows`}\\System32\\${executable}`;
 }
 
-function escapePowerShellStringLiteral(input: string): string {
-  return `'${input.replaceAll("'", "''")}'`;
-}
-
-function resolvePowerShellPath(env: NodeJS.ProcessEnv = {}): string {
-  return `${env.SYSTEMROOT || env.windir || String.raw`C:\Windows`}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
-}
-
-function resolveWslPowerShellPath(): string {
-  return "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+function resolveWslWindowsSystemExecutable(executable: string): string {
+  return `/mnt/c/Windows/System32/${executable}`;
 }
 
 function shouldUseWindowsBrowserFromWsl(
@@ -207,19 +184,10 @@ function shouldUseWindowsBrowserFromWsl(
 }
 
 function resolveWindowsBrowserLaunch(target: string, command: string): ProcessLaunch {
-  const encodedCommand = encodeUtf16LeBase64(
-    `$ProgressPreference = 'SilentlyContinue'; Start ${escapePowerShellStringLiteral(target)}`,
-  );
   return {
     command,
-    args: [...POWERSHELL_ARGUMENTS_PREFIX, encodedCommand],
-    options: {
-      detached: true,
-      shell: false,
-      stdin: "ignore",
-      stdout: "ignore",
-      stderr: "ignore",
-    },
+    args: ["url.dll,FileProtocolHandler", target],
+    options: DETACHED_IGNORE_STDIO_OPTIONS,
   };
 }
 
@@ -248,11 +216,11 @@ function buildBrowserLaunch(
   }
 
   if (platform === "win32") {
-    return resolveWindowsBrowserLaunch(target, resolvePowerShellPath(env));
+    return resolveWindowsBrowserLaunch(target, resolveWindowsSystemExecutable("rundll32.exe", env));
   }
 
   if (shouldUseWindowsBrowserFromWsl(platform, env)) {
-    return resolveWindowsBrowserLaunch(target, resolveWslPowerShellPath());
+    return resolveWindowsBrowserLaunch(target, resolveWslWindowsSystemExecutable("rundll32.exe"));
   }
 
   return {

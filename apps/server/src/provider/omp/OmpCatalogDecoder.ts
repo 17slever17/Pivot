@@ -6,6 +6,7 @@
  */
 import {
   ProviderDriverKind,
+  type ModelCapabilities,
   type ServerProviderModel,
   type ServerProviderSlashCommand,
 } from "@t3tools/contracts";
@@ -14,6 +15,17 @@ import * as Effect from "effect/Effect";
 import { ProviderAdapterRequestError } from "../Errors.ts";
 
 const PROVIDER = ProviderDriverKind.make("omp");
+
+const THINKING_LEVEL_LABELS: Readonly<Record<string, string>> = {
+  off: "Off",
+  minimal: "Minimal",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra High",
+  max: "Max",
+  ultra: "Ultra",
+};
 
 export interface OmpLoginProvider {
   readonly id: string;
@@ -24,6 +36,55 @@ export interface OmpLoginProvider {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatThinkingLevelLabel(level: string): string {
+  const knownLabel = THINKING_LEVEL_LABELS[level];
+  if (knownLabel) {
+    return knownLabel;
+  }
+  return level.replace(/[-_]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function decodeModelCapabilities(entry: Record<string, unknown>): ModelCapabilities | null {
+  if (!isRecord(entry.thinking) || !Array.isArray(entry.thinking.efforts)) {
+    return null;
+  }
+
+  const efforts = Array.from(
+    new Set(
+      entry.thinking.efforts.flatMap((value) => {
+        if (typeof value !== "string") {
+          return [];
+        }
+        const effort = value.trim();
+        return effort.length > 0 ? [effort] : [];
+      }),
+    ),
+  );
+  if (efforts.length === 0) {
+    return null;
+  }
+
+  const rawDefaultLevel =
+    typeof entry.thinking.defaultLevel === "string" ? entry.thinking.defaultLevel.trim() : "";
+  const defaultLevel = efforts.includes(rawDefaultLevel) ? rawDefaultLevel : undefined;
+
+  return {
+    optionDescriptors: [
+      {
+        id: "reasoningEffort",
+        label: "Reasoning",
+        type: "select",
+        options: efforts.map((effort) => ({
+          id: effort,
+          label: formatThinkingLevelLabel(effort),
+          ...(effort === defaultLevel ? { isDefault: true } : {}),
+        })),
+        ...(defaultLevel === undefined ? {} : { currentValue: defaultLevel }),
+      },
+    ],
+  };
 }
 
 /**
@@ -63,8 +124,9 @@ export class OmpCatalogDecoder {
       models.push({
         slug,
         name,
+        subProvider: provider,
         isCustom: false,
-        capabilities: null,
+        capabilities: decodeModelCapabilities(entry),
       });
     }
     return Effect.succeed(models);

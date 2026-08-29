@@ -94,6 +94,39 @@ it.effect("launches the default browser through the platform command", () => {
   );
 });
 
+it.effect("launches the default browser through the Windows URL handler", () => {
+  let spawned: ChildProcess.StandardCommand | undefined;
+  let didUnref = false;
+  return Effect.gen(function* () {
+    const launcher = yield* ExternalLauncher.ExternalLauncher;
+
+    yield* launcher.launchBrowser("https://example.com/oauth?x=1&y=2");
+
+    assert.ok(spawned);
+    assert.equal(spawned.command, "C:\\Windows\\System32\\rundll32.exe");
+    assert.deepEqual(spawned.args, [
+      "url.dll,FileProtocolHandler",
+      "https://example.com/oauth?x=1&y=2",
+    ]);
+    assert.equal(spawned.options.detached, true);
+    assert.equal(spawned.options.shell, undefined);
+    assert.equal(didUnref, true);
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        platform: "win32",
+        env: { SYSTEMROOT: "C:\\Windows" },
+        onSpawn: (command) => {
+          spawned = command;
+        },
+        onUnref: () => {
+          didUnref = true;
+        },
+      }),
+    ),
+  );
+});
+
 it.effect("launches an installed editor with platform-safe arguments", () =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;

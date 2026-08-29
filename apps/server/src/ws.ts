@@ -1574,7 +1574,15 @@ const makeWsRpcLayer = (
                 .ompLogin({
                   instanceId,
                   providerId: input.providerId,
-                  onOpenUrl: (url) => externalLauncher.launchBrowser(url).pipe(Effect.ignore),
+                  onOpenUrl: (url) =>
+                    externalLauncher.launchBrowser(url).pipe(
+                      Effect.tapError((error) =>
+                        Effect.logWarning(
+                          "Could not open omp login URL in the server browser.",
+                        ).pipe(Effect.annotateLogs({ errorTag: error._tag })),
+                      ),
+                      Effect.ignore,
+                    ),
                 })
                 .pipe(
                   Effect.mapError(

@@ -1,5 +1,7 @@
 import type { OmpCapabilityScope, OmpSettingsSurfaceEntry, ProjectId } from "@t3tools/contracts";
 
+import { translateOmpSettingDescription } from "../../i18n/ompSettingsRu";
+
 /**
  * Where an omp setting value may come from, least to most specific. The
  * ladder label explains which layer wins for the selected scope.
@@ -80,6 +82,7 @@ export function buildSettingRows(
 ): ReadonlyArray<SettingsRow> {
   return entries.map((entry) => ({
     ...entry,
+    description: translateOmpSettingDescription(entry.key, entry.description),
     displayValue: entry.masked ? "********" : formatSettingValue(entry.value),
   }));
 }
