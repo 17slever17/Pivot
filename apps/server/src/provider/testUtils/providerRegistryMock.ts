@@ -35,6 +35,10 @@ export const makeProviderRegistryMock = (
   ompAgentProfileDelete: () => Effect.die("OMP agent profiles are not configured in this mock"),
   ompAgentProfilesImportCodex: () =>
     Effect.die("OMP agent profiles are not configured in this mock"),
+  ompRootPromptBundlesGet: () =>
+    Effect.die("OMP root prompt bundles are not configured in this mock"),
+  ompRootPromptBundlesUpdate: () =>
+    Effect.die("OMP root prompt bundles are not configured in this mock"),
   streamChanges: Stream.empty,
 });
 

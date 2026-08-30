@@ -49,6 +49,8 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.serverOmpAgentProfileUpsert]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverOmpAgentProfileDelete]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverOmpAgentProfilesImportCodex]: AuthOrchestrationOperateScope,
+  [WS_METHODS.serverOmpRootPromptBundlesGet]: AuthOrchestrationReadScope,
+  [WS_METHODS.serverOmpRootPromptBundlesUpdate]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverUpdateProvider]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverUpdateServer]: AuthOrchestrationOperateScope,
   [WS_METHODS.serverUpdateServerWithProgress]: AuthOrchestrationOperateScope,

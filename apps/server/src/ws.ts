@@ -1896,6 +1896,45 @@ const makeWsRpcLayer = (
             }),
             { "rpc.aggregate": "server" },
           ),
+        [WS_METHODS.serverOmpRootPromptBundlesGet]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpRootPromptBundlesGet,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              return yield* providerRegistry.ompRootPromptBundlesGet({ instanceId }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ServerOmpAgentProfileError({
+                      reason: cause instanceof Error ? cause.message : String(cause),
+                      cause,
+                    }),
+                ),
+              );
+            }),
+            { "rpc.aggregate": "server" },
+          ),
+        [WS_METHODS.serverOmpRootPromptBundlesUpdate]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpRootPromptBundlesUpdate,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              const { instanceId: _ignored, ...promptInput } = input;
+              return yield* providerRegistry
+                .ompRootPromptBundlesUpdate({ instanceId, ...promptInput })
+                .pipe(
+                  Effect.mapError(
+                    (cause) =>
+                      new ServerOmpAgentProfileError({
+                        reason: cause instanceof Error ? cause.message : String(cause),
+                        cause,
+                      }),
+                  ),
+                );
+            }),
+            { "rpc.aggregate": "server" },
+          ),
         [WS_METHODS.serverUpdateProvider]: (input) =>
           observeRpcEffect(
             WS_METHODS.serverUpdateProvider,

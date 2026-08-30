@@ -38,6 +38,7 @@ import {
   type ProviderSessionStartInput,
   type OmpAgentProfileName,
   type OmpAgentProfileUpsertInput,
+  type OmpRootPromptBundles,
   type ServerOmpAgentProfilesImportCodexResult,
   type ProviderSendTurnInput,
   type ProviderUserInputAnswers,
@@ -403,6 +404,38 @@ export class OmpAdapter {
           .importCodex()
           .pipe(
             Effect.mapError((cause) => mapOmpAgentProfileError("agentProfilesImportCodex", cause)),
+          );
+  }
+
+  public rootPromptBundlesGet(): Effect.Effect<OmpRootPromptBundles, ProviderAdapterRequestError> {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "rootPromptBundlesGet",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .rootPromptBundles()
+          .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("rootPromptBundlesGet", cause)));
+  }
+
+  public rootPromptBundlesUpdate(
+    input: OmpRootPromptBundles,
+  ): Effect.Effect<OmpRootPromptBundles, ProviderAdapterRequestError> {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "rootPromptBundlesUpdate",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .updateRootPromptBundles(input)
+          .pipe(
+            Effect.mapError((cause) => mapOmpAgentProfileError("rootPromptBundlesUpdate", cause)),
           );
   }
 

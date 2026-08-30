@@ -104,6 +104,42 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
     }),
   );
 
+  it.effect("reads and atomically replaces root prompt bundles for future sessions", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-root-prompts-" });
+      const store = new OmpAgentProfileStore(fs, path, stateDir);
+
+      const initial = yield* store.rootPromptBundles();
+      expect(initial.commonPrompt).toBe("");
+      expect(initial.orchestratorPrompt).toContain("root orchestration agent");
+
+      const updated = {
+        commonPrompt: "Общие инструкции для каждой сессии.",
+        orchestratorPrompt: "Полный пакет оркестратора.",
+      };
+      expect(yield* store.updateRootPromptBundles(updated)).toEqual(updated);
+      expect(yield* store.rootPromptBundles()).toEqual(updated);
+
+      const singlePath = yield* store.rootPromptPath("thread-root-prompts", "single");
+      const orchestratorPath = yield* store.rootPromptPath("thread-root-prompts", "orchestrator");
+      expect(yield* fs.readFileString(singlePath)).toBe(`${updated.commonPrompt}\n`);
+      expect(yield* fs.readFileString(orchestratorPath)).toBe(`${updated.orchestratorPrompt}\n`);
+
+      const tooLong = yield* Effect.exit(
+        store.updateRootPromptBundles({
+          commonPrompt: "x".repeat(100_001),
+          orchestratorPrompt: updated.orchestratorPrompt,
+        }),
+      );
+      expect(Exit.isFailure(tooLong)).toBe(true);
+      if (Exit.isFailure(tooLong)) {
+        expect(isProfileError(Cause.squash(tooLong.cause))).toBe(true);
+      }
+    }),
+  );
+
   it.effect("refuses to read an unmanaged profile directory", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

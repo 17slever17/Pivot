@@ -819,6 +819,16 @@ export const ProviderRegistryLive = Layer.effect(
           const adapter = yield* resolveOmpAdapter(instanceId);
           return yield* adapter.agentProfilesImportCodex();
         }).pipe(Effect.mapError(toOmpCapabilitiesError)),
+      ompRootPromptBundlesGet: ({ instanceId }) =>
+        Effect.gen(function* () {
+          const adapter = yield* resolveOmpAdapter(instanceId);
+          return yield* adapter.rootPromptBundlesGet();
+        }).pipe(Effect.mapError(toOmpCapabilitiesError)),
+      ompRootPromptBundlesUpdate: ({ instanceId, ...input }) =>
+        Effect.gen(function* () {
+          const adapter = yield* resolveOmpAdapter(instanceId);
+          return yield* adapter.rootPromptBundlesUpdate(input);
+        }).pipe(Effect.mapError(toOmpCapabilitiesError)),
       get streamChanges() {
         return Stream.fromPubSub(changesPubSub);
       },

@@ -92,6 +92,38 @@ export const ServerOmpAgentProfilesImportCodexResult = Schema.Struct({
 export type ServerOmpAgentProfilesImportCodexResult =
   typeof ServerOmpAgentProfilesImportCodexResult.Type;
 
+/** Maximum size of one managed OMP root instruction bundle in UTF-16 chars. */
+export const OMP_ROOT_PROMPT_MAX_CHARS = 100_000;
+
+export const OmpRootPrompt = Schema.String.check(Schema.isMaxLength(OMP_ROOT_PROMPT_MAX_CHARS));
+export type OmpRootPrompt = typeof OmpRootPrompt.Type;
+
+/** Effective root bundles used for the next OMP session start. */
+export const OmpRootPromptBundles = Schema.Struct({
+  commonPrompt: OmpRootPrompt,
+  orchestratorPrompt: OmpRootPrompt,
+});
+export type OmpRootPromptBundles = typeof OmpRootPromptBundles.Type;
+
+export const ServerOmpRootPromptBundlesGetInput = Schema.Struct({
+  instanceId: Schema.optionalKey(ProviderInstanceId),
+});
+export type ServerOmpRootPromptBundlesGetInput = typeof ServerOmpRootPromptBundlesGetInput.Type;
+
+export const ServerOmpRootPromptBundlesGetResult = OmpRootPromptBundles;
+export type ServerOmpRootPromptBundlesGetResult = typeof ServerOmpRootPromptBundlesGetResult.Type;
+
+export const ServerOmpRootPromptBundlesUpdateInput = Schema.Struct({
+  instanceId: Schema.optionalKey(ProviderInstanceId),
+  ...OmpRootPromptBundles.fields,
+});
+export type ServerOmpRootPromptBundlesUpdateInput =
+  typeof ServerOmpRootPromptBundlesUpdateInput.Type;
+
+export const ServerOmpRootPromptBundlesUpdateResult = OmpRootPromptBundles;
+export type ServerOmpRootPromptBundlesUpdateResult =
+  typeof ServerOmpRootPromptBundlesUpdateResult.Type;
+
 export class OmpAgentProfileError extends Schema.TaggedErrorClass<OmpAgentProfileError>()(
   "OmpAgentProfileError",
   { reason: TrimmedNonEmptyString, cause: Schema.optional(Schema.Defect()) },

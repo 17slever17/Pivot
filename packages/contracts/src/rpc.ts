@@ -217,6 +217,10 @@ import {
   ServerOmpAgentProfilesImportCodexResult,
   ServerOmpAgentProfilesListInput,
   ServerOmpAgentProfilesListResult,
+  ServerOmpRootPromptBundlesGetInput,
+  ServerOmpRootPromptBundlesGetResult,
+  ServerOmpRootPromptBundlesUpdateInput,
+  ServerOmpRootPromptBundlesUpdateResult,
 } from "./agentProfiles.ts";
 import {
   SourceControlCloneRepositoryInput,
@@ -308,6 +312,8 @@ export const WS_METHODS = {
   serverOmpAgentProfileUpsert: "server.ompAgentProfileUpsert",
   serverOmpAgentProfileDelete: "server.ompAgentProfileDelete",
   serverOmpAgentProfilesImportCodex: "server.ompAgentProfilesImportCodex",
+  serverOmpRootPromptBundlesGet: "server.ompRootPromptBundlesGet",
+  serverOmpRootPromptBundlesUpdate: "server.ompRootPromptBundlesUpdate",
   serverUpdateProvider: "server.updateProvider",
   serverUpdateServer: "server.updateServer",
   serverUpdateServerWithProgress: "server.updateServerWithProgress",
@@ -512,6 +518,22 @@ export const WsServerOmpAgentProfilesImportCodexRpc = Rpc.make(
   {
     payload: ServerOmpAgentProfilesImportCodexInput,
     success: ServerOmpAgentProfilesImportCodexResult,
+    error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
+  },
+);
+export const WsServerOmpRootPromptBundlesGetRpc = Rpc.make(
+  WS_METHODS.serverOmpRootPromptBundlesGet,
+  {
+    payload: ServerOmpRootPromptBundlesGetInput,
+    success: ServerOmpRootPromptBundlesGetResult,
+    error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
+  },
+);
+export const WsServerOmpRootPromptBundlesUpdateRpc = Rpc.make(
+  WS_METHODS.serverOmpRootPromptBundlesUpdate,
+  {
+    payload: ServerOmpRootPromptBundlesUpdateInput,
+    success: ServerOmpRootPromptBundlesUpdateResult,
     error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
   },
 );
@@ -1167,6 +1189,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerOmpAgentProfileUpsertRpc,
   WsServerOmpAgentProfileDeleteRpc,
   WsServerOmpAgentProfilesImportCodexRpc,
+  WsServerOmpRootPromptBundlesGetRpc,
+  WsServerOmpRootPromptBundlesUpdateRpc,
   WsServerUpdateProviderRpc,
   WsServerUpdateServerRpc,
   WsServerUpdateServerWithProgressRpc,

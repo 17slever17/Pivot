@@ -24,6 +24,7 @@ import type {
   OmpAgentProfile,
   OmpAgentProfileName,
   OmpAgentProfileUpsertInput,
+  OmpRootPromptBundles,
   ServerOmpAgentProfilesImportCodexResult,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -193,6 +194,14 @@ export interface ProviderRegistryShape {
   readonly ompAgentProfilesImportCodex: (input: {
     readonly instanceId: ProviderInstanceId;
   }) => Effect.Effect<ServerOmpAgentProfilesImportCodexResult, OmpCapabilitiesError>;
+  readonly ompRootPromptBundlesGet: (input: {
+    readonly instanceId: ProviderInstanceId;
+  }) => Effect.Effect<OmpRootPromptBundles, OmpCapabilitiesError>;
+  readonly ompRootPromptBundlesUpdate: (
+    input: {
+      readonly instanceId: ProviderInstanceId;
+    } & OmpRootPromptBundles,
+  ) => Effect.Effect<OmpRootPromptBundles, OmpCapabilitiesError>;
 }
 
 export class ProviderRegistry extends Context.Service<ProviderRegistry, ProviderRegistryShape>()(

@@ -4625,6 +4625,16 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   capabilitiesCalls.push(`move-item:${instanceId}:${kind}:${name}`);
                   return { settings: { entries: [] }, resources: [], skills: [], rules: [] };
                 }),
+              ompRootPromptBundlesGet: ({ instanceId }) =>
+                Effect.sync(() => {
+                  capabilitiesCalls.push(`root-get:${instanceId}`);
+                  return { commonPrompt: "common instructions", orchestratorPrompt: "full bundle" };
+                }),
+              ompRootPromptBundlesUpdate: ({ instanceId, commonPrompt, orchestratorPrompt }) =>
+                Effect.sync(() => {
+                  capabilitiesCalls.push(`root-update:${instanceId}`);
+                  return { commonPrompt, orchestratorPrompt };
+                }),
             },
           },
         });
@@ -4638,6 +4648,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             }),
           ),
         );
+        const rootPrompts = yield* Effect.scoped(
+          withWsRpcClient(wsUrl, (client) =>
+            client[WS_METHODS.serverOmpRootPromptBundlesGet]({
+              instanceId: ProviderInstanceId.make("omp"),
+            }),
+          ),
+        );
         yield* Effect.scoped(
           withWsRpcClient(wsUrl, (client) =>
             client[WS_METHODS.serverOmpCapabilitiesWriteSetting]({
@@ -4645,6 +4662,15 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
               key: "theme.dark",
               value: "midnight",
               scope: "global",
+            }),
+          ),
+        );
+        const updatedRootPrompts = yield* Effect.scoped(
+          withWsRpcClient(wsUrl, (client) =>
+            client[WS_METHODS.serverOmpRootPromptBundlesUpdate]({
+              instanceId: ProviderInstanceId.make("omp"),
+              commonPrompt: "new common instructions",
+              orchestratorPrompt: "new full bundle",
             }),
           ),
         );
@@ -4704,11 +4730,15 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         );
 
         assert.equal(snapshot.snapshot.settings.entries[0]?.value, "titanium");
+        assert.equal(rootPrompts.commonPrompt, "common instructions");
+        assert.equal(updatedRootPrompts.orchestratorPrompt, "new full bundle");
         assert.equal(readResource.resource.content, "# rule");
         assert.equal(readResource.resource.exists, true);
         assert.deepEqual(capabilitiesCalls, [
           "get:omp:project-1",
+          "root-get:omp",
           "write:omp:theme.dark:midnight:global",
+          "root-update:omp",
           "read:omp:rules:codegraph:global",
           "write-resource:omp:skills:create-ticket:project",
           "delete-resource:omp:rules:codegraph:global",

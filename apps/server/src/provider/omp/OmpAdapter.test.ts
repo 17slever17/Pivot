@@ -167,6 +167,30 @@ describe("OmpAdapter", () => {
       }).pipe(Effect.provide(NodeServices.layer)),
   );
 
+  it.effect("exposes managed root prompt bundles through the adapter", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-root-prompt-adapter-" });
+      const store = new OmpAgentProfileStore(fs, path, stateDir);
+      const adapter = new OmpAdapter(new FakeOmpRpc(), testRandomUUID, {
+        agentProfileStore: store,
+      });
+
+      const initial = yield* adapter.rootPromptBundlesGet();
+      NodeAssert.equal(initial.commonPrompt, "");
+      NodeAssert.match(initial.orchestratorPrompt, /root orchestration agent/);
+      const updated = yield* adapter.rootPromptBundlesUpdate({
+        commonPrompt: "common",
+        orchestratorPrompt: "orchestrator",
+      });
+      NodeAssert.deepEqual(updated, {
+        commonPrompt: "common",
+        orchestratorPrompt: "orchestrator",
+      });
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("completes a T3 turn on terminal agent_end", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

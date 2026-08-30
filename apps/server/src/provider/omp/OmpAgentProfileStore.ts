@@ -4,20 +4,28 @@ import type {
   OmpAgentProfile,
   OmpAgentProfileName,
   OmpAgentProfileUpsertInput,
+  OmpRootPromptBundles,
   ServerOmpAgentProfilesImportCodexResult,
   ThreadAgentMode,
 } from "@t3tools/contracts";
-import { OmpAgentProfile as OmpAgentProfileSchema, OmpAgentProfileError } from "@t3tools/contracts";
+import {
+  OmpAgentProfile as OmpAgentProfileSchema,
+  OmpAgentProfileError,
+  OMP_ROOT_PROMPT_MAX_CHARS,
+} from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 
+import { writeFileStringAtomically } from "../../atomicWrite.ts";
+
 const STORE_DIRECTORY = "omp-agent-modes";
 const PROFILE_FILE = "profiles.json";
 const MANAGED_MARKER = ".pivot-managed";
 const MAX_SYSTEM_PROMPT_CHARS = 100_000;
+const MAX_ROOT_PROMPT_BYTES = OMP_ROOT_PROMPT_MAX_CHARS * 4;
 const DEFAULT_ORCHESTRATOR_PROMPT = `You are the root orchestration agent for Pivot. Break substantial work into focused named subagent tasks when useful, report progress, and integrate their results. Use only the Pivot-managed OMP agent profiles that are available in this session.`;
 const isOmpAgentProfileError = Schema.is(OmpAgentProfileError);
 
@@ -48,6 +56,16 @@ function instanceStoreDirectory(instanceId: string): string {
 
 function mapError(reason: string, cause: unknown): OmpAgentProfileError {
   return new OmpAgentProfileError({ reason, cause });
+}
+
+function rootPromptValidationError(value: string, label: string): OmpAgentProfileError | undefined {
+  if (value.length > OMP_ROOT_PROMPT_MAX_CHARS) {
+    return new OmpAgentProfileError({ reason: `${label} is too long` });
+  }
+  if (new TextEncoder().encode(value).byteLength > MAX_ROOT_PROMPT_BYTES) {
+    return new OmpAgentProfileError({ reason: `${label} exceeds the UTF-8 size limit` });
+  }
+  return undefined;
 }
 
 function profilePath(path: Path.Path, root: string): string {
@@ -275,7 +293,15 @@ export class OmpAgentProfileStore {
     const fs = this.#fileSystem;
     const file = profilePath(this.#path, this.#root);
     return this.ensureManagedDirectory().pipe(
-      Effect.andThen(fs.writeFileString(file, encodeProfileFile(value) + "\n")),
+      Effect.andThen(
+        writeFileStringAtomically({
+          filePath: file,
+          contents: encodeProfileFile(value) + "\n",
+        }).pipe(
+          Effect.provideService(FileSystem.FileSystem, fs),
+          Effect.provideService(Path.Path, this.#path),
+        ),
+      ),
       Effect.mapError((cause) =>
         isOmpAgentProfileError(cause)
           ? cause
@@ -286,6 +312,49 @@ export class OmpAgentProfileStore {
 
   public list(): Effect.Effect<ReadonlyArray<OmpAgentProfile>, OmpAgentProfileError> {
     return this.readFile().pipe(Effect.map((file) => file.profiles));
+  }
+
+  /**
+   * Return the effective managed root bundles. Imported orchestrator prompts
+   * remain full AGENTS.md bundles for compatibility; no common prompt is
+   * implicitly concatenated here.
+   */
+  public rootPromptBundles(): Effect.Effect<OmpRootPromptBundles, OmpAgentProfileError> {
+    return this.readFile().pipe(
+      Effect.map((file) => ({
+        commonPrompt: file.commonPrompt ?? "",
+        orchestratorPrompt: file.orchestratorPrompt ?? DEFAULT_ORCHESTRATOR_PROMPT,
+      })),
+    );
+  }
+
+  /** Replace both root bundles in one managed profile-file write. */
+  public updateRootPromptBundles(
+    input: OmpRootPromptBundles,
+  ): Effect.Effect<OmpRootPromptBundles, OmpAgentProfileError> {
+    const commonError = rootPromptValidationError(input.commonPrompt, "common root prompt");
+    const orchestratorError = rootPromptValidationError(
+      input.orchestratorPrompt,
+      "orchestrator root prompt",
+    );
+    if (commonError !== undefined) return Effect.fail(commonError);
+    if (orchestratorError !== undefined) return Effect.fail(orchestratorError);
+
+    return Effect.gen({ self: this }, function* () {
+      const current = yield* this.readFile();
+      yield* this.writeFile({
+        ...current,
+        commonPrompt: input.commonPrompt,
+        orchestratorPrompt: input.orchestratorPrompt,
+      });
+      return input;
+    }).pipe(
+      Effect.mapError((cause) =>
+        isOmpAgentProfileError(cause)
+          ? cause
+          : mapError("failed to update OMP root prompt bundles", cause),
+      ),
+    );
   }
 
   public upsert(
@@ -432,11 +501,8 @@ export class OmpAgentProfileStore {
     mode: ThreadAgentMode,
   ): Effect.Effect<string, OmpAgentProfileError> {
     return Effect.gen({ self: this }, function* () {
-      const file = yield* this.readFile();
-      const prompt =
-        mode === "orchestrator"
-          ? (file.orchestratorPrompt ?? DEFAULT_ORCHESTRATOR_PROMPT)
-          : file.commonPrompt;
+      const bundles = yield* this.rootPromptBundles();
+      const prompt = mode === "orchestrator" ? bundles.orchestratorPrompt : bundles.commonPrompt;
       if (!prompt) return "";
       const sessionDir = this.#path.join(this.#root, "sessions");
       yield* this.#fileSystem.makeDirectory(sessionDir, { recursive: true });
