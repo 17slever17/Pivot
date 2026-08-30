@@ -1227,25 +1227,32 @@ export class OmpAdapter {
       state.usage = event.usage;
     }
 
+    if (event.type === "turn_start") {
+      state.error = undefined;
+      state.summary = undefined;
+    }
+
     if (event.type === "tool_execution_start") {
       return this.#emitSubagentToolProgress(session, state, event);
     }
     if (event.type === "tool_execution_update") {
-      return this.#emitSubagentToolProgress(session, state, event);
+      return Effect.void;
     }
     if (event.type === "tool_execution_end") {
       return this.#emitSubagentToolProgress(session, state, event);
     }
 
-    if (event.type === "turn_start") {
-      state.error = undefined;
-      state.summary = undefined;
+    const isRetryOrCompaction = event.type.includes("retry") || event.type.includes("compaction");
+    const isBoundary =
+      event.type === "message_end" ||
+      event.type === "agent_end" ||
+      (isRetryOrCompaction && (event.type.endsWith("start") || event.type.endsWith("end")));
+    if (!isBoundary) {
+      return Effect.void;
     }
+
     let summary = readOmpEventText(event);
     let error: string | undefined;
-    let lastToolName: string | undefined;
-    let lastIntent: string | undefined;
-    let currentToolArgs: string | undefined;
     if (event.type === "agent_end") {
       error = readOmpAgentEndError(event);
       summary = readLatestAssistantText(event.messages) ?? summary;
@@ -1266,52 +1273,22 @@ export class OmpAdapter {
       if (assistantModel !== undefined) {
         state.model = assistantModel;
       }
-    } else if (event.type === "message_update") {
-      const assistantMessageEvent = event.assistantMessageEvent;
-      if (isRecord(assistantMessageEvent)) {
-        if (
-          assistantMessageEvent.type === "text_delta" ||
-          assistantMessageEvent.type === "thinking_delta"
-        ) {
-          summary = readNonEmptyText(assistantMessageEvent.delta) ?? summary;
-        } else if (assistantMessageEvent.type === "toolcall_end") {
-          const toolCall = assistantMessageEvent.toolCall;
-          if (isRecord(toolCall)) {
-            lastToolName = readNonEmptyText(toolCall.name);
-            lastIntent = readNonEmptyText(toolCall.intent);
-            currentToolArgs = readNonEmptyText(
-              typeof toolCall.arguments === "string"
-                ? toolCall.arguments
-                : toolCall.arguments === undefined
-                  ? undefined
-                  : JSON.stringify(toolCall.arguments),
-            );
-            summary = lastIntent ?? lastToolName ?? summary;
-          }
-        }
-      }
     }
-    if (event.type.includes("retry") || event.type.includes("compaction")) {
+    if (isRetryOrCompaction) {
       error = readOmpErrorText(event.errorMessage ?? event.error) ?? error;
       if (error === undefined && event.type.endsWith("end")) {
         state.error = undefined;
       }
     }
-    const status =
-      event.type.includes("retry") || event.type.includes("compaction")
-        ? event.type.endsWith("start")
-          ? ("waiting" as const)
-          : event.type.endsWith("end")
-            ? ("running" as const)
-            : undefined
-        : undefined;
+    const status = isRetryOrCompaction
+      ? event.type.endsWith("start")
+        ? ("waiting" as const)
+        : ("running" as const)
+      : undefined;
     return this.#emitSubagentTaskProgress(session, state, {
       status,
-      summary: summary ?? event.type,
+      summary: summary ?? (isRetryOrCompaction ? event.type : undefined),
       error,
-      lastToolName,
-      lastIntent,
-      currentToolArgs,
     });
   }
 

@@ -2120,9 +2120,32 @@ describe("OmpAdapter", () => {
         payload: {
           id: "agent-live",
           event: {
+            type: "message_end",
+            message: {
+              role: "assistant",
+              content: [{ type: "text", text: "child boundary" }],
+            },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
             type: "message_update",
             effort: "high",
             assistantMessageEvent: { type: "thinking_delta", delta: "child reasoning" },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "tool_status_update",
+            message: "ignored event",
           },
         },
       });
@@ -2215,11 +2238,19 @@ describe("OmpAdapter", () => {
       const toolProgress = events.filter((event) => event.type === "tool.progress");
       NodeAssert.equal(
         taskProgress.some((event) => event.payload.summary === "child answer"),
-        true,
+        false,
       );
       NodeAssert.equal(
         taskProgress.some((event) => event.payload.summary === "child reasoning"),
+        false,
+      );
+      NodeAssert.equal(
+        taskProgress.some((event) => event.payload.summary === "child boundary"),
         true,
+      );
+      NodeAssert.equal(
+        taskProgress.some((event) => event.payload.summary === "ignored event"),
+        false,
       );
       NodeAssert.equal(
         taskProgress.some(
@@ -2227,10 +2258,11 @@ describe("OmpAdapter", () => {
         ),
         true,
       );
-      NodeAssert.equal(toolProgress.length, 3);
+      NodeAssert.equal(toolProgress.length, 2);
       NodeAssert.equal(toolProgress[0]?.payload.taskId, RuntimeTaskId.make("agent-live"));
       NodeAssert.equal(toolProgress[0]?.payload.toolName, "read");
       NodeAssert.equal(toolProgress[0]?.payload.parentToolUseId, "task-call");
+      NodeAssert.equal(toolProgress[1]?.payload.summary, "done");
       const failedProgress = taskProgress.find(
         (event) => event.payload.error?.includes("child failed") === true,
       );
