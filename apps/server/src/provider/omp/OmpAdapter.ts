@@ -1120,13 +1120,13 @@ export class OmpAdapter {
     const summary = readNonEmptyText(progress.recentOutput) ?? lastIntent;
     const error = readOmpErrorText(progress.retryFailure);
     return this.#emitSubagentTaskProgress(session, state, {
-      status,
-      summary,
-      error,
-      lastToolName,
-      lastIntent,
-      currentToolArgs,
-      currentToolStartMs,
+      ...(status === undefined ? {} : { status }),
+      ...(summary === undefined ? {} : { summary }),
+      ...(error === undefined ? {} : { error }),
+      ...(lastToolName === undefined ? {} : { lastToolName }),
+      ...(lastIntent === undefined ? {} : { lastIntent }),
+      ...(currentToolArgs === undefined ? {} : { currentToolArgs }),
+      ...(currentToolStartMs === undefined ? {} : { currentToolStartMs }),
     });
   }
 
@@ -1286,9 +1286,13 @@ export class OmpAdapter {
         : ("running" as const)
       : undefined;
     return this.#emitSubagentTaskProgress(session, state, {
-      status,
-      summary: summary ?? (isRetryOrCompaction ? event.type : undefined),
-      error,
+      ...(status === undefined ? {} : { status }),
+      ...(summary === undefined
+        ? isRetryOrCompaction
+          ? { summary: event.type }
+          : {}
+        : { summary }),
+      ...(error === undefined ? {} : { error }),
     });
   }
 
