@@ -2067,6 +2067,31 @@ describe("OmpAdapter", () => {
           status: "started",
           parentToolCallId: "tool-9",
           index: 0,
+          resolvedModel: "openai-codex/gpt-5.6-start:max",
+          effort: "high",
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_lifecycle",
+        payload: {
+          id: "agent-literal-model",
+          agent: "scout",
+          agentSource: "bundled",
+          description: "literal model id",
+          status: "started",
+          model: "ollama/qwen:high",
+          index: 1,
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_lifecycle",
+        payload: {
+          id: "agent-literal-model",
+          agent: "scout",
+          agentSource: "bundled",
+          description: "literal model id",
+          status: "completed",
+          index: 1,
         },
       });
       yield* fake.offer(THREAD_ID, {
@@ -2092,7 +2117,18 @@ describe("OmpAdapter", () => {
             toolCount: 7,
             tokens: 44_000,
             durationMs: 123_000,
-            resolvedModel: "openai-codex/gpt-5.6-sol",
+            resolvedModel: "openai-codex/gpt-5.6-sol:xhigh",
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-1",
+          event: {
+            type: "agent_end",
+            resolvedModel: "openai-codex/gpt-5.6-terminal:low",
+            messages: [],
           },
         },
       });
@@ -2116,12 +2152,21 @@ describe("OmpAdapter", () => {
       const events = yield* Fiber.join(eventsFiber);
       const started = events.find((event) => event.type === "task.started");
       const progress = events.find((event) => event.type === "task.progress");
-      const completed = events.find((event) => event.type === "task.completed");
+      const completed = events
+        .filter((event) => event.type === "task.completed")
+        .find((event) => event.payload.taskId === RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(started?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(started?.payload.description, "survey repo");
       NodeAssert.equal(started?.payload.role, "scout");
       NodeAssert.equal(started?.payload.toolUseId, "tool-9");
       NodeAssert.equal(started?.payload.agentIndex, 0);
+      NodeAssert.equal(started?.payload.model, "openai-codex/gpt-5.6-start");
+      NodeAssert.equal(started?.payload.effort, "high");
+      const literalStarted = events
+        .filter((event) => event.type === "task.started")
+        .find((event) => event.payload.taskId === RuntimeTaskId.make("agent-literal-model"));
+      NodeAssert.equal(literalStarted?.payload.model, "ollama/qwen:high");
+      NodeAssert.equal(literalStarted?.payload.effort, undefined);
       NodeAssert.equal(progress?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(progress?.payload.description, "survey repo");
       NodeAssert.equal(progress?.payload.lastToolName, "read");
@@ -2135,10 +2180,13 @@ describe("OmpAdapter", () => {
         durationMs: 123_000,
       });
       NodeAssert.equal(progress?.payload.model, "openai-codex/gpt-5.6-sol");
+      NodeAssert.equal(progress?.payload.effort, "xhigh");
       NodeAssert.equal(progress?.payload.status, "running");
       NodeAssert.equal(completed?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(completed?.payload.status, "completed");
       NodeAssert.equal(completed?.payload.summary, "Latest child summary");
+      NodeAssert.equal(completed?.payload.model, "openai-codex/gpt-5.6-terminal");
+      NodeAssert.equal(completed?.payload.effort, "low");
     }),
   );
 

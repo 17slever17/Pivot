@@ -1057,7 +1057,7 @@ export class OmpAdapter {
     const description = readNonEmptyText(payload.description);
     const toolUseId = readNonEmptyText(payload.parentToolCallId);
     const agentIndex = readNonNegativeInt(payload.index);
-    const model = readOmpModel(payload.model ?? payload.resolvedModel);
+    const model = readOmpPayloadModel(payload);
     const effort = readOmpEffort(payload);
     if (description !== undefined) {
       state.description = description;
@@ -1161,7 +1161,7 @@ export class OmpAdapter {
       progress.currentToolStartMs >= 0
         ? Math.floor(progress.currentToolStartMs)
         : undefined;
-    const model = readOmpModel(progress.resolvedModel ?? progress.model);
+    const model = readOmpPayloadModel(progress);
     const effort = readOmpEffort(progress);
     const totalTokens =
       typeof progress.tokens === "number" &&
@@ -1309,7 +1309,7 @@ export class OmpAdapter {
       return Effect.void;
     }
     const state = this.#getOrCreateSubagentState(session, payload.id);
-    const model = readOmpModel(event.model ?? event.resolvedModel);
+    const model = readOmpPayloadModel(event);
     const effort = readOmpEffort(event);
     const usage = readOmpTaskUsage(event.usage);
     if (model !== undefined) {
@@ -2533,28 +2533,58 @@ function readOmpTaskUsage(value: unknown): RuntimeTaskUsage | undefined {
   };
 }
 
-function readOmpModel(value: unknown): string | undefined {
+function readOmpPayloadModel(value: Record<string, unknown>): string | undefined {
+  // OMP puts an explicit thinking selection on resolvedModel. Keep ordinary
+  // model ids opaque: providers may legitimately use a colon in an id.
+  return readOmpModel(value.resolvedModel, true) ?? readOmpModel(value.model);
+}
+
+function readOmpModel(value: unknown, fromResolvedModel = false): string | undefined {
   const direct = readNonEmptyText(value);
   if (direct !== undefined) {
-    return direct;
+    return fromResolvedModel ? splitOmpResolvedModel(direct).model : direct;
   }
   if (!isRecord(value)) {
     return undefined;
   }
   const provider = readNonEmptyText(value.provider);
   const modelId = readNonEmptyText(value.id ?? value.modelId);
-  return provider !== undefined && modelId !== undefined ? `${provider}/${modelId}` : undefined;
+  if (provider === undefined || modelId === undefined) {
+    return undefined;
+  }
+  const model = `${provider}/${modelId}`;
+  return fromResolvedModel ? splitOmpResolvedModel(model).model : model;
 }
 
 function readOmpEffort(value: unknown): string | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
-  return (
+  const explicit =
     readNonEmptyText(value.effort) ??
     readNonEmptyText(value.thinkingLevel) ??
-    readNonEmptyText(value.level)
-  );
+    readNonEmptyText(value.level);
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  const resolvedModel = readNonEmptyText(value.resolvedModel);
+  return resolvedModel === undefined ? undefined : splitOmpResolvedModel(resolvedModel).effort;
+}
+
+function splitOmpResolvedModel(value: string): {
+  readonly model: string;
+  readonly effort?: string;
+} {
+  const separator = value.lastIndexOf(":");
+  if (separator <= 0 || separator === value.length - 1) {
+    return { model: value };
+  }
+  const effort = value.slice(separator + 1);
+  if (!(OMP_THINKING_LEVELS as readonly string[]).includes(effort)) {
+    return { model: value };
+  }
+  const model = value.slice(0, separator);
+  return model.includes("/") ? { model, effort } : { model: value };
 }
 
 function readOmpMessageText(value: unknown): string | undefined {

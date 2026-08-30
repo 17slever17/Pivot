@@ -442,7 +442,9 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         Effect.orElseSucceed(() => pathService.join(ompHome, "agent")),
       );
       const ompConfigStore = new OmpConfigStore(fs, pathService, agentDir);
-      const agentProfileStore = new OmpAgentProfileStore(fs, pathService, serverConfig.stateDir);
+      const agentProfileStore = new OmpAgentProfileStore(fs, pathService, serverConfig.stateDir, {
+        instanceId,
+      });
       // Settings updates recreate the instance via ProviderInstanceRegistryMutator,
       // so create() is the sync point for OmpSettings → omp config.yml.
       yield* syncOmpSettingsToConfigStore(effectiveConfig, ompConfigStore).pipe(

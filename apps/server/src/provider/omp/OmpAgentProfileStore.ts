@@ -33,6 +33,17 @@ const encodeProfileFile = Schema.encodeSync(Schema.fromJsonString(ProfileFileSch
 export interface OmpAgentProfileStoreOptions {
   /** Override only in tests; production always reads the current user home. */
   readonly codexHome?: string;
+  /** Provider instance that owns this managed profile store. */
+  readonly instanceId?: string;
+}
+
+function instanceStoreDirectory(instanceId: string): string {
+  // Provider instance ids are currently slugs, but encode the complete UTF-8
+  // value so this boundary remains safe if that contract becomes less strict.
+  // Hex is deliberately case-sensitive and cannot collide on Windows paths.
+  const bytes = new TextEncoder().encode(instanceId);
+  const encoded = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `instance-${encoded}`;
 }
 
 function mapError(reason: string, cause: unknown): OmpAgentProfileError {
@@ -197,7 +208,15 @@ export class OmpAgentProfileStore {
   ) {
     this.#fileSystem = fileSystem;
     this.#path = path;
-    this.#root = path.join(stateDir, STORE_DIRECTORY);
+    const sharedRoot = path.join(stateDir, STORE_DIRECTORY);
+    // Keep the original default location readable for existing installations;
+    // additional provider instances always get their own encoded directory.
+    // OmpDriver passes the instance id, so this compatibility case is limited
+    // to the default `omp` instance and legacy direct store callers.
+    this.#root =
+      options.instanceId === undefined || options.instanceId === "omp"
+        ? sharedRoot
+        : path.join(sharedRoot, instanceStoreDirectory(options.instanceId));
     this.#codexHome = options.codexHome ?? path.join(NodeOS.homedir(), ".codex");
   }
 

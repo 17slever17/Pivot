@@ -54,6 +54,56 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
     }),
   );
 
+  it.effect("isolates managed profiles by provider instance", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-agent-mode-instances-" });
+      const first = new OmpAgentProfileStore(fs, path, stateDir, { instanceId: "omp-A" });
+      const second = new OmpAgentProfileStore(fs, path, stateDir, { instanceId: "omp-a" });
+
+      yield* first.upsert({
+        name: "worker",
+        description: "First instance worker",
+        model: "openai-codex/gpt-5.6-luna",
+        effort: "high",
+        systemPrompt: "First instance instructions.",
+        readOnly: false,
+        canSpawn: true,
+      });
+      yield* second.upsert({
+        name: "worker",
+        description: "Second instance worker",
+        model: "openai-codex/gpt-5.6-luna",
+        effort: "low",
+        systemPrompt: "Second instance instructions.",
+        readOnly: false,
+        canSpawn: true,
+      });
+
+      expect((yield* first.list()).map((profile) => profile.description)).toEqual([
+        "First instance worker",
+      ]);
+      expect((yield* second.list()).map((profile) => profile.description)).toEqual([
+        "Second instance worker",
+      ]);
+      const managedRoot = path.join(stateDir, "omp-agent-modes");
+      const instanceDirectories = yield* fs.readDirectory(managedRoot);
+      expect(instanceDirectories).toHaveLength(2);
+      const definitions = yield* Effect.all(
+        instanceDirectories.map((directory) =>
+          fs.readFileString(path.join(managedRoot, directory, "agents", "worker.md")),
+        ),
+      );
+      expect(definitions.some((definition) => definition.includes("First instance worker"))).toBe(
+        true,
+      );
+      expect(definitions.some((definition) => definition.includes("Second instance worker"))).toBe(
+        true,
+      );
+    }),
+  );
+
   it.effect("refuses to read an unmanaged profile directory", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
