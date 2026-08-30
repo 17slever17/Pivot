@@ -6,6 +6,7 @@ import {
   ProjectId,
   ThreadId,
   ProviderInstanceId,
+  TurnId,
 } from "@t3tools/contracts";
 import { createModelSelection } from "@t3tools/shared/model";
 import { expect, it } from "@effect/vitest";
@@ -418,6 +419,107 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           runtimeMode: "approval-required",
         },
       });
+    }),
+  );
+
+  it.effect("emits thread.agent-mode-set while the thread is idle", () =>
+    Effect.gen(function* () {
+      const now = "2026-01-01T00:00:00.000Z";
+      const initial = createEmptyReadModel(now);
+      const withProject = yield* projectEvent(initial, {
+        sequence: 1,
+        eventId: asEventId("evt-project-agent-mode"),
+        aggregateKind: "project",
+        aggregateId: asProjectId("project-agent-mode"),
+        type: "project.created",
+        occurredAt: now,
+        commandId: CommandId.make("cmd-project-agent-mode"),
+        causationEventId: null,
+        correlationId: CommandId.make("cmd-project-agent-mode"),
+        metadata: {},
+        payload: {
+          projectId: asProjectId("project-agent-mode"),
+          title: "Project",
+          workspaceRoot: "/tmp/project",
+          defaultModelSelection: null,
+          scripts: [],
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      const readModel = yield* projectEvent(withProject, {
+        sequence: 2,
+        eventId: asEventId("evt-thread-agent-mode"),
+        aggregateKind: "thread",
+        aggregateId: ThreadId.make("thread-agent-mode"),
+        type: "thread.created",
+        occurredAt: now,
+        commandId: CommandId.make("cmd-thread-agent-mode"),
+        causationEventId: null,
+        correlationId: CommandId.make("cmd-thread-agent-mode"),
+        metadata: {},
+        payload: {
+          threadId: ThreadId.make("thread-agent-mode"),
+          projectId: asProjectId("project-agent-mode"),
+          title: "Thread",
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("codex"),
+            model: "gpt-5.4",
+          },
+          runtimeMode: "full-access",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          branch: null,
+          worktreePath: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+
+      const result = yield* decideOrchestrationCommand({
+        command: {
+          type: "thread.agent-mode.set",
+          commandId: CommandId.make("cmd-agent-mode-set"),
+          threadId: ThreadId.make("thread-agent-mode"),
+          agentMode: "orchestrator",
+          createdAt: now,
+        },
+        readModel,
+      });
+      const event = Array.isArray(result) ? result[0] : result;
+      expect(event?.type).toBe("thread.agent-mode-set");
+      expect(event?.payload).toMatchObject({ agentMode: "orchestrator" });
+
+      const activeReadModel = {
+        ...readModel,
+        threads: readModel.threads.map((thread) =>
+          thread.id === ThreadId.make("thread-agent-mode")
+            ? {
+                ...thread,
+                latestTurn: {
+                  turnId: TurnId.make("turn-agent-mode"),
+                  state: "running" as const,
+                  requestedAt: now,
+                  startedAt: now,
+                  completedAt: null,
+                  assistantMessageId: null,
+                },
+              }
+            : thread,
+        ),
+      };
+      const rejected = yield* Effect.exit(
+        decideOrchestrationCommand({
+          command: {
+            type: "thread.agent-mode.set",
+            commandId: CommandId.make("cmd-agent-mode-set-active"),
+            threadId: ThreadId.make("thread-agent-mode"),
+            agentMode: "single",
+            createdAt: now,
+          },
+          readModel: activeReadModel,
+        }),
+      );
+      expect(rejected._tag).toBe("Failure");
     }),
   );
 

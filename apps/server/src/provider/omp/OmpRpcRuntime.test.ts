@@ -357,6 +357,27 @@ describe("OmpRpcRuntime", () => {
     }),
   );
 
+  it.effect("passes a session-local append-system-prompt file to omp", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner({ sessionFile: "/tmp/omp-session-prompt.jsonl" });
+      const runtime = new OmpRpcRuntime(fake.spawner, "/opt/omp");
+      yield* runtime.ensureSession({
+        sessionKey: "thread-prompt",
+        cwd: "/proj",
+        resumeCursor: null,
+        appendSystemPromptFile:
+          "/pivot/userdata/omp-agent-modes/sessions/thread-prompt-orchestrator.md",
+      });
+
+      NodeAssert.deepEqual(fake.spawns[1]?.args, [
+        "--mode",
+        "rpc-ui",
+        "--append-system-prompt",
+        "/pivot/userdata/omp-agent-modes/sessions/thread-prompt-orchestrator.md",
+      ]);
+    }),
+  );
+
   it.effect("uses the refreshed managed rtk directory for future sessions", () =>
     Effect.gen(function* () {
       const fake = makeFakeOmpSpawner({ sessionFile: "/tmp/omp-session.jsonl" });

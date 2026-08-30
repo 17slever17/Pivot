@@ -65,6 +65,7 @@ import {
   ServerOmpLoginError,
   ServerOmpHubError,
   ServerOmpCapabilitiesError,
+  ServerOmpAgentProfileError,
   type ProviderInstanceId,
 } from "@t3tools/contracts";
 import { resolveServerBackgroundActivitySettings } from "@t3tools/shared/backgroundActivitySettings";
@@ -1811,6 +1812,87 @@ const makeWsRpcLayer = (
                   ),
                 );
               return { snapshot };
+            }),
+            { "rpc.aggregate": "server" },
+          ),
+        [WS_METHODS.serverOmpAgentProfilesList]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpAgentProfilesList,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              const profiles = yield* providerRegistry.ompAgentProfilesList({ instanceId }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ServerOmpAgentProfileError({
+                      reason: cause instanceof Error ? cause.message : String(cause),
+                      cause,
+                    }),
+                ),
+              );
+              return { profiles };
+            }),
+            { "rpc.aggregate": "server" },
+          ),
+        [WS_METHODS.serverOmpAgentProfileUpsert]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpAgentProfileUpsert,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              const { instanceId: _ignored, ...profileInput } = input;
+              const profile = yield* providerRegistry
+                .ompAgentProfileUpsert({ instanceId, ...profileInput })
+                .pipe(
+                  Effect.mapError(
+                    (cause) =>
+                      new ServerOmpAgentProfileError({
+                        reason: cause instanceof Error ? cause.message : String(cause),
+                        cause,
+                      }),
+                  ),
+                );
+              return { profile };
+            }),
+            { "rpc.aggregate": "server" },
+          ),
+        [WS_METHODS.serverOmpAgentProfileDelete]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpAgentProfileDelete,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              const { instanceId: _ignored, ...deleteInput } = input;
+              const profiles = yield* providerRegistry
+                .ompAgentProfileDelete({ instanceId, ...deleteInput })
+                .pipe(
+                  Effect.mapError(
+                    (cause) =>
+                      new ServerOmpAgentProfileError({
+                        reason: cause instanceof Error ? cause.message : String(cause),
+                        cause,
+                      }),
+                  ),
+                );
+              return { profiles };
+            }),
+            { "rpc.aggregate": "server" },
+          ),
+        [WS_METHODS.serverOmpAgentProfilesImportCodex]: (input) =>
+          observeRpcEffect(
+            WS_METHODS.serverOmpAgentProfilesImportCodex,
+            Effect.gen(function* () {
+              const instanceId: ProviderInstanceId =
+                input.instanceId ?? defaultInstanceIdForDriver(ProviderDriverKind.make("omp"));
+              return yield* providerRegistry.ompAgentProfilesImportCodex({ instanceId }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ServerOmpAgentProfileError({
+                      reason: cause instanceof Error ? cause.message : String(cause),
+                      cause,
+                    }),
+                ),
+              );
             }),
             { "rpc.aggregate": "server" },
           ),

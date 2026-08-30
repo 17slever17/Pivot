@@ -31,10 +31,14 @@ import { formatOmpToolOutputText, OmpToolPresentation } from "./OmpToolPresentat
 import {
   type ApprovalRequestId,
   EventId,
+  OmpAgentProfileError,
   type ProviderApprovalDecision,
   type ProviderRuntimeEvent,
   type ProviderSession,
   type ProviderSessionStartInput,
+  type OmpAgentProfileName,
+  type OmpAgentProfileUpsertInput,
+  type ServerOmpAgentProfilesImportCodexResult,
   type ProviderSendTurnInput,
   type ProviderUserInputAnswers,
   RuntimeItemId,
@@ -78,6 +82,7 @@ import type {
 } from "@t3tools/contracts";
 import type { OmpCapabilitiesService } from "./OmpCapabilitiesService.ts";
 import { OmpSpawnError, type OmpRpcRuntime } from "./OmpRpcRuntime.ts";
+import { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
 import { OmpPreviewMcpInjector } from "../../mcp/OmpPreviewMcpInjector.ts";
 import { readMcpProviderSession } from "../../mcp/McpProviderSession.ts";
 import {
@@ -91,6 +96,18 @@ const PROVIDER = ProviderDriverKind.make("omp");
 const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 const isProviderAdapterProcessError = Schema.is(ProviderAdapterProcessError);
 const isOmpSpawnError = Schema.is(OmpSpawnError);
+
+function mapOmpAgentProfileError(
+  method: string,
+  cause: OmpAgentProfileError,
+): ProviderAdapterRequestError {
+  return new ProviderAdapterRequestError({
+    provider: PROVIDER,
+    method,
+    detail: cause.reason,
+    cause,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Review findings block decoding (issue #42): the persona ends with one
@@ -208,6 +225,7 @@ export interface OmpAdapterOptions {
   >;
   readonly previewMcpInjector?: OmpPreviewMcpInjector;
   readonly agentDir?: string;
+  readonly agentProfileStore?: OmpAgentProfileStore;
 }
 
 export type OmpSubagentSubscriptionLevel = "off" | "progress" | "events";
@@ -240,6 +258,7 @@ export class OmpAdapter {
   readonly #capabilitiesService: OmpAdapterOptions["capabilitiesService"];
   readonly #previewMcpInjector: OmpPreviewMcpInjector | undefined;
   readonly #agentDir: string | undefined;
+  readonly #agentProfileStore: OmpAgentProfileStore | undefined;
   readonly #reviewBlockDecoder = new ReviewBlockDecoder();
   readonly #toolPresentation = new OmpToolPresentation();
   readonly #catalogDecoder = new OmpCatalogDecoder();
@@ -255,6 +274,7 @@ export class OmpAdapter {
     this.#capabilitiesService = options.capabilitiesService;
     this.#previewMcpInjector = options.previewMcpInjector;
     this.#agentDir = options.agentDir;
+    this.#agentProfileStore = options.agentProfileStore;
   }
 
   private requireCapabilitiesService(): Effect.Effect<
@@ -325,6 +345,67 @@ export class OmpAdapter {
     );
   }
 
+  public agentProfilesList() {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "agentProfilesList",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .list()
+          .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("agentProfilesList", cause)));
+  }
+
+  public agentProfileUpsert(input: OmpAgentProfileUpsertInput) {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "agentProfileUpsert",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .upsert(input)
+          .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("agentProfileUpsert", cause)));
+  }
+
+  public agentProfileDelete(name: OmpAgentProfileName) {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "agentProfileDelete",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .delete(name)
+          .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("agentProfileDelete", cause)));
+  }
+
+  public agentProfilesImportCodex(): Effect.Effect<
+    ServerOmpAgentProfilesImportCodexResult,
+    ProviderAdapterRequestError
+  > {
+    return this.#agentProfileStore === undefined
+      ? Effect.fail(
+          new ProviderAdapterRequestError({
+            provider: PROVIDER,
+            method: "agentProfilesImportCodex",
+            detail: "omp agent profile store is not configured",
+          }),
+        )
+      : this.#agentProfileStore
+          .importCodex()
+          .pipe(
+            Effect.mapError((cause) => mapOmpAgentProfileError("agentProfilesImportCodex", cause)),
+          );
+  }
+
   public get streamEvents(): Stream.Stream<ProviderRuntimeEvent> {
     return Stream.fromQueue(this.#events);
   }
@@ -341,12 +422,32 @@ export class OmpAdapter {
       }
       const resumeCursor = typeof input.resumeCursor === "string" ? input.resumeCursor : null;
       const extraEnv = yield* this.#installPreviewMcp(input.threadId);
+      const appendSystemPromptFile =
+        input.agentMode !== undefined && this.#agentProfileStore !== undefined
+          ? yield* this.#agentProfileStore
+              .rootPromptPath(input.threadId, input.agentMode)
+              .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("startSession", cause)))
+          : undefined;
+      const managedAgentDir =
+        input.agentMode === "orchestrator" && this.#agentProfileStore !== undefined
+          ? yield* this.#agentProfileStore
+              .managedAgentDirectory()
+              .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("startSession", cause)))
+          : undefined;
+      const sessionEnv =
+        managedAgentDir === undefined
+          ? extraEnv
+          : {
+              ...(extraEnv === undefined ? {} : extraEnv),
+              PI_CODING_AGENT_DIR: managedAgentDir,
+            };
       const handle = yield* this.#runtime
         .ensureSession({
           sessionKey: input.threadId,
           cwd,
           resumeCursor,
-          ...(extraEnv === undefined ? {} : { extraEnv }),
+          ...(sessionEnv !== undefined ? { extraEnv: sessionEnv } : {}),
+          ...(appendSystemPromptFile ? { appendSystemPromptFile } : {}),
         })
         .pipe(
           Effect.tapError(() => this.#uninstallPreviewMcp(input.threadId)),

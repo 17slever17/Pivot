@@ -135,6 +135,11 @@ export const RuntimeMode = Schema.Literals([
 ]);
 export type RuntimeMode = typeof RuntimeMode.Type;
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
+/** Root collaboration mode for a durable thread. This is intentionally
+ * separate from RuntimeMode, which controls filesystem/approval access. */
+export const ThreadAgentMode = Schema.Literals(["single", "orchestrator"]);
+export type ThreadAgentMode = typeof ThreadAgentMode.Type;
+export const DEFAULT_THREAD_AGENT_MODE: ThreadAgentMode = "single";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
 export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";
@@ -379,6 +384,9 @@ export const OrchestrationThread = Schema.Struct({
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
+  // Optional for pre-agent-mode snapshots; the persisted projection defaults
+  // this field to `single` and readers normalize the absent legacy value.
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROVIDER_INTERACTION_MODE)),
   ),
@@ -455,6 +463,7 @@ export const OrchestrationThreadShell = Schema.Struct({
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROVIDER_INTERACTION_MODE)),
   ),
@@ -697,6 +706,7 @@ const ThreadCreateCommand = Schema.Struct({
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROVIDER_INTERACTION_MODE)),
   ),
@@ -813,6 +823,14 @@ const ThreadRuntimeModeSetCommand = Schema.Struct({
   createdAt: IsoDateTime,
 });
 
+const ThreadAgentModeSetCommand = Schema.Struct({
+  type: Schema.Literal("thread.agent-mode.set"),
+  commandId: CommandId,
+  threadId: ThreadId,
+  agentMode: ThreadAgentMode,
+  createdAt: IsoDateTime,
+});
+
 const ThreadInteractionModeSetCommand = Schema.Struct({
   type: Schema.Literal("thread.interaction-mode.set"),
   commandId: CommandId,
@@ -826,6 +844,7 @@ const ThreadTurnStartBootstrapCreateThread = Schema.Struct({
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode,
   branch: Schema.NullOr(TrimmedNonEmptyString),
   worktreePath: Schema.NullOr(TrimmedNonEmptyString),
@@ -999,6 +1018,7 @@ const DispatchableClientOrchestrationCommand = Schema.Union([
   ThreadPinReorderCommand,
   ThreadMetaUpdateCommand,
   ThreadRuntimeModeSetCommand,
+  ThreadAgentModeSetCommand,
   ThreadInteractionModeSetCommand,
   ThreadTurnStartCommand,
   ThreadTurnInterruptCommand,
@@ -1028,6 +1048,7 @@ export const ClientOrchestrationCommand = Schema.Union([
   ThreadPinReorderCommand,
   ThreadMetaUpdateCommand,
   ThreadRuntimeModeSetCommand,
+  ThreadAgentModeSetCommand,
   ThreadInteractionModeSetCommand,
   ClientThreadTurnStartCommand,
   ThreadTurnInterruptCommand,
@@ -1152,6 +1173,7 @@ export const OrchestrationEventType = Schema.Literals([
   "thread.pin-reordered",
   "thread.meta-updated",
   "thread.runtime-mode-set",
+  "thread.agent-mode-set",
   "thread.interaction-mode-set",
   "thread.message-sent",
   "thread.turn-start-requested",
@@ -1213,6 +1235,9 @@ export const ThreadCreatedPayload = Schema.Struct({
   title: TrimmedNonEmptyString,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(Effect.succeed(DEFAULT_RUNTIME_MODE))),
+  // Legacy event logs may omit this field; the decider emits the persisted
+  // default for new events and projectors normalize old events.
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROVIDER_INTERACTION_MODE)),
   ),
@@ -1306,6 +1331,12 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
 export const ThreadRuntimeModeSetPayload = Schema.Struct({
   threadId: ThreadId,
   runtimeMode: RuntimeMode,
+  updatedAt: IsoDateTime,
+});
+
+export const ThreadAgentModeSetPayload = Schema.Struct({
+  threadId: ThreadId,
+  agentMode: ThreadAgentMode,
   updatedAt: IsoDateTime,
 });
 
@@ -1546,6 +1577,11 @@ export const OrchestrationEvent = Schema.Union([
     ...EventBaseFields,
     type: Schema.Literal("thread.runtime-mode-set"),
     payload: ThreadRuntimeModeSetPayload,
+  }),
+  Schema.Struct({
+    ...EventBaseFields,
+    type: Schema.Literal("thread.agent-mode-set"),
+    payload: ThreadAgentModeSetPayload,
   }),
   Schema.Struct({
     ...EventBaseFields,

@@ -208,6 +208,17 @@ import {
 } from "./capabilities.ts";
 import { ServerSettings, ServerSettingsError, ServerSettingsPatch } from "./settings.ts";
 import {
+  ServerOmpAgentProfileDeleteInput,
+  ServerOmpAgentProfileDeleteResult,
+  ServerOmpAgentProfileError,
+  ServerOmpAgentProfileUpsertInput,
+  ServerOmpAgentProfileUpsertResult,
+  ServerOmpAgentProfilesImportCodexInput,
+  ServerOmpAgentProfilesImportCodexResult,
+  ServerOmpAgentProfilesListInput,
+  ServerOmpAgentProfilesListResult,
+} from "./agentProfiles.ts";
+import {
   SourceControlCloneRepositoryInput,
   SourceControlCloneRepositoryResult,
   SourceControlDiscoveryResult,
@@ -293,6 +304,10 @@ export const WS_METHODS = {
   serverOmpCapabilitiesWriteResource: "server.ompCapabilitiesWriteResource",
   serverOmpCapabilitiesDeleteResource: "server.ompCapabilitiesDeleteResource",
   serverOmpCapabilitiesMoveItem: "server.ompCapabilitiesMoveItem",
+  serverOmpAgentProfilesList: "server.ompAgentProfilesList",
+  serverOmpAgentProfileUpsert: "server.ompAgentProfileUpsert",
+  serverOmpAgentProfileDelete: "server.ompAgentProfileDelete",
+  serverOmpAgentProfilesImportCodex: "server.ompAgentProfilesImportCodex",
   serverUpdateProvider: "server.updateProvider",
   serverUpdateServer: "server.updateServer",
   serverUpdateServerWithProgress: "server.updateServerWithProgress",
@@ -474,6 +489,30 @@ export const WsServerOmpCapabilitiesMoveItemRpc = Rpc.make(
     payload: ServerOmpCapabilitiesMoveItemInput,
     success: ServerOmpCapabilitiesMoveItemResult,
     error: Schema.Union([ServerOmpCapabilitiesError, EnvironmentAuthorizationError]),
+  },
+);
+
+export const WsServerOmpAgentProfilesListRpc = Rpc.make(WS_METHODS.serverOmpAgentProfilesList, {
+  payload: ServerOmpAgentProfilesListInput,
+  success: ServerOmpAgentProfilesListResult,
+  error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
+});
+export const WsServerOmpAgentProfileUpsertRpc = Rpc.make(WS_METHODS.serverOmpAgentProfileUpsert, {
+  payload: ServerOmpAgentProfileUpsertInput,
+  success: ServerOmpAgentProfileUpsertResult,
+  error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
+});
+export const WsServerOmpAgentProfileDeleteRpc = Rpc.make(WS_METHODS.serverOmpAgentProfileDelete, {
+  payload: ServerOmpAgentProfileDeleteInput,
+  success: ServerOmpAgentProfileDeleteResult,
+  error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
+});
+export const WsServerOmpAgentProfilesImportCodexRpc = Rpc.make(
+  WS_METHODS.serverOmpAgentProfilesImportCodex,
+  {
+    payload: ServerOmpAgentProfilesImportCodexInput,
+    success: ServerOmpAgentProfilesImportCodexResult,
+    error: Schema.Union([ServerOmpAgentProfileError, EnvironmentAuthorizationError]),
   },
 );
 
@@ -1124,6 +1163,10 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerOmpCapabilitiesWriteResourceRpc,
   WsServerOmpCapabilitiesDeleteResourceRpc,
   WsServerOmpCapabilitiesMoveItemRpc,
+  WsServerOmpAgentProfilesListRpc,
+  WsServerOmpAgentProfileUpsertRpc,
+  WsServerOmpAgentProfileDeleteRpc,
+  WsServerOmpAgentProfilesImportCodexRpc,
   WsServerUpdateProviderRpc,
   WsServerUpdateServerRpc,
   WsServerUpdateServerWithProgressRpc,

@@ -21,6 +21,10 @@ import type {
   ProviderDriverKind,
   ServerProvider,
   ServerProviderUpdateState,
+  OmpAgentProfile,
+  OmpAgentProfileName,
+  OmpAgentProfileUpsertInput,
+  ServerOmpAgentProfilesImportCodexResult,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
@@ -173,6 +177,22 @@ export interface ProviderRegistryShape {
       readonly instanceId: ProviderInstanceId;
     } & OmpMoveItemInput,
   ) => Effect.Effect<OmpCapabilitiesSnapshot, OmpCapabilitiesError>;
+
+  readonly ompAgentProfilesList: (input: {
+    readonly instanceId: ProviderInstanceId;
+  }) => Effect.Effect<ReadonlyArray<OmpAgentProfile>, OmpCapabilitiesError>;
+  readonly ompAgentProfileUpsert: (
+    input: {
+      readonly instanceId: ProviderInstanceId;
+    } & OmpAgentProfileUpsertInput,
+  ) => Effect.Effect<OmpAgentProfile, OmpCapabilitiesError>;
+  readonly ompAgentProfileDelete: (input: {
+    readonly instanceId: ProviderInstanceId;
+    readonly name: OmpAgentProfileName;
+  }) => Effect.Effect<ReadonlyArray<OmpAgentProfile>, OmpCapabilitiesError>;
+  readonly ompAgentProfilesImportCodex: (input: {
+    readonly instanceId: ProviderInstanceId;
+  }) => Effect.Effect<ServerOmpAgentProfilesImportCodexResult, OmpCapabilitiesError>;
 }
 
 export class ProviderRegistry extends Context.Service<ProviderRegistry, ProviderRegistryShape>()(

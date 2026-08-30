@@ -226,6 +226,11 @@ function makeRegistry(
         Effect.succeed({ settings: { entries: [] }, resources: [], skills: [], rules: [] }),
       ompCapabilitiesMoveItem: () =>
         Effect.succeed({ settings: { entries: [] }, resources: [], skills: [], rules: [] }),
+      ompAgentProfilesList: () => Effect.die("OMP agent profiles are not configured in this mock"),
+      ompAgentProfileUpsert: () => Effect.die("OMP agent profiles are not configured in this mock"),
+      ompAgentProfileDelete: () => Effect.die("OMP agent profiles are not configured in this mock"),
+      ompAgentProfilesImportCodex: () =>
+        Effect.die("OMP agent profiles are not configured in this mock"),
       streamChanges: Stream.empty,
     };
 

@@ -58,6 +58,7 @@ type ProviderIntentEvent = Extract<
     type:
       | "thread.meta-updated"
       | "thread.runtime-mode-set"
+      | "thread.agent-mode-set"
       | "thread.turn-start-requested"
       | "thread.turn-interrupt-requested"
       | "thread.approval-response-requested"
@@ -495,6 +496,7 @@ const make = Effect.gen(function* () {
     options?: {
       readonly modelSelection?: ModelSelection;
       readonly pendingTurnStart?: boolean;
+      readonly resumeCursor?: unknown;
     },
   ) {
     const thread = yield* resolveThread(threadId);
@@ -640,6 +642,7 @@ const make = Effect.gen(function* () {
         modelSelection: desiredModelSelection,
         ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         runtimeMode: desiredRuntimeMode,
+        agentMode: thread.agentMode ?? "single",
       });
 
     const bindSessionToThread = (session: ProviderSession) =>
@@ -738,7 +741,9 @@ const make = Effect.gen(function* () {
       return restartedSession.threadId;
     }
 
-    const startedSession = yield* startProviderSession(undefined);
+    const startedSession = yield* startProviderSession(
+      options?.resumeCursor !== undefined ? { resumeCursor: options.resumeCursor } : undefined,
+    );
     yield* bindSessionToThread(startedSession);
     return startedSession.threadId;
   });
@@ -1410,6 +1415,31 @@ const make = Effect.gen(function* () {
         );
         return;
       }
+      case "thread.agent-mode-set": {
+        const thread = yield* resolveThread(event.payload.threadId);
+        if (!thread?.session || thread.session.status === "stopped") {
+          return;
+        }
+        // OMP has no RPC to replace a root system prompt. Preserve the
+        // transcript cursor while stopping the old process, then recreate the
+        // session with the new mode-specific append prompt.
+        const activeSession = yield* providerService
+          .listSessions()
+          .pipe(
+            Effect.map((sessions) =>
+              sessions.find((session) => session.threadId === event.payload.threadId),
+            ),
+          );
+        yield* providerService.stopSession({ threadId: event.payload.threadId });
+        yield* ensureSessionForThread(
+          event.payload.threadId,
+          event.occurredAt,
+          activeSession?.resumeCursor !== undefined
+            ? { resumeCursor: activeSession.resumeCursor }
+            : undefined,
+        );
+        return;
+      }
       case "thread.turn-start-requested":
         yield* processTurnStartRequested(event);
         return;
@@ -1459,6 +1489,7 @@ const make = Effect.gen(function* () {
       if (
         (event.type === "thread.meta-updated" && event.payload.regenerateTitle === true) ||
         event.type === "thread.runtime-mode-set" ||
+        event.type === "thread.agent-mode-set" ||
         event.type === "thread.turn-start-requested" ||
         event.type === "thread.turn-interrupt-requested" ||
         event.type === "thread.approval-response-requested" ||

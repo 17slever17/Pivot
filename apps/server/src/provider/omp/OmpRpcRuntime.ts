@@ -172,6 +172,8 @@ export interface OmpEnsureSessionInput {
   readonly cwd: string;
   readonly resumeCursor: string | null;
   readonly extraEnv?: Record<string, string>;
+  /** Optional Pivot-managed root instruction file for this session. */
+  readonly appendSystemPromptFile?: string;
 }
 
 export interface OmpSessionHandle {
@@ -309,14 +311,24 @@ export class OmpRpcRuntime {
       const scope = yield* Scope.make();
       const child = yield* this.#processSpawner
         .spawn(
-          ChildProcess.make(this.#binaryPath, ["--mode", "rpc-ui"], {
-            cwd: input.cwd,
-            extendEnv: true,
-            ...(env !== undefined ? { env } : {}),
-            // Keep stdin open across many RPC writes. Default endOnDone ends the
-            // pipe after the first Stream.run, which hangs the next command.
-            stdin: { stream: "pipe", endOnDone: false },
-          }),
+          ChildProcess.make(
+            this.#binaryPath,
+            [
+              "--mode",
+              "rpc-ui",
+              ...(input.appendSystemPromptFile
+                ? ["--append-system-prompt", input.appendSystemPromptFile]
+                : []),
+            ],
+            {
+              cwd: input.cwd,
+              extendEnv: true,
+              ...(env !== undefined ? { env } : {}),
+              // Keep stdin open across many RPC writes. Default endOnDone ends the
+              // pipe after the first Stream.run, which hangs the next command.
+              stdin: { stream: "pipe", endOnDone: false },
+            },
+          ),
         )
         .pipe(
           Effect.provideService(Scope.Scope, scope),

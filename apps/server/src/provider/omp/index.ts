@@ -4,6 +4,7 @@ export { OmpAdapter } from "./OmpAdapter.ts";
 export { OmpCapabilitiesService } from "./OmpCapabilitiesService.ts";
 export { OmpRpcRuntime, OmpSpawnError } from "./OmpRpcRuntime.ts";
 export { OmpConfigStore, syncOmpSettingsToConfigStore } from "./OmpConfigStore.ts";
+export { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
 export { enrichOmpManagedBundleVersionAdvisory } from "./OmpManagedBundleAdvisory.ts";
 export { OmpLoginError, listOmpLoginProviders, loginOmpProvider } from "./OmpLogin.ts";
 export { parseOmpModelRoleSlug } from "./ompModelRoles.ts";

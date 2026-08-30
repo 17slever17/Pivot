@@ -82,6 +82,7 @@ describe("orchestration projector", () => {
           model: "gpt-5-codex",
         },
         runtimeMode: "full-access",
+        agentMode: "single",
         interactionMode: "default",
         branch: null,
         worktreePath: null,
@@ -396,6 +397,61 @@ describe("orchestration projector", () => {
     );
 
     expect(afterUpdate.threads[0]?.runtimeMode).toBe("approval-required");
+    expect(afterUpdate.threads[0]?.updatedAt).toBe(updatedAt);
+  });
+
+  it("updates canonical thread agent mode from thread.agent-mode-set", async () => {
+    const createdAt = "2026-02-23T08:00:00.000Z";
+    const updatedAt = "2026-02-23T08:00:05.000Z";
+    const model = createEmptyReadModel(createdAt);
+    const afterCreate = await Effect.runPromise(
+      projectEvent(
+        model,
+        makeEvent({
+          sequence: 1,
+          type: "thread.created",
+          aggregateKind: "thread",
+          aggregateId: "thread-agent-mode",
+          occurredAt: createdAt,
+          commandId: "cmd-create-agent-mode",
+          payload: {
+            threadId: "thread-agent-mode",
+            projectId: "project-1",
+            title: "demo",
+            modelSelection: {
+              provider: ProviderDriverKind.make("codex"),
+              model: "gpt-5.3-codex",
+            },
+            runtimeMode: "full-access",
+            interactionMode: "default",
+            branch: null,
+            worktreePath: null,
+            createdAt,
+            updatedAt: createdAt,
+          },
+        }),
+      ),
+    );
+    const afterUpdate = await Effect.runPromise(
+      projectEvent(
+        afterCreate,
+        makeEvent({
+          sequence: 2,
+          type: "thread.agent-mode-set",
+          aggregateKind: "thread",
+          aggregateId: "thread-agent-mode",
+          occurredAt: updatedAt,
+          commandId: "cmd-agent-mode-set",
+          payload: {
+            threadId: "thread-agent-mode",
+            agentMode: "orchestrator",
+            updatedAt,
+          },
+        }),
+      ),
+    );
+
+    expect(afterUpdate.threads[0]?.agentMode).toBe("orchestrator");
     expect(afterUpdate.threads[0]?.updatedAt).toBe(updatedAt);
   });
 

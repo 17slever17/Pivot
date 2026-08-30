@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema";
 import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
+  DEFAULT_THREAD_AGENT_MODE,
   ModelSelection,
   OrchestrationCommand,
   OrchestrationEvent,
@@ -313,6 +314,25 @@ it.effect("decodes thread.created runtime mode for historical events", () =>
 
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
     assert.strictEqual(parsed.modelSelection.instanceId, "codex");
+  }),
+);
+
+it.effect("keeps agent mode backward compatible and defaults it at the server boundary", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadCreatedPayload({
+      threadId: "thread-agent-mode",
+      projectId: "project-1",
+      title: "Thread title",
+      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      runtimeMode: DEFAULT_RUNTIME_MODE,
+      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      branch: null,
+      worktreePath: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.strictEqual(parsed.agentMode, undefined);
+    assert.strictEqual(DEFAULT_THREAD_AGENT_MODE, "single");
   }),
 );
 

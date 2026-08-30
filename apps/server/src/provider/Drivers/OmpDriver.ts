@@ -47,6 +47,7 @@ import {
   OMP_MANAGED_UPDATE_LOCK_KEY,
   OMP_NPM_PACKAGE_NAME,
   OmpAdapter,
+  OmpAgentProfileStore,
   OmpCapabilitiesService,
   OmpConfigStore,
   OmpRpcRuntime,
@@ -441,6 +442,7 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         Effect.orElseSucceed(() => pathService.join(ompHome, "agent")),
       );
       const ompConfigStore = new OmpConfigStore(fs, pathService, agentDir);
+      const agentProfileStore = new OmpAgentProfileStore(fs, pathService, serverConfig.stateDir);
       // Settings updates recreate the instance via ProviderInstanceRegistryMutator,
       // so create() is the sync point for OmpSettings → omp config.yml.
       yield* syncOmpSettingsToConfigStore(effectiveConfig, ompConfigStore).pipe(
@@ -513,6 +515,7 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         capabilitiesService,
         previewMcpInjector,
         agentDir,
+        agentProfileStore,
       });
       yield* Effect.addFinalizer(() => adapter.stopAll());
 

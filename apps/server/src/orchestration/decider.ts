@@ -1,4 +1,5 @@
 import {
+  DEFAULT_THREAD_AGENT_MODE,
   EventId,
   ThreadId,
   type OrchestrationCommand,
@@ -377,6 +378,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           title: command.title,
           modelSelection: command.modelSelection,
           runtimeMode: command.runtimeMode,
+          agentMode: command.agentMode ?? DEFAULT_THREAD_AGENT_MODE,
           interactionMode: command.interactionMode,
           branch: command.branch,
           worktreePath: command.worktreePath,
@@ -886,6 +888,41 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           runtimeMode: command.runtimeMode,
+          updatedAt: occurredAt,
+        },
+      };
+    }
+
+    case "thread.agent-mode.set": {
+      const thread = yield* requireThread({
+        readModel,
+        command,
+        threadId: command.threadId,
+      });
+      if (
+        thread.latestTurn?.state === "running" ||
+        thread.session?.status === "starting" ||
+        thread.session?.status === "running"
+      ) {
+        return yield* Effect.fail(
+          new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: `thread ${command.threadId} has an active turn and cannot change agent mode`,
+          }),
+        );
+      }
+      const occurredAt = yield* nowIso;
+      return {
+        ...(yield* withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt,
+          commandId: command.commandId,
+        })),
+        type: "thread.agent-mode-set",
+        payload: {
+          threadId: command.threadId,
+          agentMode: command.agentMode,
           updatedAt: occurredAt,
         },
       };

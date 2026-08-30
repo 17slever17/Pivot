@@ -14,6 +14,7 @@ import {
   ProjectId,
   ProviderInteractionMode,
   RuntimeMode,
+  ThreadAgentMode,
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
@@ -30,6 +31,9 @@ export const ProjectionThread = Schema.Struct({
   title: Schema.String,
   modelSelection: ModelSelection,
   runtimeMode: RuntimeMode,
+  // Legacy projection fixtures may omit the column; SQL persistence uses the
+  // database default and consumers normalize absent values to `single`.
+  agentMode: Schema.optional(ThreadAgentMode),
   interactionMode: ProviderInteractionMode,
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),

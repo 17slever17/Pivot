@@ -32,6 +32,7 @@ import {
   ThreadMetaUpdatedPayload,
   ThreadProposedPlanUpsertedPayload,
   ThreadRuntimeModeSetPayload,
+  ThreadAgentModeSetPayload,
   ThreadSettledPayload,
   ThreadPinnedPayload,
   ThreadPinReorderedPayload,
@@ -305,6 +306,7 @@ export function projectEvent(
             title: payload.title,
             modelSelection: payload.modelSelection,
             runtimeMode: payload.runtimeMode,
+            agentMode: payload.agentMode ?? "single",
             interactionMode: payload.interactionMode,
             branch: payload.branch,
             worktreePath: payload.worktreePath,
@@ -478,6 +480,17 @@ export function projectEvent(
           ...nextBase,
           threads: updateThread(nextBase.threads, payload.threadId, {
             runtimeMode: payload.runtimeMode,
+            updatedAt: payload.updatedAt,
+          }),
+        })),
+      );
+
+    case "thread.agent-mode-set":
+      return decodeForEvent(ThreadAgentModeSetPayload, event.payload, event.type, "payload").pipe(
+        Effect.map((payload) => ({
+          ...nextBase,
+          threads: updateThread(nextBase.threads, payload.threadId, {
+            agentMode: payload.agentMode ?? "single",
             updatedAt: payload.updatedAt,
           }),
         })),

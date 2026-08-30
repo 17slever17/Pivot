@@ -971,6 +971,11 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           allowRecovery: false,
         });
         metricProvider = routed.adapter.provider;
+        const activeSession = routed.isActive
+          ? (yield* routed.adapter.listSessions()).find(
+              (session) => session.threadId === input.threadId,
+            )
+          : undefined;
         yield* Effect.annotateCurrentSpan({
           "provider.operation": "stop-session",
           "provider.kind": routed.adapter.provider,
@@ -985,6 +990,9 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           provider: routed.adapter.provider,
           providerInstanceId: routed.instanceId,
           status: "stopped",
+          ...(activeSession?.resumeCursor !== undefined
+            ? { resumeCursor: activeSession.resumeCursor }
+            : {}),
           runtimePayload: {
             activeTurnId: null,
           },
