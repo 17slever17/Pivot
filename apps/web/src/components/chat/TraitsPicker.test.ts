@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import { ProviderDriverKind, type ProviderOptionDescriptor } from "@t3tools/contracts";
-import { buildTraitsTriggerDisplay } from "./TraitsPicker";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createElement } from "react";
+import {
+  ProviderDriverKind,
+  type ProviderOptionDescriptor,
+  type ServerProviderModel,
+} from "@t3tools/contracts";
+import { buildTraitsTriggerDisplay, TraitsMenuContent } from "./TraitsPicker";
+import { Menu } from "../ui/menu";
 import { reasoningEffortOptionLabel } from "./reasoningEffort";
 
 function selectDescriptor(
@@ -15,6 +22,19 @@ function fastModeDescriptor(
   currentValue: boolean,
 ): Extract<ProviderOptionDescriptor, { type: "boolean" }> {
   return { id: "fastMode", label: "Fast Mode", type: "boolean", currentValue };
+}
+
+function modelWith(
+  descriptors: ReadonlyArray<ProviderOptionDescriptor>,
+): ReadonlyArray<ServerProviderModel> {
+  return [
+    {
+      slug: "test-model",
+      name: "Test Model",
+      isCustom: false,
+      capabilities: { optionDescriptors: descriptors },
+    },
+  ];
 }
 
 const EFFORT = selectDescriptor(
@@ -110,6 +130,35 @@ describe("buildTraitsTriggerDisplay", () => {
       label: "High",
       showFastModeIcon: true,
     });
+  });
+
+  it("keeps Service Tier option labels in English in the menu", () => {
+    const serviceTier = selectDescriptor(
+      "serviceTier",
+      [
+        { id: "default", label: "Standard", isDefault: true },
+        { id: "priority", label: "Fast" },
+      ],
+      "default",
+    );
+
+    const markup = renderToStaticMarkup(
+      createElement(
+        Menu,
+        null,
+        createElement(TraitsMenuContent, {
+          provider: OMP,
+          models: modelWith([serviceTier]),
+          model: "test-model",
+          prompt: "",
+          onPromptChange: () => {},
+          onModelOptionsChange: () => {},
+        }),
+      ),
+    );
+
+    expect(markup).toContain('data-i18n-skip="true">Standard</span>');
+    expect(markup).toContain('data-i18n-skip="true">Fast</span>');
   });
 
   it("keeps non-fastMode booleans as text labels", () => {

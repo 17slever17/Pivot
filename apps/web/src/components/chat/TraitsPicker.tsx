@@ -342,7 +342,8 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
                     <span className="flex w-full min-w-0 items-center justify-between gap-3">
                       <span className="min-w-0 truncate">
                         <span
-                          {...(isReasoningEffortDescriptor(descriptor)
+                          {...(isReasoningEffortDescriptor(descriptor) ||
+                          descriptor.id === "serviceTier"
                             ? { "data-i18n-skip": "true" }
                             : {})}
                         >
