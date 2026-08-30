@@ -52,14 +52,86 @@ function frontmatterScalar(value: string): string {
   return `'${value.replace(/'/g, "''").replace(/[\r\n]/g, " ")}'`;
 }
 
-function parseTomlString(text: string, key: string): string | undefined {
-  const match = text.match(new RegExp(`^\\s*${key}\\s*=\\s*([\\\"'])(.*?)\\1\\s*$`, "m"));
+function decodeTomlBasicString(value: string): string {
+  return value.replace(/\\([bfnrt"\\])/g, (_, escape: string) => {
+    const escapes: Record<string, string> = {
+      b: "\b",
+      f: "\f",
+      n: "\n",
+      r: "\r",
+      t: "\t",
+      '"': '"',
+      "\\": "\\",
+    };
+    return escapes[escape] ?? escape;
+  });
+}
+
+function readTomlValue(
+  text: string,
+  delimiter: '"' | "'" | '"""' | "'''",
+): { readonly value: string; readonly end: number } | undefined {
+  const isBasic = delimiter.includes('"');
+  let escaped = false;
+  for (let index = delimiter.length; index < text.length; index += 1) {
+    const character = text[index];
+    if (isBasic && character === "\\" && !escaped) {
+      escaped = true;
+      continue;
+    }
+    if (text.startsWith(delimiter, index) && !escaped) {
+      const raw = text.slice(delimiter.length, index);
+      return {
+        value: (isBasic ? decodeTomlBasicString(raw) : raw).trim(),
+        end: index + delimiter.length,
+      };
+    }
+    escaped = false;
+  }
+  return undefined;
+}
+
+function parseTomlAssignment(text: string, key: string): string | undefined {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex] ?? "";
+    const equals = line.indexOf("=");
+    if (equals < 0 || line.slice(0, equals).trim() !== key) continue;
+    let valueText = line.slice(equals + 1).trimStart();
+    const delimiter = valueText.startsWith('"""')
+      ? '"""'
+      : valueText.startsWith("'''")
+        ? "'''"
+        : valueText.startsWith('"')
+          ? '"'
+          : valueText.startsWith("'")
+            ? "'"
+            : undefined;
+    if (!delimiter) continue;
+    let parsed = readTomlValue(valueText, delimiter);
+    if (delimiter === '"""' || delimiter === "'''") {
+      while (parsed === undefined) {
+        lineIndex += 1;
+        if (lineIndex >= lines.length) break;
+        valueText += `\n${lines[lineIndex] ?? ""}`;
+        parsed = readTomlValue(valueText, delimiter);
+      }
+    }
+    if (parsed !== undefined) return parsed.value || undefined;
+  }
+  return undefined;
+}
+
+function parseTomlStringFallback(text: string, key: string): string | undefined {
+  const match = text.match(new RegExp(`^\\s*${key}\\s*=\\s*([\\"'])(.*?)\\1\\s*$`, "m"));
   return match?.[2]?.trim() || undefined;
 }
 
+function parseTomlString(text: string, key: string): string | undefined {
+  return parseTomlAssignment(text, key) ?? parseTomlStringFallback(text, key);
+}
+
 function parseDeveloperInstructions(text: string): string | undefined {
-  const triple = text.match(/developer_instructions\s*=\s*"""([\s\S]*?)"""/m);
-  if (triple?.[1] !== undefined) return triple[1].trim();
   return parseTomlString(text, "developer_instructions");
 }
 
@@ -272,7 +344,7 @@ export class OmpAgentProfileStore {
       ]);
       // The config text is deliberately only inspected for the allow-listed
       // [agents] section. It is never persisted or returned to the client.
-      if (!/^\s*\[agents(?:\.|\s*\])/.test(config)) {
+      if (!/^\s*\[agents(?:\.|\s*\])/m.test(config)) {
         return yield* new OmpAgentProfileError({
           reason: "Codex config.toml has no [agents] section",
         });

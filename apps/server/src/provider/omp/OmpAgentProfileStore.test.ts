@@ -80,11 +80,22 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
         path.join(codexHome, "AGENTS.md"),
         "# Common\n\n## Multi-agent development\n\n# Orchestrator-only\n\n## End\n\n# Tail\n",
       );
-      yield* fs.writeFileString(path.join(codexHome, "config.toml"), "[agents]\nmax_threads = 2\n");
-      const agentToml = (effort: string) =>
+      yield* fs.writeFileString(
+        path.join(codexHome, "config.toml"),
+        "[windows]\nfoo = true\n[agents]\nmax_threads = 2\n",
+      );
+      const basicAgentToml = (effort: string) =>
         `model = "gpt-5.6-luna"\nmodel_reasoning_effort = "${effort}"\ndeveloper_instructions = "Do the task."\n`;
-      yield* fs.writeFileString(path.join(codexHome, "agents", "worker.toml"), agentToml("xhigh"));
-      yield* fs.writeFileString(path.join(codexHome, "agents", "verifier.toml"), agentToml("max"));
+      const literalMultilineAgentToml = (effort: string) =>
+        `model = 'gpt-5.6-luna'\nmodel_reasoning_effort = '${effort}'\ndeveloper_instructions = '''\nDo the task.\n'''\n`;
+      yield* fs.writeFileString(
+        path.join(codexHome, "agents", "worker.toml"),
+        basicAgentToml("xhigh"),
+      );
+      yield* fs.writeFileString(
+        path.join(codexHome, "agents", "verifier.toml"),
+        literalMultilineAgentToml("max"),
+      );
 
       const store = new OmpAgentProfileStore(fs, path, stateDir, { codexHome });
       const imported = yield* store.importCodex();
