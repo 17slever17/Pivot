@@ -370,6 +370,27 @@ export function threadHasStarted(thread: Thread | null | undefined): boolean {
   );
 }
 
+/**
+ * Draft promotion needs the first user message, not only shell session
+ * metadata. The latter can arrive before the detail projection while a turn
+ * is still being materialized.
+ */
+export function threadHasProjectedUserMessage(thread: Thread | null | undefined): boolean {
+  return Boolean(thread?.messages.some((message) => message.role === "user"));
+}
+
+export function mergeServerAndOptimisticMessages(
+  serverMessages: ReadonlyArray<ChatMessage>,
+  optimisticMessages: ReadonlyArray<ChatMessage>,
+): ReadonlyArray<ChatMessage> {
+  if (optimisticMessages.length === 0) {
+    return serverMessages;
+  }
+  const serverIds = new Set(serverMessages.map((message) => message.id));
+  const pendingMessages = optimisticMessages.filter((message) => !serverIds.has(message.id));
+  return pendingMessages.length === 0 ? serverMessages : [...serverMessages, ...pendingMessages];
+}
+
 // `threadProvider` is the open branded driver kind carried by the session.
 // Unknown driver kinds degrade to `null` (i.e. "unlocked"), which is the safe
 // rollback / fork behavior — the routing layer is the right place to surface
@@ -529,12 +550,24 @@ export function hasServerAcknowledgedLocalDispatch(input: {
   hasPendingApproval: boolean;
   hasPendingUserInput: boolean;
   threadError: string | null | undefined;
+  pendingUserMessageId?: ChatMessage["id"] | null;
 }): boolean {
   if (!input.localDispatch) {
     return false;
   }
   if (input.hasPendingApproval || input.hasPendingUserInput || Boolean(input.threadError)) {
     return true;
+  }
+
+  // A shell snapshot can carry the new session/latest-turn metadata before
+  // the message projection catches up. Keep the local dispatch alive until
+  // the exact optimistic user message is present in the server detail.
+  if (
+    input.pendingUserMessageId !== undefined &&
+    input.pendingUserMessageId !== null &&
+    input.latestUserMessageId !== input.pendingUserMessageId
+  ) {
+    return false;
   }
 
   const latestTurn = input.latestTurn ?? null;

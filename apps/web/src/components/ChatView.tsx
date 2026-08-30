@@ -209,6 +209,7 @@ import {
 import { useFollowUpQueueStore } from "../followUpQueueStore";
 import { shouldDrainFollowUpQueue, type FollowUpQueueItem } from "../lib/followUpQueue";
 import { FollowUpQueueList } from "./chat/FollowUpQueueList";
+import { EMPTY_PENDING_THREAD_ENTRY, usePendingThreadState } from "../pendingThreadState";
 import {
   appendTerminalContextsToPrompt,
   formatTerminalContextLabel,
@@ -302,12 +303,12 @@ import {
   hasEnvironmentReconnectWarningGraceElapsed,
   scheduleEnvironmentReconnectWarning,
   hasServerAcknowledgedLocalDispatch,
+  mergeServerAndOptimisticMessages,
   isBranchMismatchDismissedForSession,
   shouldShowBranchMismatchBanner,
   getStartedThreadModelChangeBlockReason,
   LAST_INVOKED_SCRIPT_BY_PROJECT_KEY,
   LastInvokedScriptByProjectSchema,
-  type LocalDispatchSnapshot,
   PullRequestDialogState,
   cloneComposerImageForRetry,
   deriveLockedProvider,
@@ -543,20 +544,26 @@ interface TerminalLaunchContext {
 type PersistentTerminalLaunchContext = Pick<TerminalLaunchContext, "cwd" | "worktreePath">;
 
 function useLocalDispatchState(input: {
+  threadKey: string;
   activeThread: Thread | undefined;
   activeLatestTurn: Thread["latestTurn"] | null;
   phase: SessionPhase;
   activePendingApproval: ApprovalRequestId | null;
   activePendingUserInput: ApprovalRequestId | null;
   threadError: string | null | undefined;
+  pendingUserMessageId: ChatMessage["id"] | null;
 }) {
-  const [localDispatch, setLocalDispatch] = useState<LocalDispatchSnapshot | null>(null);
+  const localDispatch = usePendingThreadState(
+    (state) => state.entriesByThreadKey[input.threadKey]?.localDispatch ?? null,
+  );
+  const setPendingLocalDispatch = usePendingThreadState((state) => state.setLocalDispatch);
+  const clearPendingLocalDispatch = usePendingThreadState((state) => state.clearLocalDispatch);
   const latestUserMessageId =
     input.activeThread?.messages.findLast((message) => message.role === "user")?.id ?? null;
 
   const resetLocalDispatch = useCallback(() => {
-    setLocalDispatch(null);
-  }, []);
+    clearPendingLocalDispatch(input.threadKey);
+  }, [clearPendingLocalDispatch, input.threadKey]);
 
   const serverAcknowledgedLocalDispatch = useMemo(
     () =>
@@ -569,6 +576,7 @@ function useLocalDispatchState(input: {
         hasPendingApproval: input.activePendingApproval !== null,
         hasPendingUserInput: input.activePendingUserInput !== null,
         threadError: input.threadError,
+        pendingUserMessageId: input.pendingUserMessageId,
       }),
     [
       input.activeLatestTurn,
@@ -579,13 +587,19 @@ function useLocalDispatchState(input: {
       input.threadError,
       latestUserMessageId,
       localDispatch,
+      input.pendingUserMessageId,
     ],
   );
   const activeLocalDispatch = serverAcknowledgedLocalDispatch ? null : localDispatch;
+  useEffect(() => {
+    if (serverAcknowledgedLocalDispatch && localDispatch !== null) {
+      clearPendingLocalDispatch(input.threadKey);
+    }
+  }, [clearPendingLocalDispatch, input.threadKey, localDispatch, serverAcknowledgedLocalDispatch]);
   const beginLocalDispatch = useCallback(
     (options?: { preparingWorktree?: boolean }) => {
       const preparingWorktree = Boolean(options?.preparingWorktree);
-      setLocalDispatch((current) => {
+      setPendingLocalDispatch(input.threadKey, (current) => {
         const active = serverAcknowledgedLocalDispatch ? null : current;
         if (active) {
           return active.preparingWorktree === preparingWorktree
@@ -595,7 +609,7 @@ function useLocalDispatchState(input: {
         return createLocalDispatchSnapshot(input.activeThread, options);
       });
     },
-    [input.activeThread, serverAcknowledgedLocalDispatch],
+    [input.activeThread, input.threadKey, serverAcknowledgedLocalDispatch, setPendingLocalDispatch],
   );
 
   return {
@@ -1343,9 +1357,15 @@ function ChatViewContent(props: ChatViewProps) {
   const composerRef = useComposerHandleContext() ?? localComposerRef;
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
-  const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
-  const optimisticUserMessagesRef = useRef(optimisticUserMessages);
-  optimisticUserMessagesRef.current = optimisticUserMessages;
+  const optimisticUserMessages = usePendingThreadState(
+    (state) =>
+      state.entriesByThreadKey[routeThreadKey]?.optimisticUserMessages ??
+      EMPTY_PENDING_THREAD_ENTRY.optimisticUserMessages,
+  );
+  const addOptimisticUserMessage = usePendingThreadState((state) => state.addOptimisticUserMessage);
+  const removeOptimisticUserMessages = usePendingThreadState(
+    (state) => state.removeOptimisticUserMessages,
+  );
   const [localDraftErrorsByDraftId, setLocalDraftErrorsByDraftId] = useState<
     Record<string, LocalThreadErrorEntry>
   >({});
@@ -2311,12 +2331,14 @@ function ChatViewContent(props: ChatViewProps) {
     isPreparingWorktree,
     isSendBusy,
   } = useLocalDispatchState({
+    threadKey: routeThreadKey,
     activeThread,
     activeLatestTurn,
     phase,
     activePendingApproval: activePendingApproval?.requestId ?? null,
     activePendingUserInput: activePendingUserInput?.requestId ?? null,
     threadError,
+    pendingUserMessageId: optimisticUserMessages[0]?.id ?? null,
   });
   const isWorking = phase === "running" || isSendBusy || isConnecting || isRevertingCheckpoint;
   const activeWorkStartedAt = deriveActiveWorkStartedAt(
@@ -2360,9 +2382,6 @@ function ChatViewContent(props: ChatViewProps) {
   useEffect(() => {
     return () => {
       clearAttachmentPreviewHandoffs();
-      for (const message of optimisticUserMessagesRef.current) {
-        revokeUserMessagePreviewUrls(message);
-      }
     };
   }, [clearAttachmentPreviewHandoffs]);
   const handoffAttachmentPreviews = useCallback((messageId: MessageId, previewUrls: string[]) => {
@@ -2554,15 +2573,10 @@ function ChatViewContent(props: ChatViewProps) {
             return changed ? { ...message, attachments } : message;
           });
 
-    if (optimisticUserMessages.length === 0) {
-      return serverMessagesWithPreviewHandoff;
-    }
-    const serverIds = new Set(serverMessagesWithPreviewHandoff.map((message) => message.id));
-    const pendingMessages = optimisticUserMessages.filter((message) => !serverIds.has(message.id));
-    if (pendingMessages.length === 0) {
-      return serverMessagesWithPreviewHandoff;
-    }
-    return [...serverMessagesWithPreviewHandoff, ...pendingMessages];
+    return mergeServerAndOptimisticMessages(
+      serverMessagesWithPreviewHandoff,
+      optimisticUserMessages,
+    );
   }, [attachmentPreviewHandoffByMessageId, displayServerMessages, optimisticUserMessages]);
   const timelineEntries = useMemo(
     () =>
@@ -4054,9 +4068,7 @@ function ChatViewContent(props: ChatViewProps) {
       return;
     }
     const timer = window.setTimeout(() => {
-      setOptimisticUserMessages((existing) =>
-        existing.filter((message) => !serverIds.has(message.id)),
-      );
+      removeOptimisticUserMessages(routeThreadKey, serverIds);
     }, 0);
     for (const removedMessage of removedMessages) {
       const previewUrls = collectUserMessageBlobPreviewUrls(removedMessage);
@@ -4069,18 +4081,18 @@ function ChatViewContent(props: ChatViewProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [activeThread?.id, activeThread?.messages, handoffAttachmentPreviews, optimisticUserMessages]);
+  }, [
+    activeThread?.id,
+    activeThread?.messages,
+    handoffAttachmentPreviews,
+    optimisticUserMessages,
+    removeOptimisticUserMessages,
+    routeThreadKey,
+  ]);
 
   useEffect(() => {
-    setOptimisticUserMessages((existing) => {
-      for (const message of existing) {
-        revokeUserMessagePreviewUrls(message);
-      }
-      return [];
-    });
-    resetLocalDispatch();
     setExpandedImage(null);
-  }, [draftId, resetLocalDispatch, threadId]);
+  }, [draftId, threadId]);
 
   const closeExpandedImage = useCallback(() => {
     setExpandedImage(null);
@@ -5181,19 +5193,16 @@ function ChatViewContent(props: ChatViewProps) {
       threadKey: scopedThreadKey(scopeThreadRef(activeThread.environmentId, threadIdForSend)),
       messageId: messageIdForSend,
     });
-    setOptimisticUserMessages((existing) => [
-      ...existing,
-      {
-        id: messageIdForSend,
-        role: "user",
-        text: outgoingMessageText,
-        ...(optimisticAttachments.length > 0 ? { attachments: optimisticAttachments } : {}),
-        turnId: null,
-        createdAt: messageCreatedAt,
-        updatedAt: messageCreatedAt,
-        streaming: false,
-      },
-    ]);
+    addOptimisticUserMessage(routeThreadKey, {
+      id: messageIdForSend,
+      role: "user",
+      text: outgoingMessageText,
+      ...(optimisticAttachments.length > 0 ? { attachments: optimisticAttachments } : {}),
+      turnId: null,
+      createdAt: messageCreatedAt,
+      updatedAt: messageCreatedAt,
+      streaming: false,
+    });
     setThreadError(threadIdForSend, null);
     if (expiredTerminalContextCount > 0) {
       const toastCopy = buildExpiredTerminalContextToastCopy(
@@ -5334,6 +5343,10 @@ function ChatViewContent(props: ChatViewProps) {
     }
 
     if (failure !== null) {
+      const removed = removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
+      for (const message of removed) {
+        revokeUserMessagePreviewUrls(message);
+      }
       if (
         promptRef.current.length === 0 &&
         composerImagesRef.current.length === 0 &&
@@ -5344,14 +5357,6 @@ function ChatViewContent(props: ChatViewProps) {
         (useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.reviewComments
           .length ?? 0) === 0
       ) {
-        setOptimisticUserMessages((existing) => {
-          const removed = existing.filter((message) => message.id === messageIdForSend);
-          for (const message of removed) {
-            revokeUserMessagePreviewUrls(message);
-          }
-          const next = existing.filter((message) => message.id !== messageIdForSend);
-          return next.length === existing.length ? existing : next;
-        });
         promptRef.current = promptForSend;
         const retryComposerImages = composerImagesSnapshot.map(cloneComposerImageForRetry);
         composerImagesRef.current = retryComposerImages;
@@ -5441,18 +5446,15 @@ function ChatViewContent(props: ChatViewProps) {
         threadKey: scopedThreadKey(scopeThreadRef(activeThread.environmentId, threadIdForSend)),
         messageId: messageIdForSend,
       });
-      setOptimisticUserMessages((existing) => [
-        ...existing,
-        {
-          id: messageIdForSend,
-          role: "user",
-          text: outgoingMessageText,
-          turnId: null,
-          createdAt: messageCreatedAt,
-          updatedAt: messageCreatedAt,
-          streaming: false,
-        },
-      ]);
+      addOptimisticUserMessage(routeThreadKey, {
+        id: messageIdForSend,
+        role: "user",
+        text: outgoingMessageText,
+        turnId: null,
+        createdAt: messageCreatedAt,
+        updatedAt: messageCreatedAt,
+        streaming: false,
+      });
 
       const settingsResult = await persistThreadSettingsForNextTurn({
         threadId: threadIdForSend,
@@ -5493,9 +5495,10 @@ function ChatViewContent(props: ChatViewProps) {
         return true;
       }
 
-      setOptimisticUserMessages((existing) =>
-        existing.filter((message) => message.id !== messageIdForSend),
-      );
+      const removed = removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
+      for (const message of removed) {
+        revokeUserMessagePreviewUrls(message);
+      }
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);
         setThreadError(
@@ -5511,6 +5514,7 @@ function ChatViewContent(props: ChatViewProps) {
       acknowledgeActiveThreadWoke,
       activeThread,
       activeThreadKey,
+      addOptimisticUserMessage,
       beginLocalDispatch,
       environmentId,
       interactionMode,
@@ -5521,6 +5525,8 @@ function ChatViewContent(props: ChatViewProps) {
       persistThreadSettingsForNextTurn,
       phase,
       resetLocalDispatch,
+      removeOptimisticUserMessages,
+      routeThreadKey,
       runtimeMode,
       setThreadError,
       startThreadTurn,
@@ -5840,18 +5846,15 @@ function ChatViewContent(props: ChatViewProps) {
         messageId: messageIdForSend,
       });
 
-      setOptimisticUserMessages((existing) => [
-        ...existing,
-        {
-          id: messageIdForSend,
-          role: "user",
-          text: outgoingMessageText,
-          turnId: null,
-          createdAt: messageCreatedAt,
-          updatedAt: messageCreatedAt,
-          streaming: false,
-        },
-      ]);
+      addOptimisticUserMessage(routeThreadKey, {
+        id: messageIdForSend,
+        role: "user",
+        text: outgoingMessageText,
+        turnId: null,
+        createdAt: messageCreatedAt,
+        updatedAt: messageCreatedAt,
+        streaming: false,
+      });
 
       const settingsResult = await persistThreadSettingsForNextTurn({
         threadId: threadIdForSend,
@@ -5908,9 +5911,10 @@ function ChatViewContent(props: ChatViewProps) {
         return;
       }
 
-      setOptimisticUserMessages((existing) =>
-        existing.filter((message) => message.id !== messageIdForSend),
-      );
+      const removed = removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
+      for (const message of removed) {
+        revokeUserMessagePreviewUrls(message);
+      }
       if (!isAtomCommandInterrupted(failure)) {
         const error = squashAtomCommandFailure(failure);
         setThreadError(
@@ -5925,6 +5929,7 @@ function ChatViewContent(props: ChatViewProps) {
       activeThread,
       activeProposedPlan,
       acknowledgeActiveThreadWoke,
+      addOptimisticUserMessage,
       beginLocalDispatch,
       isConnecting,
       isSendBusy,
@@ -5932,6 +5937,8 @@ function ChatViewContent(props: ChatViewProps) {
       localCheckoutBranchMismatch,
       persistThreadSettingsForNextTurn,
       resetLocalDispatch,
+      removeOptimisticUserMessages,
+      routeThreadKey,
       runtimeMode,
       setComposerDraftInteractionMode,
       setThreadError,

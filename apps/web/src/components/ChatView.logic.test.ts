@@ -24,12 +24,14 @@ import {
   hasEnvironmentReconnectWarningGraceElapsed,
   hasServerAcknowledgedLocalDispatch,
   isBranchMismatchDismissedForSession,
+  mergeServerAndOptimisticMessages,
   reconcileMountedTerminalThreadIds,
   reconcileRetainedMountedThreadIds,
   resolveThreadMetadataUpdateForNextTurn,
   resolveSendEnvMode,
   scheduleEnvironmentReconnectWarning,
   startNewThreadForProject,
+  threadHasProjectedUserMessage,
   shouldShowBranchMismatchBanner,
   shouldWriteThreadErrorToCurrentServerThread,
 } from "./ChatView.logic";
@@ -167,6 +169,67 @@ describe("buildLoadingThreadFromShell", () => {
       activities: [],
       checkpoints: [],
     });
+  });
+});
+
+describe("threadHasProjectedUserMessage", () => {
+  it("does not promote a draft from session metadata alone", () => {
+    expect(
+      threadHasProjectedUserMessage(
+        makeThread({ session: readySession, latestTurn: completedTurn }),
+      ),
+    ).toBe(false);
+  });
+
+  it("promotes only after a user message is projected", () => {
+    expect(
+      threadHasProjectedUserMessage(
+        makeThread({
+          session: readySession,
+          messages: [
+            {
+              id: MessageId.make("message-1"),
+              role: "user",
+              text: "hello",
+              turnId: completedTurn.turnId,
+              createdAt: now,
+              updatedAt: now,
+              streaming: false,
+            },
+          ],
+        }),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("mergeServerAndOptimisticMessages", () => {
+  it("keeps a pending message visible while durable detail is shell-only", () => {
+    const pending = {
+      id: MessageId.make("message-pending-shell"),
+      role: "user" as const,
+      text: "hello",
+      turnId: null,
+      createdAt: now,
+      updatedAt: now,
+      streaming: false,
+    };
+
+    expect(mergeServerAndOptimisticMessages([], [pending])).toEqual([pending]);
+  });
+
+  it("does not duplicate a message after the server projection catches up", () => {
+    const projected = {
+      id: MessageId.make("message-projected"),
+      role: "user" as const,
+      text: "hello",
+      turnId: null,
+      createdAt: now,
+      updatedAt: now,
+      streaming: false,
+    };
+
+    expect(mergeServerAndOptimisticMessages([projected], [projected])).toEqual([projected]);
   });
 });
 
@@ -605,6 +668,51 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         hasPendingApproval: false,
         hasPendingUserInput: false,
         threadError: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("waits for the optimistic user message when shell metadata arrives first", () => {
+    const localDispatch = createLocalDispatchSnapshot(makeThread());
+    const pendingUserMessageId = MessageId.make("message-pending");
+    const startedTurn = {
+      ...completedTurn,
+      turnId: TurnId.make("turn-started"),
+      state: "running" as const,
+      startedAt: "2026-03-29T00:01:00.000Z",
+      completedAt: null,
+    };
+    const startedSession = {
+      ...readySession,
+      status: "running" as const,
+      activeTurnId: startedTurn.turnId,
+      updatedAt: startedTurn.startedAt,
+    };
+
+    expect(
+      hasServerAcknowledgedLocalDispatch({
+        localDispatch,
+        phase: "running",
+        latestTurn: startedTurn,
+        latestUserMessageId: null,
+        session: startedSession,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+        pendingUserMessageId,
+      }),
+    ).toBe(false);
+    expect(
+      hasServerAcknowledgedLocalDispatch({
+        localDispatch,
+        phase: "running",
+        latestTurn: startedTurn,
+        latestUserMessageId: pendingUserMessageId,
+        session: startedSession,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+        pendingUserMessageId,
       }),
     ).toBe(true);
   });

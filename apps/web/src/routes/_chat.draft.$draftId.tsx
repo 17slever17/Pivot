@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import ChatView from "../components/ChatView";
-import { threadHasStarted } from "../components/ChatView.logic";
+import { threadHasProjectedUserMessage } from "../components/ChatView.logic";
 import {
   DraftId,
   markPromotedDraftThreadByRef,
@@ -10,6 +11,7 @@ import {
 import { SidebarInset } from "../components/ui/sidebar";
 import { waitForDraftHeroTransition } from "../components/chat/draftHeroTransition";
 import { buildThreadRouteParams } from "../threadRoutes";
+import { usePendingThreadState } from "../pendingThreadState";
 import { useThread, useThreadRefs } from "../state/entities";
 
 function DraftChatThreadRouteView() {
@@ -27,18 +29,30 @@ function DraftChatThreadRouteView() {
     : null;
   const serverThreadRef = draftSession?.promotedTo ?? inferredThreadRef;
   const serverThread = useThread(serverThreadRef);
-  const serverThreadStarted = threadHasStarted(serverThread);
-  const canonicalThreadRef = serverThreadStarted ? serverThreadRef : null;
+  const serverThreadHasProjectedMessage = threadHasProjectedUserMessage(serverThread);
+  const canonicalThreadRef = serverThreadHasProjectedMessage ? serverThreadRef : null;
+  const migratePendingThreadState = usePendingThreadState((state) => state.migrateThreadState);
+  const draftThreadKey = draftSession
+    ? scopedThreadKey(scopeThreadRef(draftSession.environmentId, draftSession.threadId))
+    : null;
+  const serverThreadKey = serverThreadRef ? scopedThreadKey(serverThreadRef) : null;
+
+  useEffect(() => {
+    if (!draftThreadKey || !serverThreadKey) {
+      return;
+    }
+    migratePendingThreadState(draftThreadKey, serverThreadKey);
+  }, [draftThreadKey, migratePendingThreadState, serverThreadKey]);
 
   useEffect(() => {
     // A bootstrap send creates the thread before preparing its worktree and
     // rolls it back when preparation fails. Marking on mere existence would
     // stick `promotedTo` on the surviving draft, hiding it from the sidebar.
-    if (!inferredThreadRef || draftSession?.promotedTo || !serverThreadStarted) {
+    if (!inferredThreadRef || draftSession?.promotedTo || !serverThreadHasProjectedMessage) {
       return;
     }
     markPromotedDraftThreadByRef(inferredThreadRef);
-  }, [draftSession?.promotedTo, inferredThreadRef, serverThreadStarted]);
+  }, [draftSession?.promotedTo, inferredThreadRef, serverThreadHasProjectedMessage]);
 
   useEffect(() => {
     if (!canonicalThreadRef) {
