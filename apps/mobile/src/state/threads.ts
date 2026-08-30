@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { createEnvironmentCommand } from "@t3tools/client-runtime/state/runtime";
 import {
   createEnvironmentThreadDetailAtoms,
   createEnvironmentThreadShellAtoms,
@@ -7,15 +8,40 @@ import {
   type EnvironmentThreadState,
   createThreadEnvironmentAtoms,
 } from "@t3tools/client-runtime/state/threads";
-import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import {
+  CommandId,
+  ORCHESTRATION_WS_METHODS,
+  ThreadId,
+  type EnvironmentId,
+  type ClientOrchestrationCommand,
+  type ThreadAgentMode as ThreadAgentModeType,
+} from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import { AsyncResult, Atom } from "effect/unstable/reactivity";
 
+import { request } from "@t3tools/client-runtime/rpc";
 import { environmentCatalog } from "../connection/catalog";
 import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentSnapshotAtom } from "./shell";
 
-export const threadEnvironment = createThreadEnvironmentAtoms(connectionAtomRuntime);
+const setThreadAgentModeCommand = createEnvironmentCommand(connectionAtomRuntime, {
+  label: "mobile:thread:set-agent-mode",
+  execute: (input: {
+    readonly commandId: CommandId;
+    readonly threadId: ThreadId;
+    readonly agentMode: ThreadAgentModeType;
+    readonly createdAt: string;
+  }) =>
+    request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
+      type: "thread.agent-mode.set",
+      ...input,
+    } satisfies ClientOrchestrationCommand),
+});
+
+export const threadEnvironment = {
+  ...createThreadEnvironmentAtoms(connectionAtomRuntime),
+  setAgentMode: setThreadAgentModeCommand,
+};
 export const environmentThreads = createEnvironmentThreadStateAtoms(connectionAtomRuntime);
 export const environmentThreadDetails = createEnvironmentThreadDetailAtoms(
   environmentThreads.stateAtom,

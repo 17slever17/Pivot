@@ -4,6 +4,7 @@ import type {
   ProviderOptionDescriptor,
   ProviderOptionSelection,
   RuntimeMode,
+  ThreadAgentMode,
 } from "@t3tools/contracts";
 import {
   getProviderOptionCurrentLabel,
@@ -43,13 +44,14 @@ const PRIMARY_PROVIDER_DRIVERS: ReadonlySet<string> = new Set(["omp"]);
 
 /**
  * Compact "Fable 5 · Max · Auto" style summary for the composer trigger pill,
- * covering model, provider options, runtime mode, and plan mode in one label.
+ * covering model, provider options, runtime mode, plan mode, and agent mode in one label.
  */
 export function threadSettingsSummaryLabel(input: {
   readonly modelLabel: string;
   readonly optionDescriptors: ReadonlyArray<ProviderOptionDescriptor>;
   readonly runtimeMode: RuntimeMode;
   readonly interactionMode: ProviderInteractionMode;
+  readonly agentMode?: ThreadAgentMode;
 }): string {
   const runtime = RUNTIME_MODE_CHOICES.find((choice) => choice.mode === input.runtimeMode);
   return [
@@ -57,6 +59,7 @@ export function threadSettingsSummaryLabel(input: {
     ...providerOptionValueLabels(input.optionDescriptors),
     ...(runtime ? [runtime.shortLabel] : []),
     ...(input.interactionMode === "plan" ? ["Plan"] : []),
+    ...(input.agentMode ? [input.agentMode === "orchestrator" ? "Оркестратор" : "Одиночный"] : []),
   ].join(" · ");
 }
 
@@ -249,6 +252,53 @@ function SwitchRow(props: {
   );
 }
 
+function AgentModeSwitch(props: {
+  readonly value: ThreadAgentMode;
+  readonly disabled?: boolean;
+  readonly onChange: (value: ThreadAgentMode) => void;
+}) {
+  const choices: ReadonlyArray<{ readonly mode: ThreadAgentMode; readonly label: string }> = [
+    { mode: "single", label: "Одиночный" },
+    { mode: "orchestrator", label: "Оркестратор" },
+  ];
+  return (
+    <View className={cn("gap-2 px-5 py-2.5", props.disabled && "opacity-40")}>
+      <Text className="text-sm font-t3-medium text-foreground">Режим агента / Agent mode</Text>
+      <View className="flex-row rounded-xl bg-subtle p-1">
+        {choices.map((choice) => {
+          const selected = choice.mode === props.value;
+          return (
+            <Pressable
+              key={choice.mode}
+              accessibilityLabel={choice.mode === "single" ? "Single" : "Orchestrator"}
+              accessibilityRole="radio"
+              accessibilityState={{ disabled: props.disabled, selected }}
+              disabled={props.disabled}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                props.onChange(choice.mode);
+              }}
+              className={cn(
+                "flex-1 items-center rounded-lg px-2 py-2 active:opacity-70",
+                selected && "bg-primary",
+              )}
+            >
+              <Text
+                className={cn(
+                  "text-xs font-t3-medium",
+                  selected ? "text-primary-foreground" : "text-foreground",
+                )}
+              >
+                {choice.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 type SubmenuPage =
   | { readonly kind: "descriptor"; readonly id: string }
   | { readonly kind: "runtime" };
@@ -286,6 +336,9 @@ export function ThreadSettingsSheet(props: {
   readonly onUpdateOptionSelections: (selections: ReadonlyArray<ProviderOptionSelection>) => void;
   readonly runtimeMode: RuntimeMode;
   readonly onUpdateRuntimeMode: (mode: RuntimeMode) => void;
+  readonly agentMode: ThreadAgentMode;
+  readonly onUpdateAgentMode: (mode: ThreadAgentMode) => void;
+  readonly agentModeDisabled?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -555,6 +608,11 @@ export function ThreadSettingsSheet(props: {
           <View className="mx-5 h-px bg-border" />
 
           <View style={{ paddingBottom: insets.bottom + 12 }}>
+            <AgentModeSwitch
+              value={props.agentMode}
+              disabled={props.agentModeDisabled}
+              onChange={props.onUpdateAgentMode}
+            />
             {descriptorTemplate.map((entry) => {
               const live = displayedDescriptors.find(
                 (descriptor) => descriptor.label === entry.label,

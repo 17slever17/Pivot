@@ -52,6 +52,7 @@ function threadDetailToShell(
     modelSelection: thread.modelSelection,
     runtimeMode: thread.runtimeMode,
     interactionMode: thread.interactionMode,
+    agentMode: thread.agentMode,
     branch: thread.branch,
     worktreePath: thread.worktreePath,
     latestTurn: thread.latestTurn,

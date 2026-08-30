@@ -107,7 +107,29 @@ describe("thread outbox", () => {
       modelSelection: selectedMessage.modelSelection,
       runtimeMode: selectedMessage.runtimeMode,
       interactionMode: selectedMessage.interactionMode,
+      agentMode: "single",
     });
+  });
+
+  it("carries orchestrator mode through queued settings", () => {
+    const message = {
+      ...queuedMessage({
+        messageId: "message-orchestrator",
+        createdAt: "2026-06-08T10:00:01.000Z",
+      }),
+      agentMode: "orchestrator" as const,
+    };
+
+    expect(
+      resolveQueuedThreadSettings(message, {
+        modelSelection: {
+          instanceId: ProviderInstanceId.make("codex"),
+          model: "gpt-5.4",
+        },
+        runtimeMode: "auto",
+        interactionMode: "default",
+      }),
+    ).toMatchObject({ agentMode: "orchestrator" });
   });
 
   it("compares model options as part of the queued settings change", () => {

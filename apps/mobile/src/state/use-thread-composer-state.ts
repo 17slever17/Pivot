@@ -4,11 +4,13 @@ import { useCallback, useEffect, useMemo } from "react";
 import {
   CommandId,
   MessageId,
+  DEFAULT_THREAD_AGENT_MODE,
   type EnvironmentId,
   type ModelSelection,
   type ProviderInteractionMode,
   type RuntimeMode,
   type ThreadId,
+  type ThreadAgentMode,
 } from "@t3tools/contracts";
 import { safeErrorLogAttributes } from "@t3tools/client-runtime/errors";
 import { deriveActiveWorkStartedAt } from "@t3tools/shared/orchestrationTiming";
@@ -104,6 +106,8 @@ export function useThreadComposerState() {
   const modelSelection = selectedDraft?.modelSelection ?? selectedThread?.modelSelection ?? null;
   const runtimeMode = selectedDraft?.runtimeMode ?? selectedThread?.runtimeMode ?? null;
   const interactionMode = selectedDraft?.interactionMode ?? selectedThread?.interactionMode ?? null;
+  const agentMode =
+    selectedDraft?.agentMode ?? selectedThread?.agentMode ?? DEFAULT_THREAD_AGENT_MODE;
 
   const selectedThreadSessionActivity = useMemo(() => {
     const selectedThread = selectedThreadDetail ?? selectedThreadShell;
@@ -165,6 +169,7 @@ export function useThreadComposerState() {
       modelSelection: draft.modelSelection ?? thread.modelSelection,
       runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
       interactionMode: draft.interactionMode ?? thread.interactionMode,
+      agentMode: draft.agentMode ?? thread.agentMode,
       createdAt: metadata.createdAt,
     });
     // A confirmed stop holds auto-drain; the next explicit send releases it.
@@ -304,6 +309,16 @@ export function useThreadComposerState() {
     [selectedThreadKey],
   );
 
+  const onUpdateAgentMode = useCallback(
+    (value: ThreadAgentMode) => {
+      if (!selectedThreadKey || activeThreadBusy) {
+        return;
+      }
+      updateComposerDraftSettings(selectedThreadKey, { agentMode: value });
+    },
+    [activeThreadBusy, selectedThreadKey],
+  );
+
   return {
     selectedThreadFeed,
     selectedThreadQueueCount,
@@ -313,6 +328,7 @@ export function useThreadComposerState() {
     modelSelection,
     runtimeMode,
     interactionMode,
+    agentMode,
     activeThreadBusy,
     onChangeDraftMessage,
     onPickDraftImages,
@@ -323,5 +339,6 @@ export function useThreadComposerState() {
     onUpdateModelSelection,
     onUpdateRuntimeMode,
     onUpdateInteractionMode,
+    onUpdateAgentMode,
   };
 }

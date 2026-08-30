@@ -294,9 +294,16 @@ function ThreadRouteContent(
             modelSelection: composer.modelSelection ?? selectedThread.modelSelection,
             runtimeMode: composer.runtimeMode ?? selectedThread.runtimeMode,
             interactionMode: composer.interactionMode ?? selectedThread.interactionMode,
+            agentMode: composer.agentMode ?? selectedThread.agentMode,
           }
         : null,
-    [composer.interactionMode, composer.modelSelection, composer.runtimeMode, selectedThread],
+    [
+      composer.agentMode,
+      composer.interactionMode,
+      composer.modelSelection,
+      composer.runtimeMode,
+      selectedThread,
+    ],
   );
 
   /* ─── Native header theming ──────────────────────────────────────── */
@@ -840,6 +847,7 @@ function ThreadRouteContent(
           onUpdateThreadModelSelection={composer.onUpdateModelSelection}
           onUpdateThreadRuntimeMode={composer.onUpdateRuntimeMode}
           onUpdateThreadInteractionMode={composer.onUpdateInteractionMode}
+          onUpdateThreadAgentMode={composer.onUpdateAgentMode}
           onRespondToApproval={requests.onRespondToApproval}
           onSelectUserInputOption={requests.onSelectUserInputOption}
           onChangeUserInputCustomAnswer={requests.onChangeUserInputCustomAnswer}

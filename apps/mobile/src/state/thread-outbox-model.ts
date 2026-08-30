@@ -10,10 +10,13 @@ import {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
+  ThreadAgentMode,
+  DEFAULT_THREAD_AGENT_MODE,
   type ModelSelection as ModelSelectionType,
   type ProjectId as ProjectIdType,
   type ProviderInteractionMode as ProviderInteractionModeType,
   type RuntimeMode as RuntimeModeType,
+  type ThreadAgentMode as ThreadAgentModeType,
 } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
@@ -47,6 +50,7 @@ export const QueuedThreadMessageSchema = Schema.Struct({
   modelSelection: Schema.optional(ModelSelection),
   runtimeMode: Schema.optional(RuntimeMode),
   interactionMode: Schema.optional(ProviderInteractionMode),
+  agentMode: Schema.optional(ThreadAgentMode),
   // Present when the queued item creates a brand-new thread (pending task)
   // instead of appending a turn to an existing one.
   creation: Schema.optional(QueuedThreadCreationSchema),
@@ -76,6 +80,7 @@ export interface QueuedThreadMessage {
   readonly modelSelection?: ModelSelectionType;
   readonly runtimeMode?: RuntimeModeType;
   readonly interactionMode?: ProviderInteractionModeType;
+  readonly agentMode?: ThreadAgentModeType;
   readonly creation?: QueuedThreadCreation;
   readonly createdAt: string;
 }
@@ -84,16 +89,18 @@ export interface ThreadSettingsSnapshot {
   readonly modelSelection: ModelSelectionType;
   readonly runtimeMode: RuntimeModeType;
   readonly interactionMode: ProviderInteractionModeType;
+  readonly agentMode?: ThreadAgentModeType;
 }
 
 export function resolveQueuedThreadSettings(
   message: QueuedThreadMessage,
   thread: ThreadSettingsSnapshot,
-): ThreadSettingsSnapshot {
+): ThreadSettingsSnapshot & { readonly agentMode: ThreadAgentModeType } {
   return {
     modelSelection: message.modelSelection ?? thread.modelSelection,
     runtimeMode: message.runtimeMode ?? thread.runtimeMode,
     interactionMode: message.interactionMode ?? thread.interactionMode,
+    agentMode: message.agentMode ?? thread.agentMode ?? DEFAULT_THREAD_AGENT_MODE,
   };
 }
 

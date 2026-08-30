@@ -8,6 +8,7 @@ import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
+  DEFAULT_THREAD_AGENT_MODE,
   type MessageId,
 } from "@t3tools/contracts";
 import { buildTemporaryWorktreeBranchName } from "@t3tools/shared/git";
@@ -95,6 +96,9 @@ export function useThreadOutboxDrain(): void {
     reportFailure: false,
   });
   const setThreadInteractionMode = useAtomCommand(threadEnvironment.setInteractionMode, {
+    reportFailure: false,
+  });
+  const setThreadAgentMode = useAtomCommand(threadEnvironment.setAgentMode, {
     reportFailure: false,
   });
   const dispatchingQueuedMessageId = useAtomValue(dispatchingQueuedMessageIdAtom);
@@ -219,6 +223,22 @@ export function useThreadOutboxDrain(): void {
         }
       }
 
+      if (settings.agentMode !== (thread.agentMode ?? DEFAULT_THREAD_AGENT_MODE)) {
+        const agentModeResult = await setThreadAgentMode({
+          environmentId: queuedMessage.environmentId,
+          input: {
+            commandId: settingsCommandId(queuedMessage, "agent-mode"),
+            threadId: queuedMessage.threadId,
+            agentMode: settings.agentMode,
+            createdAt: queuedMessage.createdAt,
+          },
+        });
+        if (AsyncResult.isFailure(agentModeResult)) {
+          reportFailure(agentModeResult, "settings-sync");
+          return false;
+        }
+      }
+
       const deliveryResult = await startTurn({
         environmentId: queuedMessage.environmentId,
         input: {
@@ -241,6 +261,7 @@ export function useThreadOutboxDrain(): void {
     [
       makeDeliveryHelpers,
       setThreadInteractionMode,
+      setThreadAgentMode,
       setThreadRuntimeMode,
       startTurn,
       updateThreadMetadata,
@@ -272,6 +293,7 @@ export function useThreadOutboxDrain(): void {
           modelSelection,
           runtimeMode: queuedMessage.runtimeMode ?? DEFAULT_RUNTIME_MODE,
           interactionMode: queuedMessage.interactionMode ?? DEFAULT_PROVIDER_INTERACTION_MODE,
+          agentMode: queuedMessage.agentMode ?? DEFAULT_THREAD_AGENT_MODE,
           workspaceMode: creation.workspaceMode,
           branch: creation.branch,
           worktreePath: creation.worktreePath,

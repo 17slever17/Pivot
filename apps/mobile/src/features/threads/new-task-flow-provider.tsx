@@ -13,9 +13,11 @@ import {
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
+  DEFAULT_THREAD_AGENT_MODE,
   MessageId,
   T3_PROJECT_FILE_NAME,
   ThreadId,
+  type ThreadAgentMode,
 } from "@t3tools/contracts";
 import { parseT3ProjectFile } from "@t3tools/shared/t3ProjectFile";
 import {
@@ -141,6 +143,7 @@ type NewTaskFlowContextValue = {
   readonly availableBranches: ReadonlyArray<VcsRef>;
   readonly runtimeMode: RuntimeMode;
   readonly interactionMode: ProviderInteractionMode;
+  readonly agentMode: ThreadAgentMode;
   readonly expandedProvider: string | null;
   readonly environments: ReadonlyArray<{
     readonly environmentId: EnvironmentId;
@@ -177,6 +180,7 @@ type NewTaskFlowContextValue = {
   readonly loadBranches: () => Promise<void>;
   readonly setRuntimeMode: (value: RuntimeMode) => void;
   readonly setInteractionMode: (value: ProviderInteractionMode) => void;
+  readonly setAgentMode: (value: ThreadAgentMode) => void;
   readonly setSelectedModelOptions: (
     value: ReadonlyArray<ProviderOptionSelection> | undefined,
   ) => void;
@@ -391,6 +395,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
     true;
   const runtimeMode = selectedProjectDraft.runtimeMode ?? DEFAULT_RUNTIME_MODE;
   const interactionMode = selectedProjectDraft.interactionMode ?? DEFAULT_PROVIDER_INTERACTION_MODE;
+  const agentMode = selectedProjectDraft.agentMode ?? DEFAULT_THREAD_AGENT_MODE;
 
   // Stored selections only count while their provider is usable on the
   // server; otherwise the server's default model wins instead of silently
@@ -688,6 +693,14 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
     },
     [selectedProjectDraftKey],
   );
+  const setAgentMode = useCallback(
+    (value: ThreadAgentMode) => {
+      if (selectedProjectDraftKey) {
+        updateComposerDraftSettings(selectedProjectDraftKey, { agentMode: value });
+      }
+    },
+    [selectedProjectDraftKey],
+  );
 
   const beginEditingPendingTask = useCallback((messageId: string): boolean => {
     const message = findQueuedPendingTask(messageId);
@@ -703,6 +716,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
         modelSelection: message.modelSelection,
         runtimeMode: message.runtimeMode,
         interactionMode: message.interactionMode,
+        agentMode: message.agentMode,
         workspaceSelection: {
           mode: message.creation.workspaceMode,
           branch: message.creation.branch,
@@ -763,6 +777,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
         modelSelection: draftModelSelection,
         runtimeMode: draft.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         interactionMode: draft.interactionMode ?? DEFAULT_PROVIDER_INTERACTION_MODE,
+        agentMode: draft.agentMode ?? DEFAULT_THREAD_AGENT_MODE,
         creation: {
           projectId: selectedProject.id,
           ...(projectTitle !== undefined ? { projectTitle } : {}),
@@ -902,6 +917,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       availableBranches,
       runtimeMode,
       interactionMode,
+      agentMode,
       expandedProvider,
       environments,
       selectedProject,
@@ -932,6 +948,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       loadBranches,
       setRuntimeMode,
       setInteractionMode,
+      setAgentMode,
       setSelectedModelOptions,
       setExpandedProvider,
     }),
@@ -949,6 +966,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       filteredBranches,
       finishEditingPendingTask,
       interactionMode,
+      agentMode,
       loadBranches,
       projectScopes,
       modelOptions,
@@ -972,6 +990,7 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
       selectBranch,
       selectEnvironment,
       setInteractionMode,
+      setAgentMode,
       setPrompt,
       setRuntimeMode,
       setSelectedModelKey,

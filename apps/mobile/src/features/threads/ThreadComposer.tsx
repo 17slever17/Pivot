@@ -6,6 +6,7 @@ import type {
   OrchestrationThreadShell,
   ProviderInteractionMode,
   RuntimeMode,
+  ThreadAgentMode,
   ServerConfig as T3ServerConfig,
 } from "@t3tools/contracts";
 import {
@@ -118,6 +119,7 @@ export interface ThreadComposerProps {
   readonly onUpdateModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateRuntimeMode: (runtimeMode: RuntimeMode) => void;
   readonly onUpdateInteractionMode: (interactionMode: ProviderInteractionMode) => void;
+  readonly onUpdateAgentMode: (agentMode: ThreadAgentMode) => void;
   readonly onReconnectEnvironment: () => void;
   readonly onExpandedChange?: (expanded: boolean) => void;
   /** Fires on editor focus/blur; hosts use it to vet stale keyboard state. */
@@ -339,6 +341,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
   const currentModelSelection = props.selectedThread.modelSelection;
   const currentRuntimeMode = props.selectedThread.runtimeMode;
   const currentInteractionMode = props.selectedThread.interactionMode ?? "default";
+  const currentAgentMode = props.selectedThread.agentMode ?? "single";
   const connectionStatus = composerConnectionStatus({
     connectionError: props.connectionError,
     connectionState: props.connectionState,
@@ -635,6 +638,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
     optionDescriptors: providerOptionDescriptors,
     runtimeMode: currentRuntimeMode,
     interactionMode: currentInteractionMode,
+    agentMode: currentAgentMode,
   });
 
   // iOS gets a native menu on the trigger pill: the everyday adjustments
@@ -939,6 +943,9 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
         }
         runtimeMode={currentRuntimeMode}
         onUpdateRuntimeMode={props.onUpdateRuntimeMode}
+        agentMode={currentAgentMode}
+        onUpdateAgentMode={props.onUpdateAgentMode}
+        agentModeDisabled={props.activeThreadBusy || showStopAction}
       />
 
       <ImageViewing

@@ -38,6 +38,7 @@ describe("mobile composer drafts", () => {
             },
             runtimeMode: "approval-required",
             interactionMode: "plan",
+            agentMode: "orchestrator",
             workspaceSelection: {
               mode: "worktree",
               branch: "main",
@@ -57,6 +58,7 @@ describe("mobile composer drafts", () => {
         },
         runtimeMode: "approval-required",
         interactionMode: "plan",
+        agentMode: "orchestrator",
         workspaceSelection: {
           mode: "worktree",
           branch: "main",

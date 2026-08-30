@@ -12,6 +12,7 @@ import type {
   ProviderApprovalDecision,
   ProviderInteractionMode,
   RuntimeMode,
+  ThreadAgentMode,
   ServerConfig as T3ServerConfig,
   ThreadId,
   UserInputQuestion,
@@ -121,6 +122,7 @@ export interface ThreadDetailScreenProps {
   readonly onUpdateThreadModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateThreadRuntimeMode: (runtimeMode: RuntimeMode) => void;
   readonly onUpdateThreadInteractionMode: (interactionMode: ProviderInteractionMode) => void;
+  readonly onUpdateThreadAgentMode: (agentMode: ThreadAgentMode) => void;
   readonly onRespondToApproval: (
     requestId: ApprovalRequestId,
     decision: ProviderApprovalDecision,
@@ -742,6 +744,7 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
                 onUpdateModelSelection={props.onUpdateThreadModelSelection}
                 onUpdateRuntimeMode={props.onUpdateThreadRuntimeMode}
                 onUpdateInteractionMode={props.onUpdateThreadInteractionMode}
+                onUpdateAgentMode={props.onUpdateThreadAgentMode}
                 onExpandedChange={setComposerExpanded}
                 onEditorFocusChange={handleOwnedInputFocusChange}
               />

@@ -645,6 +645,7 @@ export function NewTaskDraftScreen(props: {
     optionDescriptors: providerOptionDescriptors,
     runtimeMode: flow.runtimeMode,
     interactionMode: flow.interactionMode,
+    agentMode: flow.agentMode,
   });
   const workspaceLabel = useMemo(
     () =>
@@ -734,6 +735,7 @@ export function NewTaskDraftScreen(props: {
     const startFromOrigin = draft.workspaceSelection?.startFromOrigin ?? flow.startFromOrigin;
     const runtimeMode = draft.runtimeMode ?? flow.runtimeMode;
     const interactionMode = draft.interactionMode ?? flow.interactionMode;
+    const agentMode = draft.agentMode ?? flow.agentMode;
     const initialMessageText = draft.text.trim();
 
     if (
@@ -805,6 +807,7 @@ export function NewTaskDraftScreen(props: {
       startFromOrigin,
       runtimeMode,
       interactionMode,
+      agentMode,
       initialMessageText,
       initialAttachments: draft.attachments,
       ...(editingPendingTask
@@ -969,6 +972,9 @@ export function NewTaskDraftScreen(props: {
       onUpdateOptionSelections={flow.setSelectedModelOptions}
       runtimeMode={flow.runtimeMode}
       onUpdateRuntimeMode={flow.setRuntimeMode}
+      agentMode={flow.agentMode}
+      onUpdateAgentMode={flow.setAgentMode}
+      agentModeDisabled={flow.submitting}
     />
   );
 
