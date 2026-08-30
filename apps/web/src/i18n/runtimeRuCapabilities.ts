@@ -164,6 +164,7 @@ export const RU_CAPABILITIES: Readonly<Record<string, string>> = {
   "provider/model": "провайдер/модель",
   "allow-listed Codex examples": "разрешённые примеры Codex",
   "Imported at": "Импортировано",
+  Imported: "Импортировано",
   Common: "Общий",
   Orchestrator: "Оркестратор",
   Worker: "Исполнитель",

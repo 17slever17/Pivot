@@ -396,7 +396,6 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
         </TooltipPopup>
       </Tooltip>
       <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
-      <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
 
       <Tooltip>
         <Select

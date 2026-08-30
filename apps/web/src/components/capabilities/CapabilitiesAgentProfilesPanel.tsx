@@ -26,6 +26,7 @@ import {
   createAgentProfileDraft,
   OMP_AGENT_PROFILE_EFFORTS,
   summarizeImportedProfiles,
+  importedProfileSummaryText,
   type AgentProfileDraft,
   validateAgentProfileDraft,
 } from "./CapabilitiesAgentProfilesPanel.logic";
@@ -63,7 +64,7 @@ function ProfileEditor({
             onChange={(event) => update("name", event.currentTarget.value)}
             placeholder="worker"
             aria-label="Profile name"
-            disabled={pending}
+            disabled={pending || isEditing}
           />
         </label>
         <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
@@ -473,7 +474,7 @@ export function CapabilitiesAgentProfilesPanel({
               <div key={category} className="flex flex-wrap gap-2">
                 <span className="w-28 font-medium text-muted-foreground">{label}</span>
                 <span className="font-mono text-foreground">
-                  {importSummary[category].length > 0 ? importSummary[category].join(", ") : "—"}
+                  {importedProfileSummaryText(category, importSummary[category])}
                 </span>
               </div>
             ))}

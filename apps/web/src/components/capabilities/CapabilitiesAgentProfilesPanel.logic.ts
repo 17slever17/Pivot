@@ -72,3 +72,11 @@ export function summarizeImportedProfiles(
   }
   return summary;
 }
+
+export function importedProfileSummaryText(
+  category: ImportedProfileCategory,
+  names: readonly string[],
+): string {
+  if (category === "common" || category === "orchestrator") return "Imported";
+  return names.length > 0 ? names.join(", ") : "—";
+}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   createAgentProfileDraft,
+  importedProfileSummaryText,
   summarizeImportedProfiles,
   validateAgentProfileDraft,
 } from "./CapabilitiesAgentProfilesPanel.logic";
@@ -53,5 +54,12 @@ describe("Codex import summary", () => {
       verifier: ["verifier"],
       other: ["custom-helper"],
     });
+  });
+
+  it("marks the imported root bundles even when they have no profile names", () => {
+    expect(importedProfileSummaryText("common", [])).toBe("Imported");
+    expect(importedProfileSummaryText("orchestrator", [])).toBe("Imported");
+    expect(importedProfileSummaryText("worker", [])).toBe("—");
+    expect(importedProfileSummaryText("verifier", ["verifier"])).toBe("verifier");
   });
 });
