@@ -10,7 +10,7 @@
  * - Workflow expansion is presentation state. A live run stays expanded when
  *   it settles; older collapsed runs can still be opened at run granularity.
  * - Static status dots, DOM-write elapsed timers, plain token counters.
- * - Clicking an agent opens a nested read-only omp transcript pane (steer/stop).
+ * - Clicking an agent opens a read-only omp transcript pane with parent-session controls.
  */
 import { useAtomValue } from "@effect/atom-react";
 import type {
@@ -23,8 +23,8 @@ import {
   formatSubagentTokenCount,
 } from "@t3tools/client-runtime/state/subagentRuntime";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { Bot, Braces, Check, ChevronDown, ChevronRight, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Bot, Braces, Check, ChevronDown, ChevronRight, RefreshCw, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import { orchestrationEnvironment } from "~/state/orchestration";
@@ -64,6 +64,23 @@ export function formatOmpTranscriptMessage(message: unknown): string {
     return record.text;
   }
   return JSON.stringify(record);
+}
+
+type ParentAction = "steer" | "stop";
+
+type ParentActionResult = { readonly _tag: "Success" } | { readonly _tag: "Failure" };
+
+export function resolveParentActionOutcome(
+  action: ParentAction,
+  result: ParentActionResult,
+): { readonly clearSteerText: boolean; readonly error: string | null } {
+  if (result._tag === "Success") {
+    return { clearSteerText: action === "steer", error: null };
+  }
+  return {
+    clearSteerText: false,
+    error: action === "steer" ? "Could not steer parent session." : "Could not stop parent turn.",
+  };
 }
 
 /**
@@ -215,8 +232,7 @@ function AgentRow({
     agent.role?.trim().toLocaleLowerCase() === agent.title.trim().toLocaleLowerCase()
       ? null
       : agent.role;
-  const metadata = [
-    modelLabel,
+  const usageMetadata = [
     agent.usage ? `${formatSubagentTokenCount(agent.usage.totalTokens)} tok` : "— tok",
     agent.usage?.toolUses !== undefined ? `${agent.usage.toolUses} tools` : null,
     agent.activationCount > 1 ? `run ${agent.activationCount}` : null,
@@ -234,6 +250,9 @@ function AgentRow({
             {role}
           </span>
         ) : null}
+        <span className="shrink-0 rounded-sm border border-border/60 px-1 font-mono text-[.65rem] text-muted-foreground">
+          {visuals.label}
+        </span>
       </span>
       <span className="col-start-3 row-start-1 min-w-14 text-right font-mono text-[.7rem] text-muted-foreground/80">
         <span className="inline-flex items-center gap-1">
@@ -251,8 +270,12 @@ function AgentRow({
       >
         {activity ?? visuals.label}
       </span>
-      <span className="col-start-2 col-end-4 row-start-3 truncate font-mono text-[.7rem] tabular-nums text-muted-foreground/70">
-        {metadata.join(" · ")}
+      <span
+        className="col-start-2 col-end-4 row-start-3 truncate font-mono text-[.7rem] tabular-nums text-muted-foreground/70"
+        title={modelLabel ?? undefined}
+      >
+        {modelLabel ? <span className="text-foreground/80">{modelLabel}</span> : null}
+        {usageMetadata.length > 0 ? `${modelLabel ? " · " : ""}${usageMetadata.join(" · ")}` : null}
       </span>
       <span className="sr-only">{visuals.label}</span>
     </>
@@ -290,6 +313,9 @@ function NestedSubagentTranscriptPane({
   const [steerText, setSteerText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [parentAction, setParentAction] = useState<ParentAction | null>(null);
+  const [parentActionError, setParentActionError] = useState<string | null>(null);
   const getMessages = useAtomCommand(serverEnvironment.ompGetSubagentMessages, {
     reportFailure: false,
   });
@@ -298,47 +324,166 @@ function NestedSubagentTranscriptPane({
     reportFailure: false,
   });
   const interruptTurn = useAtomCommand(threadEnvironment.interruptTurn, { reportFailure: false });
+  const transcriptActivityKey = [
+    agent.status,
+    agent.progress ?? "",
+    agent.lastToolName ?? "",
+    agent.lastIntent ?? "",
+    agent.currentToolArgs ?? "",
+    agent.result ?? "",
+    agent.error ?? "",
+  ].join("\0");
+  const latestActivityKeyRef = useRef(transcriptActivityKey);
+  latestActivityKeyRef.current = transcriptActivityKey;
+  const initialLoadRef = useRef(true);
+  const loadedActivityKeyRef = useRef(transcriptActivityKey);
+  const loadGenerationRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
+  const loadMessages = useCallback(
+    async (initial: boolean) => {
+      const generation = loadGenerationRef.current + 1;
+      loadGenerationRef.current = generation;
+      if (initial) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       setError(null);
-      await setSubscription({
-        environmentId,
-        input: { threadId, level: "events" },
-      });
-      const result = await getMessages({
-        environmentId,
-        input: { threadId, subagentId: agent.id },
-      });
-      if (cancelled) {
+      let result;
+      try {
+        result = await getMessages({
+          environmentId,
+          input: { threadId, subagentId: agent.id },
+        });
+      } catch {
+        if (generation !== loadGenerationRef.current) {
+          return;
+        }
+        setError("Failed to load transcript");
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      if (generation !== loadGenerationRef.current) {
         return;
       }
       if (result._tag === "Success") {
         setMessages(result.value.messages);
+        setError(null);
       } else {
         setError("Failed to load transcript");
       }
       setLoading(false);
+      setRefreshing(false);
+    },
+    [agent.id, environmentId, getMessages, threadId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    initialLoadRef.current = true;
+    loadedActivityKeyRef.current = transcriptActivityKey;
+    void (async () => {
+      const subscription = await setSubscription({
+        environmentId,
+        input: { threadId, level: "events" },
+      });
+      if (cancelled) return;
+      if (subscription._tag === "Failure") {
+        setError("Failed to subscribe to live transcript");
+      }
+      await loadMessages(true);
+      if (cancelled) {
+        return;
+      }
+      initialLoadRef.current = false;
+      loadedActivityKeyRef.current = latestActivityKeyRef.current;
     })();
     return () => {
       cancelled = true;
+      loadGenerationRef.current += 1;
       void setSubscription({
         environmentId,
         input: { threadId, level: "progress" },
       });
     };
-  }, [agent.id, environmentId, getMessages, setSubscription, threadId]);
+  }, [agent.id, environmentId, loadMessages, setSubscription, threadId]);
+
+  // The current OMP messages RPC has no cursor or message subscription payload.
+  // Reload only when a coarse activity signal changes; this is event-driven,
+  // not a timer, and Refresh remains available for prose-only updates.
+  useEffect(() => {
+    if (initialLoadRef.current || loadedActivityKeyRef.current === transcriptActivityKey) {
+      return;
+    }
+    loadedActivityKeyRef.current = transcriptActivityKey;
+    void loadMessages(false);
+  }, [loadMessages, transcriptActivityKey]);
 
   const live =
     agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
 
+  const handleSteerParent = async () => {
+    const message = steerText.trim();
+    if (!live || parentAction !== null || message.length === 0) return;
+    setParentAction("steer");
+    setParentActionError(null);
+    try {
+      const result = await steer({ environmentId, input: { threadId, message } });
+      const outcome = resolveParentActionOutcome("steer", result);
+      if (outcome.clearSteerText) {
+        setSteerText("");
+      }
+      setParentActionError(outcome.error);
+    } catch {
+      setParentActionError("Could not steer parent session.");
+    } finally {
+      setParentAction(null);
+    }
+  };
+
+  const handleStopParent = async () => {
+    if (!live || parentAction !== null) return;
+    setParentAction("stop");
+    setParentActionError(null);
+    try {
+      const result = await interruptTurn({ environmentId, input: { threadId } });
+      setParentActionError(resolveParentActionOutcome("stop", result).error);
+    } catch {
+      setParentActionError("Could not stop parent turn.");
+    } finally {
+      setParentAction(null);
+    }
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col border-t border-border/60">
       <div className="flex items-center gap-2 border-b border-border/50 px-2 py-1.5">
-        <span className="min-w-0 truncate text-xs font-medium">{agent.title}</span>
-        <span className="text-[.65rem] text-muted-foreground">read-only transcript</span>
+        <span className="min-w-0 truncate text-xs font-medium" title={agent.title}>
+          {agent.title}
+        </span>
+        <span
+          className="min-w-0 truncate font-mono text-[.65rem] text-muted-foreground"
+          title={formatSubagentModelLabel(agent.model, agent.effort) ?? undefined}
+        >
+          {formatSubagentModelLabel(agent.model, agent.effort)}
+        </span>
+        <span className="shrink-0 rounded-sm border border-border/60 px-1 font-mono text-[.65rem] text-muted-foreground">
+          {STATUS_VISUALS[agent.status].label}
+        </span>
+        <span className="hidden text-[.65rem] text-muted-foreground sm:inline">
+          Parent session controls
+        </span>
+        <button
+          type="button"
+          onClick={() => void loadMessages(false)}
+          disabled={loading || refreshing}
+          aria-label="Refresh transcript"
+          className="inline-flex items-center gap-1 rounded-sm border border-border/60 px-1.5 py-0.5 text-[.65rem] text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+        >
+          <RefreshCw aria-hidden className="size-3" />
+          {refreshing ? "Refreshing transcript…" : "Refresh transcript"}
+        </button>
         <button
           type="button"
           onClick={onClose}
@@ -350,58 +495,62 @@ function NestedSubagentTranscriptPane({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 p-2">
-          {loading ? (
+          {loading && messages.length === 0 ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : error ? (
+          ) : error && messages.length === 0 ? (
             <p className="text-xs text-destructive-foreground">{error}</p>
           ) : messages.length === 0 ? (
             <p className="text-xs text-muted-foreground">No messages yet.</p>
           ) : (
-            messages.map((message, index) => (
-              <pre
-                key={index}
-                className="whitespace-pre-wrap break-words rounded-md border border-border/40 bg-background/50 p-2 font-mono text-[.7rem] leading-relaxed"
-              >
-                {formatOmpTranscriptMessage(message)}
-              </pre>
-            ))
+            <>
+              {messages.map((message, index) => (
+                <pre
+                  key={index}
+                  className="whitespace-pre-wrap break-words rounded-md border border-border/40 bg-background/50 p-2 font-mono text-[.7rem] leading-relaxed"
+                >
+                  {formatOmpTranscriptMessage(message)}
+                </pre>
+              ))}
+              {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}
+            </>
           )}
         </div>
       </ScrollArea>
       <div className="flex flex-col gap-1.5 border-t border-border/50 p-2">
+        <p className="text-[.65rem] leading-4 text-muted-foreground">
+          Child model and effort are selected at spawn; this OMP API cannot change them after
+          launch.
+        </p>
+        {parentActionError ? (
+          <p role="alert" className="text-xs text-destructive-foreground">
+            {parentActionError}
+          </p>
+        ) : null}
         <div className="flex gap-1.5">
           <input
             value={steerText}
             onChange={(event) => setSteerText(event.target.value)}
-            placeholder="Steer session…"
+            placeholder="Message for parent session…"
             className="min-w-0 flex-1 rounded-md border border-border/60 bg-background px-2 py-1 text-xs"
-            disabled={!live}
+            disabled={!live || parentAction !== null}
           />
           <button
             type="button"
-            disabled={!live || steerText.trim().length === 0}
+            disabled={!live || parentAction !== null || steerText.trim().length === 0}
+            aria-label="Steer parent session"
             className="rounded-md border border-border/60 px-2 text-xs disabled:opacity-40"
-            onClick={() => {
-              const message = steerText.trim();
-              if (!message) {
-                return;
-              }
-              void steer({ environmentId, input: { threadId, message } }).then(() => {
-                setSteerText("");
-              });
-            }}
+            onClick={() => void handleSteerParent()}
           >
-            Steer
+            {parentAction === "steer" ? "Steering…" : "Steer parent"}
           </button>
           <button
             type="button"
-            disabled={!live}
+            disabled={!live || parentAction !== null}
+            aria-label="Stop parent turn"
             className="rounded-md border border-border/60 px-2 text-xs disabled:opacity-40"
-            onClick={() => {
-              void interruptTurn({ environmentId, input: { threadId } });
-            }}
+            onClick={() => void handleStopParent()}
           >
-            Stop
+            {parentAction === "stop" ? "Stopping parent turn…" : "Stop parent turn"}
           </button>
         </div>
       </div>

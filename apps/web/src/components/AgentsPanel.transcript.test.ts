@@ -1,7 +1,11 @@
 import type { RuntimeSubagent } from "@t3tools/client-runtime/state/subagentRuntime";
 import { describe, expect, it } from "vite-plus/test";
 
-import { formatAgentActivityText, formatOmpTranscriptMessage } from "./AgentsPanel";
+import {
+  formatAgentActivityText,
+  formatOmpTranscriptMessage,
+  resolveParentActionOutcome,
+} from "./AgentsPanel";
 
 describe("formatAgentActivityText", () => {
   it("combines OMP intent, current tool args, and tool age", () => {
@@ -71,5 +75,28 @@ describe("formatOmpTranscriptMessage", () => {
         ],
       }),
     ).toBe("ab");
+  });
+});
+
+describe("resolveParentActionOutcome", () => {
+  it("clears steering text only after a successful parent-session steer", () => {
+    expect(resolveParentActionOutcome("steer", { _tag: "Success" })).toEqual({
+      clearSteerText: true,
+      error: null,
+    });
+  });
+
+  it("preserves steering text and exposes a failure for the parent session", () => {
+    expect(resolveParentActionOutcome("steer", { _tag: "Failure" })).toEqual({
+      clearSteerText: false,
+      error: "Could not steer parent session.",
+    });
+  });
+
+  it("reports a parent-turn stop failure without implying child control", () => {
+    expect(resolveParentActionOutcome("stop", { _tag: "Failure" })).toEqual({
+      clearSteerText: false,
+      error: "Could not stop parent turn.",
+    });
   });
 });
