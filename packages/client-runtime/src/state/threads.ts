@@ -551,19 +551,6 @@ export const makeEnvironmentThreadState = Effect.fn("EnvironmentThreadState.make
       service.changes.pipe(Stream.filter(ConnectionWakeups.shouldResubscribeAfterWakeup)),
   });
 
-  const isThreadNotFoundSubscriptionFailure = (cause: Cause.Cause<unknown>): boolean =>
-    cause.reasons.some(
-      (reason) =>
-        reason._tag === "Fail" &&
-        typeof reason.error === "object" &&
-        reason.error !== null &&
-        "_tag" in reason.error &&
-        reason.error._tag === "OrchestrationGetSnapshotError" &&
-        "message" in reason.error &&
-        typeof reason.error.message === "string" &&
-        reason.error.message === `Thread ${threadId} was not found`,
-    );
-
   yield* setSynchronizing;
   yield* Effect.forkScoped(
     subscribeDynamic(
@@ -650,10 +637,12 @@ export const makeEnvironmentThreadState = Effect.fn("EnvironmentThreadState.make
         };
       }),
       {
-        onExpectedFailure: (cause) =>
-          isThreadNotFoundSubscriptionFailure(cause) ? setDeleted() : setStreamError(cause),
+        // A draft bootstrap creates the shell entry before its detail projection
+        // is visible. The detail subscription can therefore report a typed
+        // "thread not found" transiently; only an authoritative thread.deleted
+        // event should mark a live state as deleted.
+        onExpectedFailure: setStreamError,
         retryExpectedFailureAfter: "250 millis",
-        shouldRetryExpectedFailure: (cause) => !isThreadNotFoundSubscriptionFailure(cause),
         resubscribe: foregroundResubscriptions,
       },
     ).pipe(Stream.runForEach(applyItem)),
