@@ -108,6 +108,7 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
     "Выберите, как корневой агент будет обрабатывать этот чат.",
   "Agent mode can only change before the first turn or while idle.":
     "Режим агента можно менять до первого хода или в состоянии ожидания.",
+  "Failed to change agent mode": "Не удалось изменить режим агента",
   "Can change before the first turn or while idle.":
     "Можно изменить до первого хода или в состоянии ожидания.",
   "Could not stash this prompt": "Не удалось сохранить prompt в stash",

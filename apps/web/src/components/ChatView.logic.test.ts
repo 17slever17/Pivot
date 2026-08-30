@@ -30,6 +30,7 @@ import {
   reconcileRetainedMountedThreadIds,
   resolveThreadMetadataUpdateForNextTurn,
   resolveSendEnvMode,
+  resolveAgentModeDraftAfterCommand,
   scheduleEnvironmentReconnectWarning,
   startNewThreadForProject,
   threadHasProjectedUserMessage,
@@ -68,8 +69,32 @@ describe("thread agent mode changes", () => {
         latestTurn: completedTurn,
         phase: "ready",
         latestTurnSettled: false,
+        sessionStatus: "ready",
+      }),
+    ).toBe(true);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "ready",
+        latestTurnSettled: false,
+        sessionStatus: "interrupted",
       }),
     ).toBe(false);
+  });
+
+  it("applies an accepted mode immediately and clears a rejected draft", () => {
+    expect(
+      resolveAgentModeDraftAfterCommand({
+        requestedMode: "orchestrator",
+        commandSucceeded: true,
+      }),
+    ).toBe("orchestrator");
+    expect(
+      resolveAgentModeDraftAfterCommand({
+        requestedMode: "orchestrator",
+        commandSucceeded: false,
+      }),
+    ).toBeNull();
   });
 });
 

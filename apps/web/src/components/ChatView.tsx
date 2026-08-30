@@ -318,6 +318,7 @@ import {
   reconcileMountedTerminalThreadIds,
   resolveThreadMetadataUpdateForNextTurn,
   resolveSendEnvMode,
+  resolveAgentModeDraftAfterCommand,
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
   canChangeThreadAgentMode,
@@ -1366,6 +1367,7 @@ function ChatViewContent(props: ChatViewProps) {
   const localComposerRef = useRef<ChatComposerHandle | null>(null);
   const composerRef = useComposerHandleContext() ?? localComposerRef;
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [agentModeChangeInFlight, setAgentModeChangeInFlight] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const optimisticUserMessages = usePendingThreadState(
     (state) =>
@@ -2233,7 +2235,11 @@ function ChatViewContent(props: ChatViewProps) {
     latestTurn: activeThread?.latestTurn,
     phase,
     latestTurnSettled,
+    sessionStatus: activeThread?.session?.status,
   });
+  useEffect(() => {
+    setAgentModeChangeInFlight(false);
+  }, [activeThreadKey]);
   const previousPhaseRef = useRef(phase);
   const followUpDrainInFlightRef = useRef(false);
   const followUpQueue = useFollowUpQueueStore(
@@ -3319,22 +3325,76 @@ function ChatViewContent(props: ChatViewProps) {
     ],
   );
   const handleAgentModeChange = useCallback(
-    (mode: ThreadAgentMode) => {
-      if (mode === agentMode || !canChangeAgentMode) return;
-      setComposerDraftAgentMode(composerDraftTarget, mode);
-      if (isLocalDraftThread) {
-        setDraftThreadContext(composerDraftTarget, { agentMode: mode });
+    async (mode: ThreadAgentMode) => {
+      if (mode === agentMode || !canChangeAgentMode || agentModeChangeInFlight) return;
+      if (isLocalDraftThread || !serverThread) {
+        setComposerDraftAgentMode(composerDraftTarget, mode);
+        if (isLocalDraftThread) {
+          setDraftThreadContext(composerDraftTarget, { agentMode: mode });
+        }
+        scheduleComposerFocus();
+        return;
       }
-      scheduleComposerFocus();
+
+      setAgentModeChangeInFlight(true);
+      try {
+        const result = await setThreadAgentMode({
+          environmentId,
+          input: {
+            threadId: serverThread.id,
+            agentMode: mode,
+          },
+        });
+        if (result._tag === "Success") {
+          // Keep the control responsive while the event subscription catches up.
+          // The draft is only written after the server accepted the command.
+          setComposerDraftAgentMode(
+            composerDraftTarget,
+            resolveAgentModeDraftAfterCommand({
+              requestedMode: mode,
+              commandSucceeded: true,
+            }),
+          );
+        } else {
+          // Drop any stale optimistic selection so the displayed value falls
+          // back to the server's actual mode.
+          setComposerDraftAgentMode(
+            composerDraftTarget,
+            resolveAgentModeDraftAfterCommand({
+              requestedMode: mode,
+              commandSucceeded: false,
+            }),
+          );
+          if (!isAtomCommandInterrupted(result)) {
+            toastManager.add(
+              stackedThreadToast({
+                type: "error",
+                title: "Failed to change agent mode",
+                description: chatActionErrorMessage(squashAtomCommandFailure(result)),
+                data: { threadRef: routeThreadRef },
+              }),
+            );
+          }
+        }
+      } finally {
+        setAgentModeChangeInFlight(false);
+        scheduleComposerFocus();
+      }
     },
     [
+      agentModeChangeInFlight,
       agentMode,
       canChangeAgentMode,
       composerDraftTarget,
+      environmentId,
       isLocalDraftThread,
+      routeThreadRef,
+      resolveAgentModeDraftAfterCommand,
       scheduleComposerFocus,
       setComposerDraftAgentMode,
       setDraftThreadContext,
+      serverThread,
+      setThreadAgentMode,
     ],
   );
   const toggleInteractionMode = useCallback(() => {
@@ -6739,7 +6799,7 @@ function ChatViewContent(props: ChatViewProps) {
                             activeProposedPlan={activeProposedPlan}
                             runtimeMode={runtimeMode}
                             agentMode={agentMode}
-                            agentModeChangeDisabled={!canChangeAgentMode}
+                            agentModeChangeDisabled={!canChangeAgentMode || agentModeChangeInFlight}
                             interactionMode={interactionMode}
                             lockedProvider={lockedProvider}
                             providerStatuses={providerStatuses as ServerProvider[]}

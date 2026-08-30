@@ -7,6 +7,7 @@ import {
   type ServerProvider,
   type ScopedProjectRef,
   type ScopedThreadRef,
+  type ThreadAgentMode,
   type ThreadId,
   type TurnId,
 } from "@t3tools/contracts";
@@ -113,8 +114,25 @@ export function canChangeThreadAgentMode(input: {
   latestTurn: Thread["latestTurn"] | null | undefined;
   phase: SessionPhase;
   latestTurnSettled: boolean;
+  sessionStatus?: NonNullable<Thread["session"]>["status"] | undefined;
 }): boolean {
-  return input.latestTurn == null || (input.phase === "ready" && input.latestTurnSettled);
+  if (input.latestTurn == null) {
+    return input.phase !== "running" && input.phase !== "connecting";
+  }
+  if (input.phase !== "ready") {
+    return false;
+  }
+  // A freshly interrupted turn can briefly expose a ready phase before its
+  // terminal projection arrives. Keep the server's idle-only guard aligned
+  // during that narrow in-flight window.
+  return input.sessionStatus !== "interrupted" || input.latestTurnSettled;
+}
+
+export function resolveAgentModeDraftAfterCommand(input: {
+  requestedMode: ThreadAgentMode;
+  commandSucceeded: boolean;
+}): ThreadAgentMode | null {
+  return input.commandSucceeded ? input.requestedMode : null;
 }
 
 export function buildLoadingThreadFromShell(shell: ThreadShell): Thread {
