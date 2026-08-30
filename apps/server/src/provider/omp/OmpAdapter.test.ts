@@ -1297,7 +1297,7 @@ describe("OmpAdapter", () => {
     }),
   );
 
-  it.effect("cancels live subagents after an interrupt when omp supports cancel_subagent", () =>
+  it.effect("keeps the root session alive when an interrupted turn has live subagents", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
       const adapter = new OmpAdapter(fake, testRandomUUID);
@@ -1335,44 +1335,10 @@ describe("OmpAdapter", () => {
         false,
       );
       NodeAssert.equal(
-        fake.sent.some(
-          (command) => command.type === "cancel_subagent" && command.subagentId === "agent-1",
-        ),
-        true,
+        fake.sent.some((command) => command.type === "cancel_subagent"),
+        false,
       );
       NodeAssert.equal(yield* adapter.hasSession(THREAD_ID), true);
-    }),
-  );
-
-  it.effect("terminates the session to stop subagents when cancel_subagent is unsupported", () =>
-    Effect.gen(function* () {
-      const fake = new FakeOmpRpc();
-      fake.cancelSubagentUnknown = true;
-      const adapter = new OmpAdapter(fake, testRandomUUID);
-      const eventsFiber = yield* Stream.runCollect(
-        adapter.streamEvents.pipe(Stream.takeUntil((event) => event.type === "session.exited")),
-      ).pipe(
-        Effect.map((chunk) => Array.from(chunk)),
-        Effect.forkChild,
-      );
-      yield* adapter.startSession(startInput);
-      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
-      yield* fake.offer(THREAD_ID, {
-        type: "subagent_lifecycle",
-        payload: { id: "agent-1", agent: "scout", status: "started" },
-      });
-      yield* adapter.interruptTurn(THREAD_ID);
-      yield* fake.offer(THREAD_ID, {
-        type: "agent_end",
-        messages: [],
-        isTerminal: true,
-      });
-      const events = yield* Fiber.join(eventsFiber);
-      NodeAssert.equal(
-        events.some((event) => event.type === "session.exited"),
-        true,
-      );
-      NodeAssert.equal(yield* adapter.hasSession(THREAD_ID), false);
     }),
   );
 
@@ -2117,6 +2083,180 @@ describe("OmpAdapter", () => {
       NodeAssert.equal(progress?.payload.status, "running");
       NodeAssert.equal(completed?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(completed?.payload.status, "completed");
+    }),
+  );
+
+  it.effect("maps live subagent message, tool, retry, and terminal events", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "spawn" });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_lifecycle",
+        payload: {
+          id: "agent-live",
+          agent: "scout",
+          description: "inspect repository",
+          parentToolCallId: "task-call",
+          status: "started",
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "message_update",
+            assistantMessageEvent: { type: "text_delta", delta: "child answer" },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "message_update",
+            effort: "high",
+            assistantMessageEvent: { type: "thinking_delta", delta: "child reasoning" },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "tool_execution_start",
+            toolCallId: "child-tool",
+            toolName: "read",
+            intent: "Reading source",
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "tool_execution_update",
+            toolCallId: "child-tool",
+            toolName: "read",
+            partialResult: { content: [{ type: "text", text: "source chunk" }] },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "tool_execution_end",
+            toolCallId: "child-tool",
+            toolName: "read",
+            result: { content: [{ type: "text", text: "done" }] },
+            isError: false,
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "auto_retry_start",
+            reason: "provider busy",
+            errorMessage: "provider busy",
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_event",
+        payload: {
+          id: "agent-live",
+          event: {
+            type: "agent_end",
+            messages: [
+              {
+                role: "assistant",
+                stopReason: "error",
+                errorMessage: "child failed",
+                provider: "openai-codex",
+                model: "gpt-5.6-luna",
+                errorStatus: 403,
+                errorId: "child-1",
+              },
+            ],
+            usage: { tokens: 12, toolUses: 2, durationMs: 300 },
+          },
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_lifecycle",
+        payload: {
+          id: "agent-live",
+          agent: "scout",
+          description: "inspect repository",
+          parentToolCallId: "task-call",
+          status: "failed",
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+      const taskProgress = events.filter((event) => event.type === "task.progress");
+      const toolProgress = events.filter((event) => event.type === "tool.progress");
+      NodeAssert.equal(
+        taskProgress.some((event) => event.payload.summary === "child answer"),
+        true,
+      );
+      NodeAssert.equal(
+        taskProgress.some((event) => event.payload.summary === "child reasoning"),
+        true,
+      );
+      NodeAssert.equal(
+        taskProgress.some(
+          (event) => event.payload.status === "waiting" && event.payload.error === "provider busy",
+        ),
+        true,
+      );
+      NodeAssert.equal(toolProgress.length, 3);
+      NodeAssert.equal(toolProgress[0]?.payload.taskId, RuntimeTaskId.make("agent-live"));
+      NodeAssert.equal(toolProgress[0]?.payload.toolName, "read");
+      NodeAssert.equal(toolProgress[0]?.payload.parentToolUseId, "task-call");
+      const failedProgress = taskProgress.find(
+        (event) => event.payload.error?.includes("child failed") === true,
+      );
+      NodeAssert.equal(
+        failedProgress?.payload.error,
+        "openai-codex/gpt-5.6-luna HTTP 403 (error child-1): child failed",
+      );
+      NodeAssert.deepEqual(failedProgress?.payload.typedUsage, {
+        totalTokens: 12,
+        toolUses: 2,
+        durationMs: 300,
+      });
+      NodeAssert.equal(failedProgress?.payload.model, "openai-codex/gpt-5.6-luna");
+      NodeAssert.equal(failedProgress?.payload.effort, "high");
+      const completed = events.find((event) => event.type === "task.completed");
+      NodeAssert.equal(completed?.payload.status, "failed");
+      NodeAssert.equal(
+        completed?.payload.summary,
+        "openai-codex/gpt-5.6-luna HTTP 403 (error child-1): child failed",
+      );
+      NodeAssert.deepEqual(completed?.payload.usage, {
+        tokens: 12,
+        toolUses: 2,
+        durationMs: 300,
+      });
+      NodeAssert.equal(completed?.payload.model, "openai-codex/gpt-5.6-luna");
     }),
   );
 

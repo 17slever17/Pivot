@@ -40,6 +40,7 @@ import {
   RuntimeItemId,
   RuntimeRequestId,
   type RuntimeTaskStatus,
+  type RuntimeTaskUsage,
   ProviderDriverKind,
   ReviewFileLineCoverage,
   RuntimeTaskId,
@@ -80,6 +81,7 @@ import { OmpSpawnError, type OmpRpcRuntime } from "./OmpRpcRuntime.ts";
 import { OmpPreviewMcpInjector } from "../../mcp/OmpPreviewMcpInjector.ts";
 import { readMcpProviderSession } from "../../mcp/McpProviderSession.ts";
 import {
+  formatOmpAssistantError,
   readOmpAgentEndError,
   readOmpAssistantOutcome,
   type OmpAssistantOutcome,
@@ -153,8 +155,8 @@ interface LiveAdapterSession {
   readonly scope: Scope.Scope;
   readonly toolCalls: Map<string, TrackedOmpToolCall>;
   readonly pendingUiRequests: Map<string, PendingExtensionUiRequest>;
-  /** Subagent ids seen via `subagent_lifecycle started` and not yet terminal. */
-  readonly liveSubagents: Set<string>;
+  /** Metadata needed to fold raw child events into task activity. */
+  readonly subagentStates: Map<string, OmpSubagentState>;
   turnId: TurnId | undefined;
   /** Set by interruptTurn; cleared when the terminal agent_end confirms stop. */
   stopRequested: boolean;
@@ -170,6 +172,20 @@ interface LiveAdapterSession {
   prePlanModelSlug: string | undefined;
   preReviewModelSlug: string | undefined;
   onOpenUrl: ((request: OmpOpenUrlRequest) => Effect.Effect<void>) | undefined;
+}
+
+interface OmpSubagentState {
+  readonly id: string;
+  description: string;
+  role: string | undefined;
+  toolUseId: string | undefined;
+  agentIndex: number | undefined;
+  model: string | undefined;
+  effort: string | undefined;
+  summary: string | undefined;
+  error: string | undefined;
+  usage: unknown;
+  typedUsage: RuntimeTaskUsage | undefined;
 }
 
 const TOKEN_USAGE_EMIT_MIN_INTERVAL_MS = 1_000;
@@ -357,7 +373,7 @@ export class OmpAdapter {
         scope,
         toolCalls: new Map(),
         pendingUiRequests: new Map(),
-        liveSubagents: new Set<string>(),
+        subagentStates: new Map<string, OmpSubagentState>(),
         turnId: undefined,
         stopRequested: false,
         // Negative so the first mid-turn emit is not throttled when Clock is 0 (TestClock).
@@ -924,6 +940,9 @@ export class OmpAdapter {
     if (frame.type === "subagent_progress") {
       return this.#onSubagentProgress(session, frame);
     }
+    if (frame.type === "subagent_event") {
+      return this.#onSubagentEvent(session, frame);
+    }
     return Effect.void;
   }
 
@@ -935,30 +954,48 @@ export class OmpAdapter {
     if (!isRecord(payload) || typeof payload.id !== "string") {
       return Effect.void;
     }
+    const state = this.#getOrCreateSubagentState(session, payload.id);
+    const role = readNonEmptyText(payload.agent);
+    const description = readNonEmptyText(payload.description);
+    const toolUseId = readNonEmptyText(payload.parentToolCallId);
+    const agentIndex = readNonNegativeInt(payload.index);
+    const model = readOmpModel(payload.model ?? payload.resolvedModel);
+    const effort = readOmpEffort(payload);
+    if (description !== undefined) {
+      state.description = description;
+    }
+    if (role !== undefined) {
+      state.role = role;
+    }
+    if (toolUseId !== undefined) {
+      state.toolUseId = toolUseId;
+    }
+    if (agentIndex !== undefined) {
+      state.agentIndex = agentIndex;
+    }
+    if (model !== undefined) {
+      state.model = model;
+    }
+    if (effort !== undefined) {
+      state.effort = effort;
+    }
     const taskId = RuntimeTaskId.make(payload.id);
-    const role = typeof payload.agent === "string" ? payload.agent : undefined;
-    const description =
-      typeof payload.description === "string" && payload.description.length > 0
-        ? payload.description
-        : undefined;
-    const toolUseId =
-      typeof payload.parentToolCallId === "string" ? payload.parentToolCallId : undefined;
-    const agentIndex = typeof payload.index === "number" ? payload.index : undefined;
     const linkage = {
-      ...(role === undefined ? {} : { role }),
-      ...(description === undefined ? {} : { title: description }),
-      ...(toolUseId === undefined ? {} : { toolUseId }),
-      ...(agentIndex === undefined ? {} : { agentIndex }),
+      ...(state.role === undefined ? {} : { role: state.role }),
+      ...(state.description.length === 0 ? {} : { title: state.description }),
+      ...(state.toolUseId === undefined ? {} : { toolUseId: state.toolUseId }),
+      ...(state.agentIndex === undefined ? {} : { agentIndex: state.agentIndex }),
+      ...(state.model === undefined ? {} : { model: state.model }),
+      ...(state.effort === undefined ? {} : { effort: state.effort }),
     };
     if (payload.status === "started") {
-      session.liveSubagents.add(payload.id);
       return this.#emit({
         type: "task.started",
         threadId: session.threadId,
         turnId: session.turnId,
         payload: {
           taskId,
-          ...(description === undefined ? {} : { description }),
+          description: state.description,
           ...linkage,
         },
       });
@@ -974,17 +1011,22 @@ export class OmpAdapter {
     if (status === undefined) {
       return Effect.void;
     }
-    session.liveSubagents.delete(payload.id);
-    return this.#emit({
+    const summary = status === "failed" ? (state.error ?? state.summary) : state.summary;
+    const completed = this.#emit({
       type: "task.completed",
       threadId: session.threadId,
       turnId: session.turnId,
       payload: {
         taskId,
         status,
+        ...(summary === undefined ? {} : { summary }),
+        ...(state.usage === undefined ? {} : { usage: state.usage }),
+        ...(state.typedUsage === undefined ? {} : { typedUsage: state.typedUsage }),
         ...linkage,
       },
     });
+    session.subagentStates.delete(payload.id);
+    return completed;
   }
 
   #onSubagentProgress(
@@ -999,20 +1041,10 @@ export class OmpAdapter {
     if (!isRecord(progress) || typeof progress.id !== "string") {
       return Effect.void;
     }
-    const description =
-      (typeof progress.task === "string" && progress.task.length > 0 ? progress.task : undefined) ??
-      (typeof payload.task === "string" && payload.task.length > 0 ? payload.task : undefined);
-    if (description === undefined) {
-      return Effect.void;
-    }
-    const role =
-      typeof progress.agent === "string"
-        ? progress.agent
-        : typeof payload.agent === "string"
-          ? payload.agent
-          : undefined;
-    const toolUseId =
-      typeof payload.parentToolCallId === "string" ? payload.parentToolCallId : undefined;
+    const state = this.#getOrCreateSubagentState(session, progress.id);
+    const description = readNonEmptyText(progress.task) ?? readNonEmptyText(payload.task);
+    const role = readNonEmptyText(progress.agent) ?? readNonEmptyText(payload.agent);
+    const toolUseId = readNonEmptyText(payload.parentToolCallId);
     const lastToolName =
       typeof progress.currentTool === "string" && progress.currentTool.length > 0
         ? progress.currentTool
@@ -1031,10 +1063,8 @@ export class OmpAdapter {
       progress.currentToolStartMs >= 0
         ? Math.floor(progress.currentToolStartMs)
         : undefined;
-    const model =
-      typeof progress.resolvedModel === "string" && progress.resolvedModel.length > 0
-        ? progress.resolvedModel
-        : undefined;
+    const model = readOmpModel(progress.resolvedModel ?? progress.model);
+    const effort = readOmpEffort(progress);
     const totalTokens =
       typeof progress.tokens === "number" &&
       Number.isFinite(progress.tokens) &&
@@ -1053,7 +1083,7 @@ export class OmpAdapter {
       progress.durationMs >= 0
         ? Math.floor(progress.durationMs)
         : undefined;
-    const typedUsage =
+    const typedUsage: RuntimeTaskUsage | undefined =
       totalTokens === undefined
         ? undefined
         : {
@@ -1062,26 +1092,261 @@ export class OmpAdapter {
             ...(durationMs === undefined ? {} : { durationMs }),
           };
     const status = runtimeTaskStatusFromOmpProgress(progress.status);
-    const agentIndex = typeof progress.index === "number" ? progress.index : undefined;
+    const agentIndex = readNonNegativeInt(progress.index);
+    if (description !== undefined) {
+      state.description = description;
+    }
+    if (role !== undefined) {
+      state.role = role;
+    }
+    if (toolUseId !== undefined) {
+      state.toolUseId = toolUseId;
+    }
+    if (agentIndex !== undefined) {
+      state.agentIndex = agentIndex;
+    }
+    if (model !== undefined) {
+      state.model = model;
+    }
+    if (effort !== undefined) {
+      state.effort = effort;
+    }
+    if (typedUsage !== undefined) {
+      state.typedUsage = typedUsage;
+    }
+    if (progress.usage !== undefined) {
+      state.usage = progress.usage;
+    }
+    const summary = readNonEmptyText(progress.recentOutput) ?? lastIntent;
+    const error = readOmpErrorText(progress.retryFailure);
+    return this.#emitSubagentTaskProgress(session, state, {
+      status,
+      summary,
+      error,
+      lastToolName,
+      lastIntent,
+      currentToolArgs,
+      currentToolStartMs,
+    });
+  }
+
+  #getOrCreateSubagentState(session: LiveAdapterSession, id: string): OmpSubagentState {
+    const existing = session.subagentStates.get(id);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const state: OmpSubagentState = {
+      id,
+      description: id,
+      role: undefined,
+      toolUseId: undefined,
+      agentIndex: undefined,
+      model: undefined,
+      effort: undefined,
+      summary: undefined,
+      error: undefined,
+      usage: undefined,
+      typedUsage: undefined,
+    };
+    session.subagentStates.set(id, state);
+    return state;
+  }
+
+  #emitSubagentTaskProgress(
+    session: LiveAdapterSession,
+    state: OmpSubagentState,
+    input: {
+      readonly status?: RuntimeTaskStatus;
+      readonly summary?: string;
+      readonly error?: string;
+      readonly lastToolName?: string;
+      readonly lastIntent?: string;
+      readonly currentToolArgs?: string;
+      readonly currentToolStartMs?: number;
+    } = {},
+  ): Effect.Effect<void> {
+    if (input.summary !== undefined) {
+      state.summary = truncateSubagentActivity(input.summary);
+    }
+    if (input.error !== undefined) {
+      state.error = truncateSubagentActivity(input.error);
+    }
     return this.#emit({
       type: "task.progress",
       threadId: session.threadId,
       turnId: session.turnId,
       payload: {
-        taskId: RuntimeTaskId.make(progress.id),
-        description,
-        ...(status === undefined ? {} : { status }),
-        ...(lastToolName === undefined ? {} : { lastToolName }),
-        ...(lastIntent === undefined ? {} : { lastIntent }),
-        ...(currentToolArgs === undefined ? {} : { currentToolArgs }),
-        ...(currentToolStartMs === undefined ? {} : { currentToolStartMs }),
-        ...(typedUsage === undefined ? {} : { typedUsage }),
-        ...(model === undefined ? {} : { model }),
-        ...(role === undefined ? {} : { role }),
-        ...(toolUseId === undefined ? {} : { toolUseId }),
-        ...(agentIndex === undefined ? {} : { agentIndex }),
+        taskId: RuntimeTaskId.make(state.id),
+        description: state.description,
+        ...(state.summary === undefined ? {} : { summary: state.summary }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        ...(state.error === undefined ? {} : { error: state.error }),
+        ...(state.usage === undefined ? {} : { usage: state.usage }),
+        ...(state.typedUsage === undefined ? {} : { typedUsage: state.typedUsage }),
+        ...(state.model === undefined ? {} : { model: state.model }),
+        ...(state.effort === undefined ? {} : { effort: state.effort }),
+        ...(state.role === undefined ? {} : { role: state.role }),
+        ...(state.toolUseId === undefined ? {} : { toolUseId: state.toolUseId }),
+        ...(state.agentIndex === undefined ? {} : { agentIndex: state.agentIndex }),
+        ...(input.lastToolName === undefined ? {} : { lastToolName: input.lastToolName }),
+        ...(input.lastIntent === undefined ? {} : { lastIntent: input.lastIntent }),
+        ...(input.currentToolArgs === undefined ? {} : { currentToolArgs: input.currentToolArgs }),
+        ...(input.currentToolStartMs === undefined
+          ? {}
+          : { currentToolStartMs: input.currentToolStartMs }),
       },
     });
+  }
+
+  #onSubagentEvent(
+    session: LiveAdapterSession,
+    frame: Record<string, unknown>,
+  ): Effect.Effect<void> {
+    const payload = frame.payload;
+    if (!isRecord(payload) || typeof payload.id !== "string" || !isRecord(payload.event)) {
+      return Effect.void;
+    }
+    const event = payload.event;
+    if (typeof event.type !== "string") {
+      return Effect.void;
+    }
+    const state = this.#getOrCreateSubagentState(session, payload.id);
+    const model = readOmpModel(event.model ?? event.resolvedModel);
+    const effort = readOmpEffort(event);
+    const usage = readOmpTaskUsage(event.usage);
+    if (model !== undefined) {
+      state.model = model;
+    }
+    if (effort !== undefined) {
+      state.effort = effort;
+    }
+    if (usage !== undefined) {
+      state.typedUsage = usage;
+    }
+    if (event.usage !== undefined) {
+      state.usage = event.usage;
+    }
+
+    if (event.type === "tool_execution_start") {
+      return this.#emitSubagentToolProgress(session, state, event);
+    }
+    if (event.type === "tool_execution_update") {
+      return this.#emitSubagentToolProgress(session, state, event);
+    }
+    if (event.type === "tool_execution_end") {
+      return this.#emitSubagentToolProgress(session, state, event);
+    }
+
+    if (event.type === "turn_start") {
+      state.error = undefined;
+      state.summary = undefined;
+    }
+    let summary = readOmpEventText(event);
+    let error: string | undefined;
+    let lastToolName: string | undefined;
+    let lastIntent: string | undefined;
+    let currentToolArgs: string | undefined;
+    if (event.type === "agent_end") {
+      error = readOmpAgentEndError(event);
+      summary = readLatestAssistantText(event.messages) ?? summary;
+      if (Array.isArray(event.messages)) {
+        for (const message of event.messages) {
+          const assistantModel = readOmpAssistantModel(message);
+          if (assistantModel !== undefined) {
+            state.model = assistantModel;
+          }
+        }
+      }
+    } else if (event.type === "message_end") {
+      const message = event.message;
+      const outcome = readOmpAssistantOutcome(message);
+      error = outcome === undefined ? undefined : formatOmpAssistantError(outcome);
+      summary = readOmpMessageText(message) ?? summary;
+      const assistantModel = readOmpAssistantModel(message);
+      if (assistantModel !== undefined) {
+        state.model = assistantModel;
+      }
+    } else if (event.type === "message_update") {
+      const assistantMessageEvent = event.assistantMessageEvent;
+      if (isRecord(assistantMessageEvent)) {
+        if (
+          assistantMessageEvent.type === "text_delta" ||
+          assistantMessageEvent.type === "thinking_delta"
+        ) {
+          summary = readNonEmptyText(assistantMessageEvent.delta) ?? summary;
+        } else if (assistantMessageEvent.type === "toolcall_end") {
+          const toolCall = assistantMessageEvent.toolCall;
+          if (isRecord(toolCall)) {
+            lastToolName = readNonEmptyText(toolCall.name);
+            lastIntent = readNonEmptyText(toolCall.intent);
+            currentToolArgs = readNonEmptyText(
+              typeof toolCall.arguments === "string"
+                ? toolCall.arguments
+                : toolCall.arguments === undefined
+                  ? undefined
+                  : JSON.stringify(toolCall.arguments),
+            );
+            summary = lastIntent ?? lastToolName ?? summary;
+          }
+        }
+      }
+    }
+    if (event.type.includes("retry") || event.type.includes("compaction")) {
+      error = readOmpErrorText(event.errorMessage ?? event.error) ?? error;
+      if (error === undefined && event.type.endsWith("end")) {
+        state.error = undefined;
+      }
+    }
+    const status =
+      event.type.includes("retry") || event.type.includes("compaction")
+        ? event.type.endsWith("start")
+          ? ("waiting" as const)
+          : event.type.endsWith("end")
+            ? ("running" as const)
+            : undefined
+        : undefined;
+    return this.#emitSubagentTaskProgress(session, state, {
+      status,
+      summary: summary ?? event.type,
+      error,
+      lastToolName,
+      lastIntent,
+      currentToolArgs,
+    });
+  }
+
+  #emitSubagentToolProgress(
+    session: LiveAdapterSession,
+    state: OmpSubagentState,
+    event: Record<string, unknown>,
+  ): Effect.Effect<void> {
+    const toolUseId = readNonEmptyText(event.toolCallId) ?? readNonEmptyText(event.toolUseId);
+    const toolName = readNonEmptyText(event.toolName);
+    const output = formatOmpToolOutputText(event.partialResult ?? event.result);
+    const summary =
+      readNonEmptyText(event.intent) ??
+      (output.length > 0 ? truncateSubagentActivity(output) : toolName);
+    const toolProgress = this.#emit({
+      type: "tool.progress",
+      threadId: session.threadId,
+      turnId: session.turnId,
+      payload: {
+        taskId: RuntimeTaskId.make(state.id),
+        ...(toolUseId === undefined ? {} : { toolUseId }),
+        ...(toolName === undefined ? {} : { toolName }),
+        ...(summary === undefined ? {} : { summary }),
+        ...(state.toolUseId === undefined ? {} : { parentToolUseId: state.toolUseId }),
+      },
+    });
+    if (event.type !== "tool_execution_end" || event.isError !== true) {
+      return toolProgress;
+    }
+    const error = summary ?? "subagent tool execution failed";
+    return toolProgress.pipe(
+      Effect.flatMap(() =>
+        this.#emitSubagentTaskProgress(session, state, { error, summary: error }),
+      ),
+    );
   }
 
   #onMessageStart(
@@ -1529,13 +1794,9 @@ export class OmpAdapter {
           payload: { state: "completed" },
         });
       }
-      // A user stop only settles the parent turn; background subagents (async
-      // jobs) keep running on their own decoupled run signal, so Stop must
-      // cancel them explicitly. Fall back to terminating the child when the
-      // running omp predates `cancel_subagent`.
-      if (aborted && session.liveSubagents.size > 0) {
-        yield* this.#cancelLiveSubagents(session);
-      }
+      // OMP v18.0.11 has no child-targeted cancel RPC. A parent abort settles
+      // only the parent turn; background task jobs retain their own lifecycle
+      // and must not cause the root RPC session to be torn down.
     });
   }
 
@@ -1604,34 +1865,6 @@ export class OmpAdapter {
           : { filesReviewed: extracted.filesReviewed }),
         ...(extracted.lineCoverage === undefined ? {} : { lineCoverage: extracted.lineCoverage }),
       } as const;
-    });
-  }
-
-  #cancelLiveSubagents(session: LiveAdapterSession): Effect.Effect<void> {
-    const ids = Array.from(session.liveSubagents);
-    if (ids.length === 0) {
-      return Effect.void;
-    }
-    return Effect.gen({ self: this }, function* () {
-      for (const subagentId of ids) {
-        const outcome = yield* Effect.exit(
-          this.#send(session.threadId, {
-            type: "cancel_subagent",
-            subagentId,
-          }).pipe(Effect.timeout(OMP_ABORT_ACK_TIMEOUT)),
-        );
-        // `cancel_subagent` acknowledges with a response; a `success: false`
-        // response means the command is unknown (pre-`cancel_subagent` omp) or
-        // the cancel failed. An effect-level failure means the child died. In
-        // every non-success case the only way to actually stop the subagents
-        // is to terminate the child.
-        const cancelled =
-          Exit.isSuccess(outcome) && isRecord(outcome.value) && outcome.value.success === true;
-        if (!cancelled) {
-          yield* this.#onSessionTransportEnded(session);
-          return;
-        }
-      }
     });
   }
 
@@ -2163,6 +2396,127 @@ function runtimeTaskStatusFromOmpProgress(status: unknown): RuntimeTaskStatus | 
     default:
       return undefined;
   }
+}
+
+function readNonEmptyText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function truncateSubagentActivity(value: string, maxLength = 500): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength - 1)}…`;
+}
+
+function readNonNegativeInt(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : undefined;
+}
+
+function readOmpTaskUsage(value: unknown): RuntimeTaskUsage | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const totalTokens = readNonNegativeInt(value.totalTokens ?? value.tokens);
+  if (totalTokens === undefined) {
+    return undefined;
+  }
+  const inputTokens = readNonNegativeInt(value.inputTokens);
+  const cachedInputTokens = readNonNegativeInt(value.cachedInputTokens);
+  const outputTokens = readNonNegativeInt(value.outputTokens);
+  const reasoningOutputTokens = readNonNegativeInt(value.reasoningOutputTokens);
+  const toolUses = readNonNegativeInt(value.toolUses ?? value.toolCount);
+  const durationMs = readNonNegativeInt(value.durationMs);
+  return {
+    totalTokens,
+    ...(inputTokens === undefined ? {} : { inputTokens }),
+    ...(cachedInputTokens === undefined ? {} : { cachedInputTokens }),
+    ...(outputTokens === undefined ? {} : { outputTokens }),
+    ...(reasoningOutputTokens === undefined ? {} : { reasoningOutputTokens }),
+    ...(toolUses === undefined ? {} : { toolUses }),
+    ...(durationMs === undefined ? {} : { durationMs }),
+  };
+}
+
+function readOmpModel(value: unknown): string | undefined {
+  const direct = readNonEmptyText(value);
+  if (direct !== undefined) {
+    return direct;
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const provider = readNonEmptyText(value.provider);
+  const modelId = readNonEmptyText(value.id ?? value.modelId);
+  return provider !== undefined && modelId !== undefined ? `${provider}/${modelId}` : undefined;
+}
+
+function readOmpEffort(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return (
+    readNonEmptyText(value.effort) ??
+    readNonEmptyText(value.thinkingLevel) ??
+    readNonEmptyText(value.level)
+  );
+}
+
+function readOmpMessageText(value: unknown): string | undefined {
+  if (!isRecord(value) || value.role !== "assistant") {
+    return undefined;
+  }
+  const text = formatOmpToolOutputText(value);
+  return text.length > 0 ? truncateSubagentActivity(text) : undefined;
+}
+
+function readLatestAssistantText(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  let latest: string | undefined;
+  for (const message of value) {
+    const text = readOmpMessageText(message);
+    if (text !== undefined) {
+      latest = text;
+    }
+  }
+  return latest;
+}
+
+function readOmpAssistantModel(value: unknown): string | undefined {
+  const outcome = readOmpAssistantOutcome(value);
+  if (outcome === undefined) {
+    return undefined;
+  }
+  const model = readNonEmptyText(outcome.model);
+  if (model === undefined) {
+    return undefined;
+  }
+  const provider = readNonEmptyText(outcome.provider);
+  return provider === undefined ? model : `${provider}/${model}`;
+}
+
+function readOmpEventText(event: Record<string, unknown>): string | undefined {
+  const direct = readNonEmptyText(event.text ?? event.message ?? event.reason ?? event.detail);
+  if (direct !== undefined) {
+    return truncateSubagentActivity(direct);
+  }
+  return readLatestAssistantText(event.messages);
+}
+
+function readOmpErrorText(value: unknown): string | undefined {
+  const direct = readNonEmptyText(value);
+  if (direct !== undefined) {
+    return truncateSubagentActivity(direct);
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return readOmpErrorText(value.errorMessage ?? value.error ?? value.message ?? value.detail);
 }
 
 function isLocalOnlyPromptResponse(response: object): boolean {
