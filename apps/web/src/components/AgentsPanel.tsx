@@ -320,9 +320,6 @@ function NestedSubagentTranscriptPane({
     reportFailure: false,
   });
   const steer = useAtomCommand(serverEnvironment.ompSteer, { reportFailure: false });
-  const setSubscription = useAtomCommand(serverEnvironment.ompSetSubagentSubscription, {
-    reportFailure: false,
-  });
   const interruptTurn = useAtomCommand(threadEnvironment.interruptTurn, { reportFailure: false });
   const transcriptActivityKey = [
     agent.status,
@@ -384,14 +381,6 @@ function NestedSubagentTranscriptPane({
     initialLoadRef.current = true;
     loadedActivityKeyRef.current = transcriptActivityKey;
     void (async () => {
-      const subscription = await setSubscription({
-        environmentId,
-        input: { threadId, level: "events" },
-      });
-      if (cancelled) return;
-      if (subscription._tag === "Failure") {
-        setError("Failed to subscribe to live transcript");
-      }
       await loadMessages(true);
       if (cancelled) {
         return;
@@ -402,12 +391,8 @@ function NestedSubagentTranscriptPane({
     return () => {
       cancelled = true;
       loadGenerationRef.current += 1;
-      void setSubscription({
-        environmentId,
-        input: { threadId, level: "progress" },
-      });
     };
-  }, [agent.id, environmentId, loadMessages, setSubscription, threadId]);
+  }, [agent.id, environmentId, loadMessages, threadId]);
 
   // The current OMP messages RPC has no cursor or message subscription payload.
   // Reload only when a coarse activity signal changes; this is event-driven,
