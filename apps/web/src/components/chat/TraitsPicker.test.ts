@@ -35,14 +35,22 @@ const CONTEXT_WINDOW = selectDescriptor(
 );
 
 const CODEX = ProviderDriverKind.make("codex");
+const OMP = ProviderDriverKind.make("omp");
 
-function display(descriptors: ReadonlyArray<ProviderOptionDescriptor>) {
+function displayFor(
+  provider: ProviderDriverKind,
+  descriptors: ReadonlyArray<ProviderOptionDescriptor>,
+) {
   return buildTraitsTriggerDisplay({
-    provider: CODEX,
+    provider,
     descriptors,
     primarySelectDescriptorId: "reasoningEffort",
     ultrathinkPromptControlled: false,
   });
+}
+
+function display(descriptors: ReadonlyArray<ProviderOptionDescriptor>) {
+  return displayFor(CODEX, descriptors);
 }
 
 describe("buildTraitsTriggerDisplay", () => {
@@ -83,6 +91,22 @@ describe("buildTraitsTriggerDisplay", () => {
       showFastModeIcon: false,
     });
     expect(display([EFFORT, { ...serviceTier, currentValue: "priority" }])).toEqual({
+      label: "High",
+      showFastModeIcon: true,
+    });
+  });
+
+  it("renders OMP Codex's Fast service tier with the bolt", () => {
+    const serviceTier = selectDescriptor(
+      "serviceTier",
+      [
+        { id: "default", label: "Standard", isDefault: true },
+        { id: "priority", label: "Fast" },
+      ],
+      "priority",
+    );
+
+    expect(displayFor(OMP, [EFFORT, serviceTier])).toEqual({
       label: "High",
       showFastModeIcon: true,
     });

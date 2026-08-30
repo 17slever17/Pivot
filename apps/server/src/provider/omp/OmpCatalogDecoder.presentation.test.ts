@@ -69,6 +69,70 @@ describe("OmpCatalogDecoder model presentation", () => {
               { id: "max", label: "Max" },
             ],
           },
+          {
+            id: "serviceTier",
+            label: "Service Tier",
+            type: "select",
+            currentValue: "default",
+            options: [
+              { id: "default", label: "Standard", isDefault: true },
+              {
+                id: "priority",
+                label: "Fast",
+                description: "Faster responses at higher cost.",
+              },
+            ],
+          },
+        ],
+      });
+    }),
+  );
+
+  it.effect("adds Fast mode only for the openai-codex provider family", () =>
+    Effect.gen(function* () {
+      const decoder = new OmpCatalogDecoder();
+
+      const models = yield* decoder.decodeModels({
+        data: {
+          models: [
+            { provider: "openai-codex", id: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
+            {
+              provider: "openai",
+              id: "gpt-5.6-sol",
+              name: "GPT-5.6 Sol",
+              thinking: { efforts: ["low"], defaultLevel: "low" },
+            },
+          ],
+        },
+      });
+
+      expect(models[0]?.capabilities).toEqual({
+        optionDescriptors: [
+          {
+            id: "serviceTier",
+            label: "Service Tier",
+            type: "select",
+            currentValue: "default",
+            options: [
+              { id: "default", label: "Standard", isDefault: true },
+              {
+                id: "priority",
+                label: "Fast",
+                description: "Faster responses at higher cost.",
+              },
+            ],
+          },
+        ],
+      });
+      expect(models[1]?.capabilities).toEqual({
+        optionDescriptors: [
+          {
+            id: "reasoningEffort",
+            label: "Reasoning",
+            type: "select",
+            currentValue: "low",
+            options: [{ id: "low", label: "Low", isDefault: true }],
+          },
         ],
       });
     }),

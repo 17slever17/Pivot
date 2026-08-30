@@ -7,6 +7,7 @@
 import {
   ProviderDriverKind,
   type ModelCapabilities,
+  type ProviderOptionDescriptor,
   type ServerProviderModel,
   type ServerProviderSlashCommand,
 } from "@t3tools/contracts";
@@ -47,32 +48,24 @@ function formatThinkingLevelLabel(level: string): string {
 }
 
 function decodeModelCapabilities(entry: Record<string, unknown>): ModelCapabilities | null {
-  if (!isRecord(entry.thinking) || !Array.isArray(entry.thinking.efforts)) {
-    return null;
-  }
-
-  const efforts = Array.from(
-    new Set(
-      entry.thinking.efforts.flatMap((value) => {
-        if (typeof value !== "string") {
-          return [];
-        }
-        const effort = value.trim();
-        return effort.length > 0 ? [effort] : [];
-      }),
-    ),
-  );
-  if (efforts.length === 0) {
-    return null;
-  }
-
-  const rawDefaultLevel =
-    typeof entry.thinking.defaultLevel === "string" ? entry.thinking.defaultLevel.trim() : "";
-  const defaultLevel = efforts.includes(rawDefaultLevel) ? rawDefaultLevel : undefined;
-
-  return {
-    optionDescriptors: [
-      {
+  const optionDescriptors: ProviderOptionDescriptor[] = [];
+  if (isRecord(entry.thinking) && Array.isArray(entry.thinking.efforts)) {
+    const efforts = Array.from(
+      new Set(
+        entry.thinking.efforts.flatMap((value) => {
+          if (typeof value !== "string") {
+            return [];
+          }
+          const effort = value.trim();
+          return effort.length > 0 ? [effort] : [];
+        }),
+      ),
+    );
+    if (efforts.length > 0) {
+      const rawDefaultLevel =
+        typeof entry.thinking.defaultLevel === "string" ? entry.thinking.defaultLevel.trim() : "";
+      const defaultLevel = efforts.includes(rawDefaultLevel) ? rawDefaultLevel : undefined;
+      optionDescriptors.push({
         id: "reasoningEffort",
         label: "Reasoning",
         type: "select",
@@ -82,9 +75,29 @@ function decodeModelCapabilities(entry: Record<string, unknown>): ModelCapabilit
           ...(effort === defaultLevel ? { isDefault: true } : {}),
         })),
         ...(defaultLevel === undefined ? {} : { currentValue: defaultLevel }),
-      },
-    ],
-  };
+      });
+    }
+  }
+
+  // OMP does not currently expose a narrower service-tier capability in its
+  // model catalog. The Codex provider family is the only one with a proven
+  // Fast-mode RPC (`set_fast_mode`), so keep this descriptor scoped to the
+  // `openai-codex` family instead of advertising it for OpenAI-compatible
+  // providers such as `openai`, Kilo, or OpenCode.
+  if (typeof entry.provider === "string" && entry.provider.trim() === "openai-codex") {
+    optionDescriptors.push({
+      id: "serviceTier",
+      label: "Service Tier",
+      type: "select",
+      currentValue: "default",
+      options: [
+        { id: "default", label: "Standard", isDefault: true },
+        { id: "priority", label: "Fast", description: "Faster responses at higher cost." },
+      ],
+    });
+  }
+
+  return optionDescriptors.length > 0 ? { optionDescriptors } : null;
 }
 
 /**

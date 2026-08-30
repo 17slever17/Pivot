@@ -422,7 +422,7 @@ export function buildTraitsTriggerDisplay(input: {
       continue;
     }
     if (
-      input.provider === "codex" &&
+      (input.provider === "codex" || input.provider === "omp") &&
       descriptor.id === "serviceTier" &&
       descriptor.type === "select"
     ) {
@@ -514,7 +514,7 @@ export const TraitsPicker = memo(function TraitsPicker({
     </>
   ) : null;
 
-  const isCodexStyle = provider === "codex";
+  const isCodexStyle = provider === "codex" || provider === "omp";
 
   return (
     <Menu

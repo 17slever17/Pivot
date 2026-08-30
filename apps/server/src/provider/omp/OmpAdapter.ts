@@ -98,6 +98,36 @@ const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 const isProviderAdapterProcessError = Schema.is(ProviderAdapterProcessError);
 const isOmpSpawnError = Schema.is(OmpSpawnError);
 
+type OmpModelOption = { readonly id: string; readonly value: string | boolean };
+
+/**
+ * OMP exposes Fast mode as a boolean RPC, while the shared model selection uses
+ * the provider-neutral serviceTier option. Keep the legacy fastMode fallback,
+ * but let an explicitly selected serviceTier win even when both are present.
+ */
+function resolveOmpFastMode(options: ReadonlyArray<OmpModelOption>): {
+  readonly hasServiceTier: boolean;
+  readonly enabled: boolean | undefined;
+} {
+  const serviceTier = options.find((option) => option.id === "serviceTier");
+  if (serviceTier !== undefined) {
+    return {
+      hasServiceTier: true,
+      enabled:
+        serviceTier.value === "priority"
+          ? true
+          : serviceTier.value === "default"
+            ? false
+            : undefined,
+    };
+  }
+  const legacyFastMode = options.find((option) => option.id === "fastMode");
+  return {
+    hasServiceTier: false,
+    enabled: typeof legacyFastMode?.value === "boolean" ? legacyFastMode.value : undefined,
+  };
+}
+
 function mapOmpAgentProfileError(
   method: string,
   cause: OmpAgentProfileError,
@@ -538,6 +568,7 @@ export class OmpAdapter {
         })
         .pipe(Effect.mapError((cause) => mapOmpSpawnError(input.threadId, cause)));
       yield* this.#applyModelSelection(input.threadId, input.modelSelection?.model);
+      yield* this.#applyTurnOptions(input.threadId, input.modelSelection?.options);
       return snapshot;
     });
   }
@@ -2074,14 +2105,13 @@ export class OmpAdapter {
     });
   }
 
-  #applyTurnOptions(
-    threadId: ThreadId,
-    options: ReadonlyArray<{ readonly id: string; readonly value: string | boolean }> | undefined,
-  ) {
+  #applyTurnOptions(threadId: ThreadId, options: ReadonlyArray<OmpModelOption> | undefined) {
     return Effect.gen({ self: this }, function* () {
       if (options === undefined) {
         return;
       }
+      const fastMode = resolveOmpFastMode(options);
+      let serviceTierSent = false;
       for (const option of options) {
         if (
           (option.id === "effort" ||
@@ -2095,7 +2125,20 @@ export class OmpAdapter {
             level: option.value,
           });
         }
-        if (option.id === "fastMode" && typeof option.value === "boolean") {
+        if (option.id === "serviceTier" && !serviceTierSent) {
+          serviceTierSent = true;
+          if (fastMode.enabled !== undefined) {
+            yield* this.#send(threadId, {
+              type: "set_fast_mode",
+              enabled: fastMode.enabled,
+            });
+          }
+        }
+        if (
+          option.id === "fastMode" &&
+          !fastMode.hasServiceTier &&
+          typeof option.value === "boolean"
+        ) {
           yield* this.#send(threadId, {
             type: "set_fast_mode",
             enabled: option.value,

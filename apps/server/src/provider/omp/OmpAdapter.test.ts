@@ -2508,7 +2508,28 @@ describe("OmpAdapter", () => {
     }),
   );
 
-  it.effect("sendTurn applies thinking and fastMode options before prompt", () =>
+  it.effect("startSession applies service tier before the first prompt", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      yield* adapter.startSession({
+        ...startInput,
+        modelSelection: {
+          instanceId: ProviderInstanceId.make("omp"),
+          model: "openai-codex/gpt-5.6-sol",
+          options: [{ id: "serviceTier", value: "priority" }],
+        },
+      });
+
+      NodeAssert.deepEqual(
+        fake.sent.map((command) => command.type),
+        ["set_subagent_subscription", "set_model", "set_fast_mode"],
+      );
+      NodeAssert.equal(fake.sent.at(-1)?.enabled, true);
+    }),
+  );
+
+  it.effect("sendTurn applies thinking and service tier options before prompt", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
       const adapter = new OmpAdapter(fake, testRandomUUID);
@@ -2519,10 +2540,10 @@ describe("OmpAdapter", () => {
         input: "hi",
         modelSelection: {
           instanceId: ProviderInstanceId.make("omp"),
-          model: "openai/gpt-5",
+          model: "openai-codex/gpt-5.6-sol",
           options: [
             { id: "effort", value: "high" },
-            { id: "fastMode", value: true },
+            { id: "serviceTier", value: "priority" },
           ],
         },
       });
@@ -2532,6 +2553,62 @@ describe("OmpAdapter", () => {
       );
       NodeAssert.equal(fake.sent.slice(sentBefore)[1]?.level, "high");
       NodeAssert.equal(fake.sent.slice(sentBefore)[2]?.enabled, true);
+    }),
+  );
+
+  it.effect("maps the standard service tier to disabled fast mode", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      yield* adapter.startSession(startInput);
+
+      const sentBefore = fake.sent.length;
+      yield* adapter.sendTurn({
+        threadId: THREAD_ID,
+        input: "standard",
+        modelSelection: {
+          instanceId: ProviderInstanceId.make("omp"),
+          model: "openai-codex/gpt-5.6-sol",
+          options: [{ id: "serviceTier", value: "default" }],
+        },
+      });
+
+      const commands = fake.sent.slice(sentBefore);
+      NodeAssert.deepEqual(
+        commands.map((command) => command.type),
+        ["set_model", "set_fast_mode", "prompt"],
+      );
+      NodeAssert.equal(commands[1]?.enabled, false);
+    }),
+  );
+
+  it.effect("keeps legacy fastMode compatibility and lets serviceTier win", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      yield* adapter.startSession(startInput);
+
+      const sentBefore = fake.sent.length;
+      yield* adapter.sendTurn({
+        threadId: THREAD_ID,
+        input: "legacy",
+        modelSelection: {
+          instanceId: ProviderInstanceId.make("omp"),
+          model: "openai-codex/gpt-5.6-sol",
+          options: [
+            { id: "fastMode", value: false },
+            { id: "serviceTier", value: "priority" },
+          ],
+        },
+      });
+
+      const commands = fake.sent.slice(sentBefore);
+      NodeAssert.deepEqual(
+        commands.map((command) => command.type),
+        ["set_model", "set_fast_mode", "prompt"],
+      );
+      NodeAssert.equal(commands[1]?.enabled, true);
+      NodeAssert.equal(commands.filter((command) => command.type === "set_fast_mode").length, 1);
     }),
   );
 
