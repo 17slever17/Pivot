@@ -12,6 +12,7 @@ import {
   PreviewAnnotationPayloadSchema,
   type PreviewAnnotationPayload,
   RuntimeMode,
+  ThreadAgentMode,
   type ServerProvider,
   type ScopedProjectRef,
   type ScopedThreadRef,
@@ -54,6 +55,7 @@ import { getDefaultServerModel } from "./providerModels";
 import { UnifiedSettings } from "@t3tools/contracts/settings";
 import { ReviewCommentContextSchema, type ReviewCommentContext } from "./reviewCommentContext";
 const isRuntimeMode = Schema.is(RuntimeMode);
+const isThreadAgentMode = Schema.is(ThreadAgentMode);
 const isProviderDriverKind = Schema.is(ProviderDriverKind);
 const isReviewCommentContext = Schema.is(ReviewCommentContextSchema);
 
@@ -147,6 +149,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   modelSelectionByProvider: Schema.optionalKey(Schema.Record(ProviderInstanceId, ModelSelection)),
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderInstanceId)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
+  agentMode: Schema.optionalKey(ThreadAgentMode),
   interactionMode: Schema.optionalKey(ProviderInteractionMode),
 });
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
@@ -212,6 +215,7 @@ const PersistedDraftThreadState = Schema.Struct({
   logicalProjectKey: Schema.optionalKey(Schema.String),
   createdAt: Schema.String,
   runtimeMode: RuntimeMode,
+  agentMode: Schema.optionalKey(ThreadAgentMode),
   interactionMode: ProviderInteractionMode,
   branch: Schema.NullOr(Schema.String),
   worktreePath: Schema.NullOr(Schema.String),
@@ -275,6 +279,7 @@ export interface ComposerThreadDraftState {
   /** Routing key of the last picked instance (see `modelSelectionByProvider`). */
   activeProvider: ProviderInstanceId | null;
   runtimeMode: RuntimeMode | null;
+  agentMode: ThreadAgentMode | null;
   interactionMode: ProviderInteractionMode | null;
 }
 
@@ -316,6 +321,7 @@ export interface DraftSessionState {
   logicalProjectKey: string;
   createdAt: string;
   runtimeMode: RuntimeMode;
+  agentMode: ThreadAgentMode;
   interactionMode: ProviderInteractionMode;
   branch: string | null;
   worktreePath: string | null;
@@ -384,6 +390,7 @@ interface ComposerDraftStoreState {
       envMode?: DraftThreadEnvMode;
       startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
+      agentMode?: ThreadAgentMode;
       interactionMode?: ProviderInteractionMode;
     },
   ) => void;
@@ -399,6 +406,7 @@ interface ComposerDraftStoreState {
       envMode?: DraftThreadEnvMode;
       startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
+      agentMode?: ThreadAgentMode;
       interactionMode?: ProviderInteractionMode;
     },
   ) => void;
@@ -413,6 +421,7 @@ interface ComposerDraftStoreState {
       envMode?: DraftThreadEnvMode;
       startFromOrigin?: boolean;
       runtimeMode?: RuntimeMode;
+      agentMode?: ThreadAgentMode;
       interactionMode?: ProviderInteractionMode;
     },
   ) => void;
@@ -464,6 +473,10 @@ interface ComposerDraftStoreState {
   setRuntimeMode: (
     threadRef: ComposerThreadTarget,
     runtimeMode: RuntimeMode | null | undefined,
+  ) => void;
+  setAgentMode: (
+    threadRef: ComposerThreadTarget,
+    agentMode: ThreadAgentMode | null | undefined,
   ) => void;
   setInteractionMode: (
     threadRef: ComposerThreadTarget,
@@ -634,6 +647,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   modelSelectionByProvider: EMPTY_MODEL_SELECTION_BY_PROVIDER,
   activeProvider: null,
   runtimeMode: null,
+  agentMode: null,
   interactionMode: null,
 });
 
@@ -656,6 +670,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     modelSelectionByProvider: {},
     activeProvider: null,
     runtimeMode: null,
+    agentMode: null,
     interactionMode: null,
   };
 }
@@ -729,6 +744,7 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     Object.keys(draft.modelSelectionByProvider).length === 0 &&
     draft.activeProvider === null &&
     draft.runtimeMode === null &&
+    draft.agentMode === null &&
     draft.interactionMode === null
   );
 }
@@ -1372,6 +1388,7 @@ function createDraftThreadState(
     envMode?: DraftThreadEnvMode;
     startFromOrigin?: boolean;
     runtimeMode?: RuntimeMode;
+    agentMode?: ThreadAgentMode;
     interactionMode?: ProviderInteractionMode;
   },
 ): DraftThreadState {
@@ -1408,6 +1425,7 @@ function createDraftThreadState(
     runtimeMode: options?.runtimeMode ?? existingThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
     interactionMode:
       options?.interactionMode ?? existingThread?.interactionMode ?? DEFAULT_INTERACTION_MODE,
+    agentMode: options?.agentMode ?? existingThread?.agentMode ?? "single",
     branch: nextBranch,
     worktreePath: nextWorktreePath,
     envMode:
@@ -1440,6 +1458,7 @@ function draftThreadsEqual(left: DraftThreadState | undefined, right: DraftThrea
     left.logicalProjectKey === right.logicalProjectKey &&
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
+    left.agentMode === right.agentMode &&
     left.interactionMode === right.interactionMode &&
     left.branch === right.branch &&
     left.worktreePath === right.worktreePath &&
@@ -1584,6 +1603,9 @@ function normalizePersistedDraftThreads(
           candidateDraftThread.interactionMode === "default"
             ? candidateDraftThread.interactionMode
             : DEFAULT_INTERACTION_MODE,
+        agentMode: isThreadAgentMode(candidateDraftThread.agentMode)
+          ? candidateDraftThread.agentMode
+          : "single",
         branch: typeof branch === "string" ? branch : null,
         worktreePath: normalizedWorktreePath,
         envMode: normalizeDraftThreadEnvMode(candidateDraftThread.envMode, normalizedWorktreePath),
@@ -1629,6 +1651,7 @@ function normalizePersistedDraftThreads(
           logicalProjectKey,
           createdAt: new Date().toISOString(),
           runtimeMode: DEFAULT_RUNTIME_MODE,
+          agentMode: "single",
           interactionMode: DEFAULT_INTERACTION_MODE,
           branch: null,
           worktreePath: null,
@@ -1715,6 +1738,7 @@ function normalizePersistedDraftsByThreadId(
       draftCandidate.interactionMode === "plan" || draftCandidate.interactionMode === "default"
         ? draftCandidate.interactionMode
         : null;
+    const agentMode = isThreadAgentMode(draftCandidate.agentMode) ? draftCandidate.agentMode : null;
     const prompt = ensureInlineTerminalContextPlaceholders(
       promptCandidate,
       terminalContexts.length,
@@ -1775,6 +1799,7 @@ function normalizePersistedDraftsByThreadId(
       reviewComments.length === 0 &&
       !hasModelData &&
       !runtimeMode &&
+      !agentMode &&
       !interactionMode
     ) {
       continue;
@@ -1804,6 +1829,7 @@ function normalizePersistedDraftsByThreadId(
           }
         : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
+      ...(agentMode ? { agentMode } : {}),
       ...(interactionMode ? { interactionMode } : {}),
     };
   }
@@ -1907,6 +1933,7 @@ function partializeComposerDraftStoreState(
       draft.reviewComments.length === 0 &&
       !hasModelData &&
       draft.runtimeMode === null &&
+      draft.agentMode === null &&
       draft.interactionMode === null
     ) {
       continue;
@@ -1965,6 +1992,7 @@ function partializeComposerDraftStoreState(
           }
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
+      ...(draft.agentMode ? { agentMode: draft.agentMode } : {}),
       ...(draft.interactionMode ? { interactionMode: draft.interactionMode } : {}),
     };
     persistedDraftsByThreadKey[threadKey] = persistedDraft;
@@ -2211,6 +2239,7 @@ function toHydratedThreadDraft(
     modelSelectionByProvider,
     activeProvider,
     runtimeMode: persistedDraft.runtimeMode ?? null,
+    agentMode: persistedDraft.agentMode ?? null,
     interactionMode: persistedDraft.interactionMode ?? null,
   };
 }
@@ -2232,6 +2261,7 @@ function toHydratedDraftThreadState(
       ),
     createdAt: persistedDraftThread.createdAt,
     runtimeMode: persistedDraftThread.runtimeMode,
+    agentMode: persistedDraftThread.agentMode ?? "single",
     interactionMode: persistedDraftThread.interactionMode,
     branch: persistedDraftThread.branch,
     worktreePath: persistedDraftThread.worktreePath,
@@ -2465,6 +2495,7 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
                   ? existing.createdAt
                   : options.createdAt || existing.createdAt,
               runtimeMode: options.runtimeMode ?? existing.runtimeMode,
+              agentMode: options.agentMode ?? existing.agentMode,
               interactionMode: options.interactionMode ?? existing.interactionMode,
               branch: nextBranch,
               worktreePath: nextWorktreePath,
@@ -2479,6 +2510,7 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
               nextDraftThread.logicalProjectKey === existing.logicalProjectKey &&
               nextDraftThread.createdAt === existing.createdAt &&
               nextDraftThread.runtimeMode === existing.runtimeMode &&
+              nextDraftThread.agentMode === existing.agentMode &&
               nextDraftThread.interactionMode === existing.interactionMode &&
               nextDraftThread.branch === existing.branch &&
               nextDraftThread.worktreePath === existing.worktreePath &&
@@ -2943,6 +2975,34 @@ const composerDraftStore = create<ComposerDraftStoreState>()(
             const nextDraft: ComposerThreadDraftState = {
               ...base,
               interactionMode: nextInteractionMode,
+            };
+            const nextDraftsByThreadKey = { ...state.draftsByThreadKey };
+            if (shouldRemoveDraft(nextDraft)) {
+              delete nextDraftsByThreadKey[threadKey];
+            } else {
+              nextDraftsByThreadKey[threadKey] = nextDraft;
+            }
+            return { draftsByThreadKey: nextDraftsByThreadKey };
+          });
+        },
+        setAgentMode: (threadRef, agentMode) => {
+          const threadKey = resolveComposerDraftKey(get(), threadRef) ?? "";
+          if (threadKey.length === 0) {
+            return;
+          }
+          const nextAgentMode = isThreadAgentMode(agentMode) ? agentMode : null;
+          set((state) => {
+            const existing = state.draftsByThreadKey[threadKey];
+            if (!existing && nextAgentMode === null) {
+              return state;
+            }
+            const base = existing ?? createEmptyThreadDraft();
+            if (base.agentMode === nextAgentMode) {
+              return state;
+            }
+            const nextDraft: ComposerThreadDraftState = {
+              ...base,
+              agentMode: nextAgentMode,
             };
             const nextDraftsByThreadKey = { ...state.draftsByThreadKey };
             if (shouldRemoveDraft(nextDraft)) {

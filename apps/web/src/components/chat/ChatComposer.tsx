@@ -200,6 +200,7 @@ import {
   LockOpenIcon,
   PenLineIcon,
   SparklesIcon,
+  UsersIcon,
   XIcon,
 } from "lucide-react";
 import { proposedPlanTitle } from "../../proposedPlan";
@@ -297,8 +298,11 @@ function isInsideComposerFloatingLayer(element: Element): boolean {
 const ComposerFooterModeControls = memo(function ComposerFooterModeControls(props: {
   showInteractionModeToggle: boolean;
   interactionMode: ProviderInteractionMode;
+  agentMode: "single" | "orchestrator";
+  agentModeChangeDisabled: boolean;
   runtimeMode: RuntimeMode;
   onToggleInteractionMode: () => void;
+  onAgentModeChange: (mode: "single" | "orchestrator") => void;
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
   const runtimeModeOption = runtimeModeConfig[props.runtimeMode];
@@ -343,6 +347,55 @@ const ComposerFooterModeControls = memo(function ComposerFooterModeControls(prop
 
   return (
     <>
+      <Tooltip>
+        <Select
+          value={props.agentMode}
+          onValueChange={(value) => {
+            if (value === "single" || value === "orchestrator") {
+              props.onAgentModeChange(value);
+            }
+          }}
+        >
+          <TooltipTrigger
+            render={
+              <ComposerSelectControl
+                className="font-medium"
+                aria-label="Agent mode"
+                disabled={props.agentModeChangeDisabled}
+              />
+            }
+          >
+            <ComposerControlIcon icon={props.agentMode === "orchestrator" ? UsersIcon : BotIcon} />
+            <SelectValue>
+              {props.agentMode === "orchestrator" ? "Orchestrator" : "Single"}
+            </SelectValue>
+          </TooltipTrigger>
+          <SelectPopup alignItemWithTrigger={false}>
+            <SelectItem value="single" hideIndicator className="min-w-64 py-2">
+              <div className="grid gap-0.5">
+                <span className="font-medium text-foreground">Single</span>
+                <span className="text-muted-foreground text-xs leading-4">
+                  Use one primary agent for this thread.
+                </span>
+              </div>
+            </SelectItem>
+            <SelectItem value="orchestrator" hideIndicator className="min-w-64 py-2">
+              <div className="grid gap-0.5">
+                <span className="font-medium text-foreground">Orchestrator</span>
+                <span className="text-muted-foreground text-xs leading-4">
+                  Let the root agent coordinate named subagents.
+                </span>
+              </div>
+            </SelectItem>
+          </SelectPopup>
+        </Select>
+        <TooltipPopup side="top">
+          {props.agentModeChangeDisabled
+            ? "Agent mode can only change before the first turn or while idle."
+            : "Choose how the root agent handles this thread."}
+        </TooltipPopup>
+      </Tooltip>
+      <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
       <Separator orientation="vertical" className="mx-0.5 hidden h-4 sm:block" />
 
       <Tooltip>
@@ -545,6 +598,8 @@ export interface ChatComposerProps {
 
   // Mode
   runtimeMode: RuntimeMode;
+  agentMode: "single" | "orchestrator";
+  agentModeChangeDisabled: boolean;
   interactionMode: ProviderInteractionMode;
 
   // Provider / model
@@ -592,6 +647,7 @@ export interface ChatComposerProps {
   onProviderModelSelect: (instanceId: ProviderInstanceId, model: string) => void;
   getModelDisabledReason: (instanceId: ProviderInstanceId, model: string) => string | null;
   toggleInteractionMode: () => void;
+  handleAgentModeChange: (mode: "single" | "orchestrator") => void;
   handleRuntimeModeChange: (mode: RuntimeMode) => void;
   handleInteractionModeChange: (mode: ProviderInteractionMode) => void;
 
@@ -638,6 +694,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     showPlanFollowUpPrompt,
     activeProposedPlan,
     runtimeMode,
+    agentMode,
+    agentModeChangeDisabled,
     interactionMode,
     lockedProvider,
     providerStatuses,
@@ -665,6 +723,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     onProviderModelSelect,
     getModelDisabledReason,
     toggleInteractionMode,
+    handleAgentModeChange,
     handleRuntimeModeChange,
     handleInteractionModeChange,
     focusComposer,
@@ -3166,10 +3225,13 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                 {isComposerFooterCompact ? (
                   <CompactComposerControlsMenu
                     interactionMode={interactionMode}
+                    agentMode={agentMode}
+                    agentModeChangeDisabled={agentModeChangeDisabled}
                     runtimeMode={runtimeMode}
                     showInteractionModeToggle={composerProviderControls.showInteractionModeToggle}
                     traitsMenuContent={providerTraitsMenuContent}
                     onToggleInteractionMode={toggleInteractionMode}
+                    onAgentModeChange={handleAgentModeChange}
                     onRuntimeModeChange={handleRuntimeModeChange}
                   />
                 ) : (
@@ -3183,8 +3245,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     <ComposerFooterModeControls
                       showInteractionModeToggle={composerProviderControls.showInteractionModeToggle}
                       interactionMode={interactionMode}
+                      agentMode={agentMode}
+                      agentModeChangeDisabled={agentModeChangeDisabled}
                       runtimeMode={runtimeMode}
                       onToggleInteractionMode={toggleInteractionMode}
+                      onAgentModeChange={handleAgentModeChange}
                       onRuntimeModeChange={handleRuntimeModeChange}
                     />
                   </>

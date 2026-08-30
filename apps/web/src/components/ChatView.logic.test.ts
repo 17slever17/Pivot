@@ -16,6 +16,7 @@ import {
   buildExpiredTerminalContextToastCopy,
   buildLoadingThreadFromShell,
   buildThreadTurnInterruptInput,
+  canChangeThreadAgentMode,
   createLocalDispatchSnapshot,
   deriveComposerSendState,
   dismissBranchMismatchForSession,
@@ -35,6 +36,42 @@ import {
   shouldShowBranchMismatchBanner,
   shouldWriteThreadErrorToCurrentServerThread,
 } from "./ChatView.logic";
+
+describe("thread agent mode changes", () => {
+  it("allows a mode choice before the first turn", () => {
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: null,
+        phase: "disconnected",
+        latestTurnSettled: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("allows settled idle threads and blocks active or unsettled turns", () => {
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "ready",
+        latestTurnSettled: true,
+      }),
+    ).toBe(true);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "running",
+        latestTurnSettled: false,
+      }),
+    ).toBe(false);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "ready",
+        latestTurnSettled: false,
+      }),
+    ).toBe(false);
+  });
+});
 
 const environmentId = EnvironmentId.make("environment-local");
 const projectId = ProjectId.make("project-1");

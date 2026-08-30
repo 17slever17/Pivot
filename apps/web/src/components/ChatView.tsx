@@ -20,6 +20,7 @@ import {
   ProviderInteractionMode,
   ProviderDriverKind,
   RuntimeMode,
+  ThreadAgentMode,
   TerminalOpenInput,
 } from "@t3tools/contracts";
 import {
@@ -318,6 +319,7 @@ import {
   resolveSendEnvMode,
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
+  canChangeThreadAgentMode,
   shouldWriteThreadErrorToCurrentServerThread,
   startNewThreadForProject,
   waitForStartedServerThread,
@@ -1240,6 +1242,9 @@ function ChatViewContent(props: ChatViewProps) {
   const setThreadRuntimeMode = useAtomCommand(threadEnvironment.setRuntimeMode, {
     reportFailure: false,
   });
+  const setThreadAgentMode = useAtomCommand(threadEnvironment.setAgentMode, {
+    reportFailure: false,
+  });
   const setThreadInteractionMode = useAtomCommand(threadEnvironment.setInteractionMode, {
     reportFailure: false,
   });
@@ -1320,6 +1325,9 @@ function ChatViewContent(props: ChatViewProps) {
   const composerInteractionMode = useComposerDraftStore(
     (store) => store.getComposerDraft(composerDraftTarget)?.interactionMode ?? null,
   );
+  const composerAgentMode = useComposerDraftStore(
+    (store) => store.getComposerDraft(composerDraftTarget)?.agentMode ?? null,
+  );
   const composerActiveProvider = useComposerDraftStore(
     (store) => store.getComposerDraft(composerDraftTarget)?.activeProvider ?? null,
   );
@@ -1340,6 +1348,7 @@ function ChatViewContent(props: ChatViewProps) {
   const setComposerDraftInteractionMode = useComposerDraftStore(
     (store) => store.setInteractionMode,
   );
+  const setComposerDraftAgentMode = useComposerDraftStore((store) => store.setAgentMode);
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const getDraftSessionByLogicalProjectKey = useComposerDraftStore(
@@ -1561,6 +1570,7 @@ function ChatViewContent(props: ChatViewProps) {
   const interactionMode = settings.planModeEnabled
     ? (composerInteractionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE)
     : DEFAULT_INTERACTION_MODE;
+  const agentMode = composerAgentMode ?? activeThread?.agentMode ?? "single";
   const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const activeThreadId = activeThread?.id ?? null;
@@ -1961,6 +1971,7 @@ function ChatViewContent(props: ChatViewProps) {
           threadId: activeDraftSession.threadId,
           createdAt: activeDraftSession.createdAt,
           runtimeMode: activeDraftSession.runtimeMode,
+          agentMode: activeDraftSession.agentMode,
           interactionMode: activeDraftSession.interactionMode,
           ...input,
         });
@@ -1973,6 +1984,7 @@ function ChatViewContent(props: ChatViewProps) {
         threadId: nextThreadId,
         createdAt: new Date().toISOString(),
         runtimeMode: DEFAULT_RUNTIME_MODE,
+        agentMode,
         interactionMode: DEFAULT_INTERACTION_MODE,
         ...input,
       });
@@ -1984,6 +1996,7 @@ function ChatViewContent(props: ChatViewProps) {
     },
     [
       activeProject,
+      agentMode,
       draftId,
       getDraftSession,
       getDraftSessionByLogicalProjectKey,
@@ -2215,6 +2228,11 @@ function ChatViewContent(props: ChatViewProps) {
   );
   const selectedProvider: ProviderDriverKind = lockedProvider ?? unlockedSelectedProvider;
   const phase = derivePhase(activeThread?.session ?? null);
+  const canChangeAgentMode = canChangeThreadAgentMode({
+    latestTurn: activeThread?.latestTurn,
+    phase,
+    latestTurnSettled,
+  });
   const previousPhaseRef = useRef(phase);
   const followUpDrainInFlightRef = useRef(false);
   const followUpQueue = useFollowUpQueueStore(
@@ -3299,6 +3317,25 @@ function ChatViewContent(props: ChatViewProps) {
       setDraftThreadContext,
     ],
   );
+  const handleAgentModeChange = useCallback(
+    (mode: ThreadAgentMode) => {
+      if (mode === agentMode || !canChangeAgentMode) return;
+      setComposerDraftAgentMode(composerDraftTarget, mode);
+      if (isLocalDraftThread) {
+        setDraftThreadContext(composerDraftTarget, { agentMode: mode });
+      }
+      scheduleComposerFocus();
+    },
+    [
+      agentMode,
+      canChangeAgentMode,
+      composerDraftTarget,
+      isLocalDraftThread,
+      scheduleComposerFocus,
+      setComposerDraftAgentMode,
+      setDraftThreadContext,
+    ],
+  );
   const toggleInteractionMode = useCallback(() => {
     handleInteractionModeChange(interactionMode === "plan" ? "default" : "plan");
   }, [handleInteractionModeChange, interactionMode]);
@@ -3626,6 +3663,7 @@ function ChatViewContent(props: ChatViewProps) {
       modelSelection?: ModelSelection;
       branch?: string;
       runtimeMode: RuntimeMode;
+      agentMode: ThreadAgentMode;
       interactionMode: ProviderInteractionMode;
     }): Promise<AtomCommandResult<void, unknown>> => {
       if (!serverThread) {
@@ -3672,6 +3710,23 @@ function ChatViewContent(props: ChatViewProps) {
         }
       }
 
+      if (input.agentMode !== (serverThread.agentMode ?? "single")) {
+        result = mapAtomCommandResult(
+          await setThreadAgentMode({
+            environmentId,
+            input: {
+              threadId: input.threadId,
+              agentMode: input.agentMode,
+              createdAt: input.createdAt,
+            },
+          }),
+          () => undefined,
+        );
+        if (result._tag === "Failure") {
+          return result;
+        }
+      }
+
       if (input.interactionMode !== serverThread.interactionMode) {
         result = mapAtomCommandResult(
           await setThreadInteractionMode({
@@ -3690,6 +3745,7 @@ function ChatViewContent(props: ChatViewProps) {
     [
       environmentId,
       serverThread,
+      setThreadAgentMode,
       setThreadInteractionMode,
       setThreadRuntimeMode,
       updateThreadMetadata,
@@ -5271,6 +5327,7 @@ function ChatViewContent(props: ChatViewProps) {
           ? { branch: localCheckoutBranchMismatch.currentBranch }
           : {}),
         runtimeMode,
+        agentMode,
         interactionMode,
       });
       if (settingsResult._tag === "Failure") {
@@ -5295,6 +5352,7 @@ function ChatViewContent(props: ChatViewProps) {
                       title,
                       modelSelection: threadCreateModelSelection,
                       runtimeMode,
+                      agentMode,
                       interactionMode,
                       branch: activeThreadBranch,
                       worktreePath: activeThread.worktreePath,
@@ -5464,6 +5522,7 @@ function ChatViewContent(props: ChatViewProps) {
           ? { branch: localCheckoutBranchMismatch.currentBranch }
           : {}),
         runtimeMode,
+        agentMode,
         interactionMode,
       });
       let failure: AtomCommandResult<unknown, unknown> | null =
@@ -5517,6 +5576,7 @@ function ChatViewContent(props: ChatViewProps) {
       addOptimisticUserMessage,
       beginLocalDispatch,
       environmentId,
+      agentMode,
       interactionMode,
       isConnecting,
       isSendBusy,
@@ -5864,6 +5924,7 @@ function ChatViewContent(props: ChatViewProps) {
           ? { branch: localCheckoutBranchMismatch.currentBranch }
           : {}),
         runtimeMode,
+        agentMode,
         interactionMode: nextInteractionMode,
       });
       let failure: AtomCommandResult<unknown, unknown> | null =
@@ -5930,6 +5991,7 @@ function ChatViewContent(props: ChatViewProps) {
       activeProposedPlan,
       acknowledgeActiveThreadWoke,
       addOptimisticUserMessage,
+      agentMode,
       beginLocalDispatch,
       isConnecting,
       isSendBusy,
@@ -6003,6 +6065,7 @@ function ChatViewContent(props: ChatViewProps) {
         title: nextThreadTitle,
         modelSelection: nextThreadModelSelection,
         runtimeMode,
+        agentMode,
         interactionMode: "default",
         branch: activeThreadBranch,
         worktreePath: activeThread.worktreePath,
@@ -6087,6 +6150,7 @@ function ChatViewContent(props: ChatViewProps) {
     finish();
   }, [
     activeProject,
+    agentMode,
     activeProposedPlan,
     activeThreadBranch,
     activeThread,
@@ -6658,6 +6722,8 @@ function ChatViewContent(props: ChatViewProps) {
                             showPlanFollowUpPrompt={showPlanFollowUpPrompt}
                             activeProposedPlan={activeProposedPlan}
                             runtimeMode={runtimeMode}
+                            agentMode={agentMode}
+                            agentModeChangeDisabled={!canChangeAgentMode}
                             interactionMode={interactionMode}
                             lockedProvider={lockedProvider}
                             providerStatuses={providerStatuses as ServerProvider[]}
@@ -6693,6 +6759,7 @@ function ChatViewContent(props: ChatViewProps) {
                             getModelDisabledReason={getModelDisabledReason}
                             toggleInteractionMode={toggleInteractionMode}
                             handleRuntimeModeChange={handleRuntimeModeChange}
+                            handleAgentModeChange={handleAgentModeChange}
                             handleInteractionModeChange={handleInteractionModeChange}
                             focusComposer={focusComposer}
                             scheduleComposerFocus={scheduleComposerFocus}

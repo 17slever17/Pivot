@@ -775,6 +775,38 @@ export function createServerEnvironmentAtoms<R, E>(
           `${environmentId}:${input.threadId}:subagent-sub:${input.level}`,
       },
     }),
+    ompAgentProfilesList: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:omp-agent-profiles-list",
+      tag: WS_METHODS.serverOmpAgentProfilesList,
+      staleTimeMs: 30_000,
+    }),
+    ompAgentProfileUpsert: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:omp-agent-profile-upsert",
+      tag: WS_METHODS.serverOmpAgentProfileUpsert,
+      concurrency: {
+        mode: "singleFlight",
+        key: ({ environmentId, input }) =>
+          `${environmentId}:${input.instanceId ?? "omp"}:agent-profile-upsert:${input.name}`,
+      },
+    }),
+    ompAgentProfileDelete: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:omp-agent-profile-delete",
+      tag: WS_METHODS.serverOmpAgentProfileDelete,
+      concurrency: {
+        mode: "singleFlight",
+        key: ({ environmentId, input }) =>
+          `${environmentId}:${input.instanceId ?? "omp"}:agent-profile-delete:${input.name}`,
+      },
+    }),
+    ompAgentProfilesImportCodex: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:omp-agent-profiles-import-codex",
+      tag: WS_METHODS.serverOmpAgentProfilesImportCodex,
+      concurrency: {
+        mode: "singleFlight",
+        key: ({ environmentId, input }) =>
+          `${environmentId}:${input.instanceId ?? "omp"}:agent-profiles-import-codex`,
+      },
+    }),
     capabilitiesSnapshot: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:omp-capabilities-snapshot",
       tag: WS_METHODS.serverOmpCapabilitiesGetSnapshot,

@@ -135,6 +135,11 @@ export function useNewThreadHandler() {
         carrySourceShell?.interactionMode ??
         carrySourceDraft?.interactionMode ??
         null;
+      const carryAgentMode =
+        carrySourceComposer?.agentMode ??
+        carrySourceShell?.agentMode ??
+        carrySourceDraft?.agentMode ??
+        null;
       // Content only moves when the caller opted in and the user is looking
       // at a draft. The content check happens at move time, not here: the
       // paths below await, and text typed during those awaits must still
@@ -271,6 +276,7 @@ export function useNewThreadHandler() {
             setDraftThreadContext(emptyStoredDraftThread.draftId, {
               ...workspaceContext,
               ...(carryRuntimeMode ? { runtimeMode: carryRuntimeMode } : {}),
+              ...(carryAgentMode ? { agentMode: carryAgentMode } : {}),
               ...(carryInteractionMode ? { interactionMode: carryInteractionMode } : {}),
             });
             if (carryModelSelection) {
@@ -294,6 +300,7 @@ export function useNewThreadHandler() {
               threadId: emptyStoredDraftThread.threadId,
               ...workspaceContext,
               ...(carryRuntimeMode ? { runtimeMode: carryRuntimeMode } : {}),
+              ...(carryAgentMode ? { agentMode: carryAgentMode } : {}),
               ...(carryInteractionMode ? { interactionMode: carryInteractionMode } : {}),
             },
           );
@@ -342,6 +349,7 @@ export function useNewThreadHandler() {
           threadId: latestActiveDraftThread.threadId,
           createdAt: latestActiveDraftThread.createdAt,
           runtimeMode: latestActiveDraftThread.runtimeMode,
+          agentMode: latestActiveDraftThread.agentMode,
           interactionMode: latestActiveDraftThread.interactionMode,
           ...pickExplicitWorkspaceOptions(options),
         });
@@ -382,6 +390,7 @@ export function useNewThreadHandler() {
             threadId: racedDraft.threadId,
             createdAt: racedDraft.createdAt,
             runtimeMode: racedDraft.runtimeMode,
+            agentMode: racedDraft.agentMode,
             interactionMode: racedDraft.interactionMode,
             ...pickExplicitWorkspaceOptions(options),
           });
@@ -406,6 +415,7 @@ export function useNewThreadHandler() {
               newWorktreesStartFromOrigin: primaryServerSettings.newWorktreesStartFromOrigin,
             }),
           runtimeMode: carryRuntimeMode ?? DEFAULT_RUNTIME_MODE,
+          agentMode: carryAgentMode ?? "single",
           ...(carryInteractionMode ? { interactionMode: carryInteractionMode } : {}),
         });
         applyStickyState(draftId);

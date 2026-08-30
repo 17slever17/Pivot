@@ -1,4 +1,4 @@
-import { ProviderInteractionMode, RuntimeMode } from "@t3tools/contracts";
+import { ProviderInteractionMode, RuntimeMode, ThreadAgentMode } from "@t3tools/contracts";
 import { memo, type ReactNode } from "react";
 import { EllipsisIcon } from "lucide-react";
 import { Button } from "../ui/button";
@@ -13,10 +13,13 @@ import {
 
 export const CompactComposerControlsMenu = memo(function CompactComposerControlsMenu(props: {
   interactionMode: ProviderInteractionMode;
+  agentMode: ThreadAgentMode;
+  agentModeChangeDisabled: boolean;
   runtimeMode: RuntimeMode;
   showInteractionModeToggle: boolean;
   traitsMenuContent?: ReactNode;
   onToggleInteractionMode: () => void;
+  onAgentModeChange: (mode: ThreadAgentMode) => void;
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
   return (
@@ -56,6 +59,28 @@ export const CompactComposerControlsMenu = memo(function CompactComposerControls
             <MenuDivider />
           </>
         ) : null}
+        <div className="px-2 py-1.5 font-medium text-muted-foreground text-xs">Agent mode</div>
+        <MenuRadioGroup
+          value={props.agentMode}
+          onValueChange={(value) => {
+            if (value === "single" || value === "orchestrator") {
+              props.onAgentModeChange(value);
+            }
+          }}
+        >
+          <MenuRadioItem value="single" disabled={props.agentModeChangeDisabled}>
+            Single
+          </MenuRadioItem>
+          <MenuRadioItem value="orchestrator" disabled={props.agentModeChangeDisabled}>
+            Orchestrator
+          </MenuRadioItem>
+        </MenuRadioGroup>
+        <div className="px-2 pb-1.5 text-muted-foreground text-xs">
+          {props.agentModeChangeDisabled
+            ? "Can change before the first turn or while idle."
+            : "Choose how the root agent handles this thread."}
+        </div>
+        <MenuDivider />
         <div className="px-2 py-1.5 font-medium text-muted-foreground text-xs">Access</div>
         <MenuRadioGroup
           value={props.runtimeMode}

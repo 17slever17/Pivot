@@ -105,6 +105,30 @@ describe("applyThreadDetailEvent", () => {
     });
   });
 
+  describe("thread.agent-mode-set", () => {
+    it("updates the persisted root mode", () => {
+      const result = applyThreadDetailEvent(baseThread, {
+        ...baseEventFields,
+        sequence: 2,
+        occurredAt: "2026-04-01T01:30:00.000Z",
+        aggregateKind: "thread",
+        aggregateId: ThreadId.make("thread-1"),
+        type: "thread.agent-mode-set",
+        payload: {
+          threadId: ThreadId.make("thread-1"),
+          agentMode: "orchestrator",
+          updatedAt: "2026-04-01T01:30:00.000Z",
+        },
+      });
+
+      expect(result.kind).toBe("updated");
+      if (result.kind === "updated") {
+        expect(result.thread.agentMode).toBe("orchestrator");
+        expect(result.thread.updatedAt).toBe("2026-04-01T01:30:00.000Z");
+      }
+    });
+  });
+
   describe("thread.deleted", () => {
     it("returns deleted signal", () => {
       const result = applyThreadDetailEvent(baseThread, {

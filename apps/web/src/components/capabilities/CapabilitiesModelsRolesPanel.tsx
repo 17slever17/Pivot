@@ -29,6 +29,7 @@ import {
   availableOmpModelRolePresets,
   modelRolesFromSettingsEntries,
 } from "./CapabilitiesModelsRolesPanel.logic";
+import { CapabilitiesAgentProfilesPanel } from "./CapabilitiesAgentProfilesPanel";
 import { resolveCapabilitiesProjectIdForView } from "./CapabilitiesOverviewPanel.logic";
 import { buildWriteSettingInput } from "./CapabilitiesSettingsPanel.logic";
 
@@ -484,6 +485,13 @@ export function CapabilitiesModelsRolesPanel({
           </div>
         )}
       </SettingsSection>
+
+      <CapabilitiesAgentProfilesPanel
+        environmentId={environmentId}
+        instanceId={defaultInstanceId}
+        instanceEntries={instanceEntries}
+        modelOptionsByInstance={modelOptionsByInstance}
+      />
     </SettingsPageContainer>
   );
 }

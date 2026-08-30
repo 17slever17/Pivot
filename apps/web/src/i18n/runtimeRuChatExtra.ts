@@ -97,6 +97,19 @@ export const RU_CHAT_EXTRA: Readonly<Record<string, string>> = {
   "Browser storage rejected the write, so the composer was left as-is. Free up site data and try again.":
     "Хранилище браузера отклонило запись. Освободите данные сайта и повторите попытку.",
   Build: "Build",
+  Single: "Одиночный",
+  Orchestrator: "Оркестратор",
+  "Agent mode": "Режим агента",
+  "More composer controls": "Дополнительные настройки ввода",
+  "Use one primary agent for this thread.": "Использовать одного основного агента в этом чате.",
+  "Let the root agent coordinate named subagents.":
+    "Позволить корневому агенту координировать именованные подагенты.",
+  "Choose how the root agent handles this thread.":
+    "Выберите, как корневой агент будет обрабатывать этот чат.",
+  "Agent mode can only change before the first turn or while idle.":
+    "Режим агента можно менять до первого хода или в состоянии ожидания.",
+  "Can change before the first turn or while idle.":
+    "Можно изменить до первого хода или в состоянии ожидания.",
   "Could not stash this prompt": "Не удалось сохранить prompt в stash",
   "Default mode — click to enter plan mode": "Обычный режим — нажмите, чтобы перейти в Plan",
   "Draft attachment may not persist": "Вложение черновика может не сохраниться",

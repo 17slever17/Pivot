@@ -44,6 +44,7 @@ export type UnpinThreadInput = CommandInput<"thread.unpin">;
 export type ReorderPinnedThreadInput = CommandInput<"thread.pin.reorder">;
 export type UpdateThreadMetadataInput = CommandInput<"thread.meta.update">;
 export type SetThreadRuntimeModeInput = CommandInput<"thread.runtime-mode.set">;
+export type SetThreadAgentModeInput = CommandInput<"thread.agent-mode.set">;
 export type SetThreadInteractionModeInput = CommandInput<"thread.interaction-mode.set">;
 export type StartThreadTurnInput = CommandInput<"thread.turn.start">;
 export type InterruptThreadTurnInput = CommandInput<"thread.turn.interrupt">;
@@ -260,6 +261,18 @@ export const setThreadRuntimeMode: (input: SetThreadRuntimeModeInput) => Command
   return yield* dispatch({
     ...input,
     type: "thread.runtime-mode.set",
+    commandId: metadata.commandId,
+    createdAt: metadata.createdAt,
+  });
+});
+
+export const setThreadAgentMode: (input: SetThreadAgentModeInput) => CommandEffect = Effect.fn(
+  "EnvironmentCommands.setThreadAgentMode",
+)(function* (input) {
+  const metadata = yield* timestampedCommandMetadata(input);
+  return yield* dispatch({
+    ...input,
+    type: "thread.agent-mode.set",
     commandId: metadata.commandId,
     createdAt: metadata.createdAt,
   });

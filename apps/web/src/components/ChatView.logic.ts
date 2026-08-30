@@ -90,6 +90,7 @@ export function buildLocalDraftThread(
     title: "New thread",
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
+    agentMode: draftThread.agentMode,
     interactionMode: draftThread.interactionMode,
     session: null,
     messages: [],
@@ -106,6 +107,14 @@ export function buildLocalDraftThread(
     activities: [],
     proposedPlans: [],
   };
+}
+
+export function canChangeThreadAgentMode(input: {
+  latestTurn: Thread["latestTurn"] | null | undefined;
+  phase: SessionPhase;
+  latestTurnSettled: boolean;
+}): boolean {
+  return input.latestTurn == null || (input.phase === "ready" && input.latestTurnSettled);
 }
 
 export function buildLoadingThreadFromShell(shell: ThreadShell): Thread {
