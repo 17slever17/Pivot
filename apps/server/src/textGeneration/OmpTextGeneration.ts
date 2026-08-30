@@ -40,29 +40,18 @@ import {
   sanitizePrTitle,
   sanitizeThreadTitle,
 } from "./TextGenerationUtils.ts";
+import {
+  readOmpAgentEndError,
+  readOmpAssistantOutcome,
+  type OmpAssistantOutcome,
+} from "../provider/omp/OmpErrorFormatting.ts";
 
 const OMP_TIMEOUT_MS = 180_000;
-const OMP_ERROR_MESSAGE_MAX_LENGTH = 2_000;
 
 const isTextGenerationError = Schema.is(TextGenerationError);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-interface OmpAssistantOutcome {
-  readonly stopReason: string | undefined;
-  readonly errorMessage: string | undefined;
-}
-
-function readOmpAssistantOutcome(value: unknown): OmpAssistantOutcome | undefined {
-  if (!isRecord(value) || value.role !== "assistant") {
-    return undefined;
-  }
-  return {
-    stopReason: typeof value.stopReason === "string" ? value.stopReason : undefined,
-    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : undefined,
-  };
 }
 
 function parseOmpModelSlug(slug: string): { provider: string; modelId: string } | null {
@@ -82,32 +71,6 @@ function resolveOmpModelSlug(slug: string): { provider: string; modelId: string 
     return { provider: "openai-codex", modelId: slug };
   }
   return null;
-}
-
-function readOmpAgentEndError(
-  frame: Record<string, unknown>,
-  fallbackAssistant?: OmpAssistantOutcome,
-): string | undefined {
-  let lastAssistant = fallbackAssistant;
-  if (Array.isArray(frame.messages)) {
-    for (const message of frame.messages) {
-      const outcome = readOmpAssistantOutcome(message);
-      if (outcome !== undefined) {
-        lastAssistant = outcome;
-      }
-    }
-  }
-  if (lastAssistant?.stopReason !== "error") {
-    return undefined;
-  }
-  const rawMessage = lastAssistant.errorMessage ?? "";
-  const normalized = rawMessage.replace(/\s+/g, " ").trim();
-  if (normalized.length === 0) {
-    return "omp provider returned an error without details.";
-  }
-  return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
-    ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
-    : normalized;
 }
 
 function mapOmpError(operation: string, cause: unknown, detail: string): TextGenerationError {

@@ -760,15 +760,18 @@ describe("ProviderCommandReactor", () => {
 
     const readModel = await harness.readModel();
     const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
-    expect(
-      thread?.activities.find((activity) => activity.kind === "provider.text-generation.failed"),
-    ).toMatchObject({
+    const failureActivity = thread?.activities.find(
+      (activity) => activity.kind === "provider.text-generation.failed",
+    );
+    expect(failureActivity).toMatchObject({
       tone: "error",
       summary: "Could not name this thread",
       payload: {
-        detail: expect.stringContaining("disabled in test harness"),
+        detail: "disabled in test harness",
       },
     });
+    expect(failureActivity?.createdAt).not.toBe(now);
+    expect(Date.parse(failureActivity?.createdAt ?? "")).toBeGreaterThan(Date.parse(now));
   });
 
   it("regenerates a thread title from the current conversation", async () => {

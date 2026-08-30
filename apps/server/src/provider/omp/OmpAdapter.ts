@@ -79,12 +79,16 @@ import type { OmpCapabilitiesService } from "./OmpCapabilitiesService.ts";
 import { OmpSpawnError, type OmpRpcRuntime } from "./OmpRpcRuntime.ts";
 import { OmpPreviewMcpInjector } from "../../mcp/OmpPreviewMcpInjector.ts";
 import { readMcpProviderSession } from "../../mcp/McpProviderSession.ts";
+import {
+  readOmpAgentEndError,
+  readOmpAssistantOutcome,
+  type OmpAssistantOutcome,
+} from "./OmpErrorFormatting.ts";
 
 const PROVIDER = ProviderDriverKind.make("omp");
 const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 const isProviderAdapterProcessError = Schema.is(ProviderAdapterProcessError);
 const isOmpSpawnError = Schema.is(OmpSpawnError);
-const OMP_ERROR_MESSAGE_MAX_LENGTH = 2_000;
 
 // ---------------------------------------------------------------------------
 // Review findings block decoding (issue #42): the persona ends with one
@@ -96,42 +100,6 @@ const OMP_ERROR_MESSAGE_MAX_LENGTH = 2_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readOmpAssistantOutcome(value: unknown): OmpAssistantOutcome | undefined {
-  if (!isRecord(value) || value.role !== "assistant") {
-    return undefined;
-  }
-  return {
-    stopReason: typeof value.stopReason === "string" ? value.stopReason : undefined,
-    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : undefined,
-  };
-}
-
-function readOmpAgentEndError(
-  frame: Record<string, unknown>,
-  fallbackAssistant?: OmpAssistantOutcome,
-): string | undefined {
-  let lastAssistant = fallbackAssistant;
-  if (Array.isArray(frame.messages)) {
-    for (const message of frame.messages) {
-      const outcome = readOmpAssistantOutcome(message);
-      if (outcome !== undefined) {
-        lastAssistant = outcome;
-      }
-    }
-  }
-  if (lastAssistant?.stopReason !== "error") {
-    return undefined;
-  }
-  const rawMessage = lastAssistant.errorMessage ?? "";
-  const normalized = rawMessage.replace(/\s+/g, " ").trim();
-  if (normalized.length === 0) {
-    return "omp provider returned an error without details.";
-  }
-  return normalized.length > OMP_ERROR_MESSAGE_MAX_LENGTH
-    ? `${normalized.slice(0, OMP_ERROR_MESSAGE_MAX_LENGTH)}...`
-    : normalized;
 }
 
 /** Normalize omp Rule condition/scope fields (string or string[]) to string[]. */
@@ -174,11 +142,6 @@ type PendingExtensionUiKind = "confirm" | "select" | "input" | "editor" | "host_
 interface PendingExtensionUiRequest {
   readonly kind: PendingExtensionUiKind;
   readonly ompId: string;
-}
-
-interface OmpAssistantOutcome {
-  readonly stopReason: string | undefined;
-  readonly errorMessage: string | undefined;
 }
 
 interface LiveAdapterSession {

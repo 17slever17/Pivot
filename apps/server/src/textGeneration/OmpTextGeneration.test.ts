@@ -281,6 +281,55 @@ describe("OmpTextGeneration", () => {
     }),
   );
 
+  it.effect("formats HTML assistant errors with provider metadata", () =>
+    Effect.gen(function* () {
+      const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl", {
+        terminalMessages: [
+          {
+            role: "assistant",
+            provider: "openai-codex",
+            model: "gpt-5.6-luna",
+            stopReason: "error",
+            errorStatus: 403,
+            errorId: 16781312,
+            errorMessage:
+              "<!doctype html><html><head><style>body{color:red}</style><script>alert(1)</script></head><body><h1>Unable to load site</h1><p>[IP:89.22.145.11 | Ray ID:a32f668e9f88f10e]</p></body></html>",
+          },
+        ],
+      });
+      const textGeneration = yield* makeOmpTextGeneration(
+        decodeOmpSettings({
+          enabled: true,
+          binaryPath: "/opt/omp",
+        }),
+      ).pipe(
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, fake.spawner),
+        Effect.provide(NodeServices.layer),
+      );
+
+      const outcome = yield* Effect.exit(
+        textGeneration.generateThreadTitle({
+          cwd: "/proj",
+          message: "Please wire omp text generation so thread titles work again",
+          modelSelection: createModelSelection(ProviderInstanceId.make("omp"), "openai/gpt-5"),
+        }),
+      );
+
+      NodeAssert.equal(Exit.isFailure(outcome), true);
+      if (Exit.isFailure(outcome)) {
+        const error = Cause.squash(outcome.cause);
+        NodeAssert.equal(isTextGenerationError(error), true);
+        if (isTextGenerationError(error)) {
+          NodeAssert.match(
+            error.detail,
+            /openai-codex\/gpt-5\.6-luna HTTP 403 \(error 16781312\): Unable to load site/,
+          );
+          NodeAssert.equal(/<|>|89\.22\.145\.11|Ray ID/i.test(error.detail), false);
+        }
+      }
+    }),
+  );
+
   it.effect("surfaces a streamed assistant error when agent_end was compacted", () =>
     Effect.gen(function* () {
       const fake = makeFakeOmpSpawner("/tmp/omp-textgen.jsonl", {

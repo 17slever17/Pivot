@@ -168,6 +168,41 @@ describe("OmpAdapter", () => {
     }),
   );
 
+  it.effect("formats HTML assistant errors with provider metadata", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [
+          {
+            role: "assistant",
+            provider: "openai-codex",
+            model: "gpt-5.6-luna",
+            stopReason: "error",
+            errorStatus: 403,
+            errorId: 16781312,
+            errorMessage:
+              "<!doctype html><html><head><style>body{color:red}</style></head><body><h1>Unable to load site</h1><p>[IP:89.22.145.11 | Ray ID:a32f668e9f88f10e]</p></body></html>",
+          },
+        ],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+      const completed = events.find((event) => event.type === "turn.completed");
+      const errorMessage = completed?.payload.errorMessage ?? "";
+      NodeAssert.equal(completed?.payload.state, "failed");
+      NodeAssert.match(errorMessage, /openai-codex\/gpt-5\.6-luna HTTP 403 \(error 16781312\)/);
+      NodeAssert.match(errorMessage, /Unable to load site/);
+      NodeAssert.equal(/<|>|89\.22\.145\.11|Ray ID/i.test(errorMessage), false);
+    }),
+  );
+
   it.effect("uses the latest assistant message in a terminal agent_end", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
