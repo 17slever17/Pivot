@@ -49,7 +49,7 @@ describe("thread agent mode changes", () => {
     ).toBe(true);
   });
 
-  it("allows settled idle threads and blocks active or unsettled turns", () => {
+  it("allows idle, stopped, errored, and legacy threads", () => {
     expect(
       canChangeThreadAgentMode({
         latestTurn: completedTurn,
@@ -60,18 +60,45 @@ describe("thread agent mode changes", () => {
     expect(
       canChangeThreadAgentMode({
         latestTurn: completedTurn,
+        phase: "disconnected",
+        latestTurnSettled: false,
+        sessionStatus: "stopped",
+      }),
+    ).toBe(true);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "disconnected",
+        latestTurnSettled: false,
+        sessionStatus: "error",
+      }),
+    ).toBe(true);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "disconnected",
+        latestTurnSettled: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("blocks active sessions and interrupted turns awaiting terminal projection", () => {
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
         phase: "running",
         latestTurnSettled: false,
+        sessionStatus: "running",
       }),
     ).toBe(false);
     expect(
       canChangeThreadAgentMode({
-        latestTurn: completedTurn,
-        phase: "ready",
+        latestTurn: null,
+        phase: "connecting",
         latestTurnSettled: false,
-        sessionStatus: "ready",
+        sessionStatus: "starting",
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       canChangeThreadAgentMode({
         latestTurn: completedTurn,
@@ -80,6 +107,14 @@ describe("thread agent mode changes", () => {
         sessionStatus: "interrupted",
       }),
     ).toBe(false);
+    expect(
+      canChangeThreadAgentMode({
+        latestTurn: completedTurn,
+        phase: "ready",
+        latestTurnSettled: true,
+        sessionStatus: "interrupted",
+      }),
+    ).toBe(true);
   });
 
   it("applies an accepted mode immediately and clears a rejected draft", () => {

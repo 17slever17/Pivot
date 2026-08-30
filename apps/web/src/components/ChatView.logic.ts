@@ -116,16 +116,14 @@ export function canChangeThreadAgentMode(input: {
   latestTurnSettled: boolean;
   sessionStatus?: NonNullable<Thread["session"]>["status"] | undefined;
 }): boolean {
-  if (input.latestTurn == null) {
-    return input.phase !== "running" && input.phase !== "connecting";
-  }
-  if (input.phase !== "ready") {
-    return false;
-  }
+  if (input.phase === "running" || input.phase === "connecting") return false;
   // A freshly interrupted turn can briefly expose a ready phase before its
   // terminal projection arrives. Keep the server's idle-only guard aligned
   // during that narrow in-flight window.
-  return input.sessionStatus !== "interrupted" || input.latestTurnSettled;
+  if (input.sessionStatus === "interrupted") return input.latestTurnSettled;
+  // A stopped/error session is disconnected by derivePhase, but it is still
+  // idle for the server decider and the next turn will recreate the session.
+  return true;
 }
 
 export function resolveAgentModeDraftAfterCommand(input: {
