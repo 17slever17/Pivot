@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 
 import type { DraftId } from "../../composerDraftStore";
 import { getProviderModelCapabilities } from "../../providerModels";
+import { resolveReasoningEffortModelOptions } from "./reasoningEffort";
 import { shouldRenderTraitsControls, TraitsMenuContent, TraitsPicker } from "./TraitsPicker";
 
 export type ComposerProviderStateInput = {
@@ -55,7 +56,13 @@ export function getComposerPromptInjectionState(prompt: string): ComposerPromptI
 export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {
   const { provider, model, models, modelOptions, promptInjectionState = "none" } = input;
   const caps = getProviderModelCapabilities(models, model, provider);
-  const descriptors = getProviderOptionDescriptors({ caps, selections: modelOptions });
+  const resolvedModelOptions = resolveReasoningEffortModelOptions({
+    provider,
+    model,
+    models,
+    modelOptions,
+  });
+  const descriptors = getProviderOptionDescriptors({ caps, selections: resolvedModelOptions });
   const primarySelectDescriptor = descriptors.find(
     (descriptor): descriptor is Extract<(typeof descriptors)[number], { type: "select" }> =>
       descriptor.type === "select",

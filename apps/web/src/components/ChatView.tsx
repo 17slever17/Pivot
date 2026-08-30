@@ -151,6 +151,7 @@ import { PullRequestDetailGhost } from "./pullRequest/PullRequestGhosts";
 import { PullRequestsUnavailableState } from "./pullRequest/PullRequestsUnavailableState";
 import { RightPanelTabs, type PullRequestTabStatus } from "./RightPanelTabs";
 import { AgentsPanel } from "./AgentsPanel";
+import { resolveReasoningEffortModelOptions } from "./chat/reasoningEffort";
 import {
   deriveAgentPanelModel,
   foldSubagentActivities,
@@ -6225,10 +6226,24 @@ function ChatViewContent(props: ChatViewProps) {
         scheduleComposerFocus();
         return;
       }
-      const nextModelSelection: ModelSelection = {
-        instanceId,
-        model: resolvedModel,
-      };
+      const currentDraftSelection = useComposerDraftStore
+        .getState()
+        .getComposerDraft(composerDraftTarget)?.modelSelectionByProvider[instanceId];
+      const currentModelOptions =
+        currentDraftSelection?.options ??
+        (activeThread.modelSelection.instanceId === instanceId
+          ? activeThread.modelSelection.options
+          : undefined);
+      const nextModelOptions =
+        entry && resolvedDriverKind
+          ? resolveReasoningEffortModelOptions({
+              provider: resolvedDriverKind,
+              model: resolvedModel,
+              models: entry.models,
+              modelOptions: currentModelOptions,
+            })
+          : currentModelOptions;
+      const nextModelSelection = createModelSelection(instanceId, resolvedModel, nextModelOptions);
       const modelChangeBlockReason = getStartedThreadModelChangeBlockReason({
         providers: providerStatuses,
         hasStartedSession: activeThread.session !== null,
@@ -6254,6 +6269,7 @@ function ChatViewContent(props: ChatViewProps) {
     },
     [
       activeThread,
+      composerDraftTarget,
       lockedProvider,
       scheduleComposerFocus,
       setComposerDraftModelSelection,

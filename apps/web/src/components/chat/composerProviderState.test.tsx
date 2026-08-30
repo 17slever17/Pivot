@@ -89,6 +89,59 @@ describe("getComposerProviderState", () => {
     });
   });
 
+  it("falls back to medium when the reasoning descriptor has no current value", () => {
+    const state = getComposerProviderState({
+      provider: PROVIDER,
+      model: MODEL,
+      models: modelWith([
+        selectDescriptor("effort", [
+          { id: "low", label: "Low" },
+          { id: "medium", label: "Medium" },
+          { id: "high", label: "High" },
+        ]),
+      ]),
+      modelOptions: undefined,
+    });
+
+    expect(state.promptEffort).toBe("medium");
+    expect(state.modelOptionsForDispatch).toEqual(selections(["effort", "medium"]));
+  });
+
+  it("preserves a valid user-selected reasoning effort", () => {
+    const state = getComposerProviderState({
+      provider: PROVIDER,
+      model: MODEL,
+      models: modelWith([
+        selectDescriptor("effort", [
+          { id: "low", label: "Low" },
+          { id: "medium", label: "Medium" },
+          { id: "high", label: "High" },
+        ]),
+      ]),
+      modelOptions: selections(["effort", "high"]),
+    });
+
+    expect(state.promptEffort).toBe("high");
+    expect(state.modelOptionsForDispatch).toEqual(selections(["effort", "high"]));
+  });
+
+  it("uses the first option when the previous reasoning effort is unsupported", () => {
+    const state = getComposerProviderState({
+      provider: PROVIDER,
+      model: MODEL,
+      models: modelWith([
+        selectDescriptor("effort", [
+          { id: "low", label: "Low" },
+          { id: "high", label: "High" },
+        ]),
+      ]),
+      modelOptions: selections(["effort", "xhigh"]),
+    });
+
+    expect(state.promptEffort).toBe("low");
+    expect(state.modelOptionsForDispatch).toEqual(selections(["effort", "low"]));
+  });
+
   it("lets selections override defaults and propagates them through dispatch", () => {
     const state = getComposerProviderState({
       provider: PROVIDER,

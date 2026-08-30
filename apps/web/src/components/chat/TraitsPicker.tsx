@@ -32,6 +32,11 @@ import { getProviderModelCapabilities } from "../../providerModels";
 import { cn } from "~/lib/utils";
 import { Badge } from "../ui/badge";
 import { ComposerControl, ComposerControlChevron, ComposerControlIcon } from "./ComposerControl";
+import {
+  isReasoningEffortDescriptor,
+  reasoningEffortOptionLabel,
+  resolveReasoningEffortModelOptions,
+} from "./reasoningEffort";
 
 type ProviderOptions = ReadonlyArray<ProviderOptionSelection>;
 
@@ -98,9 +103,15 @@ function getSelectedTraits(
   allowPromptInjectedEffort: boolean,
 ) {
   const caps = getProviderModelCapabilities(models, model, provider);
+  const resolvedModelOptions = resolveReasoningEffortModelOptions({
+    provider,
+    model,
+    models,
+    modelOptions,
+  });
   const descriptors = getProviderOptionDescriptors({
     caps,
-    selections: modelOptions,
+    selections: resolvedModelOptions,
   });
   const selectDescriptors = descriptors.filter(
     (descriptor): descriptor is Extract<ProviderOptionDescriptor, { type: "select" }> =>
@@ -330,7 +341,15 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
                   >
                     <span className="flex w-full min-w-0 items-center justify-between gap-3">
                       <span className="min-w-0 truncate">
-                        {option.label}
+                        <span
+                          {...(isReasoningEffortDescriptor(descriptor)
+                            ? { "data-i18n-skip": "true" }
+                            : {})}
+                        >
+                          {isReasoningEffortDescriptor(descriptor)
+                            ? reasoningEffortOptionLabel(option.id, option.label)
+                            : option.label}
+                        </span>
                         {option.isDefault ? (
                           <>
                             {" "}
@@ -420,7 +439,12 @@ export function buildTraitsTriggerDisplay(input: {
         ? "Ultrathink"
         : descriptor.type === "boolean"
           ? `${descriptor.label} ${descriptor.currentValue === true ? "On" : "Off"}`
-          : getProviderOptionCurrentLabel(descriptor);
+          : isReasoningEffortDescriptor(descriptor) && descriptor.type === "select"
+            ? reasoningEffortOptionLabel(
+                getDescriptorStringValue(descriptor) ?? "",
+                getProviderOptionCurrentLabel(descriptor) ?? "",
+              )
+            : getProviderOptionCurrentLabel(descriptor);
     if (typeof label === "string" && label.length > 0) {
       labels.push(label);
     }
@@ -515,13 +539,26 @@ export const TraitsPicker = memo(function TraitsPicker({
         {isCodexStyle ? (
           <span className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
             {fastModeIcon}
-            <span className="min-w-0 truncate">{triggerLabel}</span>
+            <span
+              className="min-w-0 truncate"
+              {...(isReasoningEffortDescriptor(primarySelectDescriptor)
+                ? { "data-i18n-skip": "true" }
+                : {})}
+            >
+              {triggerLabel}
+            </span>
             <ComposerControlChevron />
           </span>
         ) : (
           <>
             {fastModeIcon}
-            <span>{triggerLabel}</span>
+            <span
+              {...(isReasoningEffortDescriptor(primarySelectDescriptor)
+                ? { "data-i18n-skip": "true" }
+                : {})}
+            >
+              {triggerLabel}
+            </span>
             <ComposerControlChevron />
           </>
         )}

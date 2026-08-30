@@ -23,7 +23,16 @@ import {
   formatSubagentTokenCount,
 } from "@t3tools/client-runtime/state/subagentRuntime";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
-import { Bot, Braces, Check, ChevronDown, ChevronRight, RefreshCw, X } from "lucide-react";
+import {
+  Bot,
+  Braces,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
@@ -69,6 +78,37 @@ export function formatOmpTranscriptMessage(message: unknown): string {
 type ParentAction = "steer" | "stop";
 
 type ParentActionResult = { readonly _tag: "Success" } | { readonly _tag: "Failure" };
+
+export type AgentTranscriptTabsState = {
+  readonly openIds: ReadonlyArray<string>;
+  readonly activeId: string | null;
+};
+
+export function openAgentTranscriptTab(
+  state: AgentTranscriptTabsState,
+  agentId: string,
+): AgentTranscriptTabsState {
+  return {
+    openIds: state.openIds.includes(agentId) ? state.openIds : [...state.openIds, agentId],
+    activeId: agentId,
+  };
+}
+
+export function closeAgentTranscriptTab(
+  state: AgentTranscriptTabsState,
+  agentId: string,
+): AgentTranscriptTabsState {
+  const index = state.openIds.indexOf(agentId);
+  if (index < 0) return state;
+  const openIds = state.openIds.filter((id) => id !== agentId);
+  if (state.activeId !== agentId) {
+    return { openIds, activeId: state.activeId };
+  }
+  return {
+    openIds,
+    activeId: openIds[index] ?? openIds[index - 1] ?? null,
+  };
+}
 
 export function resolveParentActionOutcome(
   action: ParentAction,
@@ -919,14 +959,32 @@ export function AgentsPanel({
   environmentId?: EnvironmentId | null;
   threadId?: ThreadId | null;
 }) {
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const selectedAgent =
-    model.directAgents.find((agent) => agent.id === selectedAgentId) ??
-    model.workflows
-      .flatMap((group) => [group.workflow, ...workflowMembers(group)])
-      .find((agent) => agent.id === selectedAgentId) ??
-    null;
-  const canOpenTranscript = environmentId !== null && threadId !== null && selectedAgent !== null;
+  const [transcriptTabs, setTranscriptTabs] = useState<AgentTranscriptTabsState>({
+    openIds: [],
+    activeId: null,
+  });
+  const agents = [
+    ...model.directAgents,
+    ...model.workflows.flatMap((group) => [group.workflow, ...workflowMembers(group)]),
+  ];
+  const activeAgent = agents.find((agent) => agent.id === transcriptTabs.activeId) ?? null;
+  const canOpenTranscript = environmentId !== null && threadId !== null && activeAgent !== null;
+  const tabAgents = transcriptTabs.openIds
+    .map((id) => agents.find((agent) => agent.id === id) ?? null)
+    .filter((agent): agent is RuntimeSubagent => agent !== null);
+  const openTranscript = useCallback(
+    (agent: RuntimeSubagent) => {
+      if (environmentId === null || threadId === null) return;
+      setTranscriptTabs((state) => openAgentTranscriptTab(state, agent.id));
+    },
+    [environmentId, threadId],
+  );
+  const closeTranscript = useCallback((agentId: string) => {
+    setTranscriptTabs((state) => closeAgentTranscriptTab(state, agentId));
+  }, []);
+  const returnToAgentList = useCallback(() => {
+    setTranscriptTabs((state) => ({ ...state, activeId: null }));
+  }, []);
 
   if (!model.hasAgents) {
     return (
@@ -943,42 +1001,94 @@ export function AgentsPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ScrollArea className={cn("min-h-0", canOpenTranscript ? "flex-[0_0_40%]" : "flex-1")}>
-        <div className="flex flex-col gap-2 p-2">
-          {model.workflows.map((group) => (
-            <WorkflowSection
-              key={group.workflow.id}
-              group={group}
-              environmentId={environmentId}
-              threadId={threadId}
-              selectedAgentId={selectedAgentId}
-              onSelectAgent={(agent) => setSelectedAgentId(agent.id)}
-            />
-          ))}
-          {model.directAgents.length > 0 ? (
-            <section>
-              <div className="px-1.5 pt-1 text-[.65rem] font-medium uppercase tracking-wider text-muted-foreground">
-                Direct spawns
-              </div>
-              {model.directAgents.map((agent) => (
-                <AgentRow
-                  key={agent.id}
-                  agent={agent}
-                  selected={selectedAgentId === agent.id}
-                  onSelect={(next) => setSelectedAgentId(next.id)}
-                />
-              ))}
-            </section>
-          ) : null}
-        </div>
-      </ScrollArea>
       {canOpenTranscript ? (
-        <NestedSubagentTranscriptPane
-          environmentId={environmentId}
-          threadId={threadId}
-          agent={selectedAgent}
-          onClose={() => setSelectedAgentId(null)}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-w-0 items-center gap-1 border-b border-border/60 px-1.5 py-1">
+            <button
+              type="button"
+              onClick={returnToAgentList}
+              aria-label="Back to agents list"
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+            >
+              <ChevronLeft aria-hidden className="size-4" />
+            </button>
+            <div
+              role="tablist"
+              aria-label="Open agent transcripts"
+              className="flex min-w-0 flex-1 gap-1 overflow-x-auto"
+            >
+              {tabAgents.map((agent) => (
+                <div
+                  key={agent.id}
+                  role="presentation"
+                  className={cn(
+                    "flex min-w-0 max-w-44 shrink-0 items-center rounded-md border border-border/50",
+                    agent.id === transcriptTabs.activeId && "border-border bg-accent/40",
+                  )}
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={agent.id === transcriptTabs.activeId}
+                    onClick={() =>
+                      setTranscriptTabs((state) => openAgentTranscriptTab(state, agent.id))
+                    }
+                    className="min-w-0 flex-1 truncate px-2 py-1 text-left text-[.7rem] text-muted-foreground hover:text-foreground"
+                    title={agent.title}
+                  >
+                    {agent.title}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Close ${agent.title} transcript`}
+                    onClick={() => closeTranscript(agent.id)}
+                    className="inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X aria-hidden className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <NestedSubagentTranscriptPane
+            key={activeAgent.id}
+            environmentId={environmentId}
+            threadId={threadId}
+            agent={activeAgent}
+            onClose={() => closeTranscript(activeAgent.id)}
+          />
+        </div>
+      ) : null}
+      {!canOpenTranscript ? (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex flex-col gap-2 p-2">
+            {model.workflows.map((group) => (
+              <WorkflowSection
+                key={group.workflow.id}
+                group={group}
+                environmentId={environmentId}
+                threadId={threadId}
+                selectedAgentId={transcriptTabs.activeId}
+                onSelectAgent={openTranscript}
+              />
+            ))}
+            {model.directAgents.length > 0 ? (
+              <section>
+                <div className="px-1.5 pt-1 text-[.65rem] font-medium uppercase tracking-wider text-muted-foreground">
+                  Direct spawns
+                </div>
+                {model.directAgents.map((agent) => (
+                  <AgentRow
+                    key={agent.id}
+                    agent={agent}
+                    selected={transcriptTabs.activeId === agent.id}
+                    onSelect={openTranscript}
+                  />
+                ))}
+              </section>
+            ) : null}
+          </div>
+        </ScrollArea>
       ) : null}
       <footer className="flex items-center justify-between border-t border-border/60 px-3 py-1.5 font-mono text-[.7rem] text-muted-foreground">
         <span className="flex items-center gap-2">

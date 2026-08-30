@@ -2,8 +2,10 @@ import type { RuntimeSubagent } from "@t3tools/client-runtime/state/subagentRunt
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  closeAgentTranscriptTab,
   formatAgentActivityText,
   formatOmpTranscriptMessage,
+  openAgentTranscriptTab,
   resolveParentActionOutcome,
 } from "./AgentsPanel";
 
@@ -98,5 +100,36 @@ describe("resolveParentActionOutcome", () => {
       clearSteerText: false,
       error: "Could not stop parent turn.",
     });
+  });
+});
+
+describe("agent transcript tabs", () => {
+  it("opens distinct agents while preserving earlier transcript tabs", () => {
+    const first = openAgentTranscriptTab({ openIds: [], activeId: null }, "worker");
+    const second = openAgentTranscriptTab(first, "reviewer");
+
+    expect(second).toEqual({ openIds: ["worker", "reviewer"], activeId: "reviewer" });
+    expect(openAgentTranscriptTab(second, "worker")).toEqual({
+      openIds: ["worker", "reviewer"],
+      activeId: "worker",
+    });
+  });
+
+  it("selects a neighboring tab or the list when the active tab closes", () => {
+    const state = { openIds: ["worker", "reviewer", "scout"], activeId: "reviewer" } as const;
+    expect(closeAgentTranscriptTab(state, "reviewer")).toEqual({
+      openIds: ["worker", "scout"],
+      activeId: "scout",
+    });
+    expect(closeAgentTranscriptTab({ openIds: ["worker"], activeId: "worker" }, "worker")).toEqual({
+      openIds: [],
+      activeId: null,
+    });
+  });
+
+  it("does not disturb the active tab when closing another tab", () => {
+    expect(
+      closeAgentTranscriptTab({ openIds: ["worker", "reviewer"], activeId: "reviewer" }, "worker"),
+    ).toEqual({ openIds: ["reviewer"], activeId: "reviewer" });
   });
 });

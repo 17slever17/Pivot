@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ProviderDriverKind, type ProviderOptionDescriptor } from "@t3tools/contracts";
 import { buildTraitsTriggerDisplay } from "./TraitsPicker";
+import { reasoningEffortOptionLabel } from "./reasoningEffort";
 
 function selectDescriptor(
   id: string,
@@ -45,6 +46,14 @@ function display(descriptors: ReadonlyArray<ProviderOptionDescriptor>) {
 }
 
 describe("buildTraitsTriggerDisplay", () => {
+  it("keeps reasoning effort labels in English", () => {
+    expect(reasoningEffortOptionLabel("low", "Низкая")).toBe("Low");
+    expect(reasoningEffortOptionLabel("medium", "Средняя")).toBe("Medium");
+    expect(reasoningEffortOptionLabel("high", "Высокая")).toBe("High");
+    expect(reasoningEffortOptionLabel("xhigh", "Очень высокая")).toBe("Extra High");
+    expect(reasoningEffortOptionLabel("max", "Максимальная")).toBe("Max");
+  });
+
   it("omits fast mode from the label entirely when it is off", () => {
     expect(display([EFFORT, fastModeDescriptor(false), CONTEXT_WINDOW])).toEqual({
       label: "High · 1M",
