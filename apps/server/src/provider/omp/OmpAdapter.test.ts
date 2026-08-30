@@ -39,6 +39,7 @@ const isProviderAdapterRequestError = Schema.is(ProviderAdapterRequestError);
 const isProviderAdapterProcessError = Schema.is(ProviderAdapterProcessError);
 import { FakeOmpRpc } from "./FakeOmpRpc.ts";
 import { OmpAdapter } from "./OmpAdapter.ts";
+import { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
 import { OmpSpawnError } from "./OmpRpcRuntime.ts";
 
 let nextTestUuid = 0;
@@ -113,7 +114,59 @@ const waitForSent = (
     }
   });
 
+class AgentModeObservingFakeOmpRpc extends FakeOmpRpc {
+  ensureSessionInput:
+    | {
+        readonly sessionKey: string;
+        readonly cwd: string;
+        readonly resumeCursor: string | null;
+        readonly extraEnv?: Record<string, string>;
+        readonly extraArgs?: ReadonlyArray<string>;
+        readonly appendSystemPromptFile?: string;
+      }
+    | undefined;
+
+  override ensureSession(input: NonNullable<AgentModeObservingFakeOmpRpc["ensureSessionInput"]>) {
+    this.ensureSessionInput = input;
+    return super.ensureSession(input);
+  }
+}
+
 describe("OmpAdapter", () => {
+  it.effect(
+    "discovers managed task agents through a session extension without replacing OMP state",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-agent-mode-runtime-" });
+        const store = new OmpAgentProfileStore(fs, path, stateDir);
+        yield* store.upsert({
+          name: "worker",
+          description: "A focused worker",
+          model: "openai-codex/gpt-5.6-luna",
+          effort: "xhigh",
+          systemPrompt: "Follow the project instructions.",
+          readOnly: false,
+          canSpawn: false,
+        });
+        const fake = new AgentModeObservingFakeOmpRpc();
+        const adapter = new OmpAdapter(fake, testRandomUUID, { agentProfileStore: store });
+
+        yield* adapter.startSession({ ...startInput, agentMode: "orchestrator" });
+
+        NodeAssert.deepEqual(fake.ensureSessionInput?.extraArgs, [
+          "--extension",
+          path.join(stateDir, "omp-agent-modes"),
+        ]);
+        NodeAssert.equal(fake.ensureSessionInput?.extraEnv, undefined);
+        NodeAssert.equal(
+          fake.ensureSessionInput?.extraArgs?.includes("PI_CODING_AGENT_DIR"),
+          false,
+        );
+      }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("completes a T3 turn on terminal agent_end", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

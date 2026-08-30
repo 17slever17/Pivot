@@ -8,6 +8,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import { expect } from "vite-plus/test";
+import { parseDocument } from "yaml";
 
 import { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
 
@@ -29,7 +30,7 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
         effort: "xhigh",
         systemPrompt: "Follow the project instructions.",
         readOnly: false,
-        canSpawn: false,
+        canSpawn: true,
       });
 
       expect(profile.name).toBe("worker");
@@ -39,8 +40,12 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       );
       expect(definition).toContain("model: 'openai-codex/gpt-5.6-luna'");
       expect(definition).toContain("thinking-level: 'xhigh'");
-      expect(definition).toContain("Usage hint: Use for implementation tasks");
+      expect(definition).toContain('spawns: "*"');
       expect(definition).not.toContain("spawns: *");
+      const parsedFrontmatter = parseDocument(definition.split("---")[1] ?? "");
+      expect(parsedFrontmatter.errors).toEqual([]);
+      expect(parsedFrontmatter.get("spawns")).toBe("*");
+      expect(definition).toContain("Usage hint: Use for implementation tasks");
 
       yield* store.delete("worker");
       expect(yield* fs.exists(path.join(stateDir, "omp-agent-modes", "agents", "worker.md"))).toBe(
@@ -88,6 +93,10 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       expect(imported.profiles[1]?.readOnly).toBe(true);
       expect(imported.profiles[0]?.systemPrompt).toContain("# Common");
       expect(imported.profiles[0]?.systemPrompt).not.toContain("# Orchestrator-only");
+      const verifierDefinition = yield* fs.readFileString(
+        path.join(stateDir, "omp-agent-modes", "agents", "verifier.md"),
+      );
+      expect(verifierDefinition).toContain("thinking-level: 'max'");
     }),
   );
 });

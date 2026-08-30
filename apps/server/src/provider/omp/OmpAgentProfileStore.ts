@@ -363,9 +363,9 @@ export class OmpAgentProfileStore {
   }
 
   /**
-   * OMP documents PI_CODING_AGENT_DIR as the agent-directory override. Return
-   * it only after explicit profile materialization; ordinary sessions keep the
-   * user's configured OMP directory and its settings untouched.
+   * Return the explicit extension root containing materialized agent
+   * definitions. Ordinary sessions keep the user's configured OMP directory
+   * and its settings untouched.
    */
   public managedAgentDirectory(): Effect.Effect<string | undefined, OmpAgentProfileError> {
     return this.list().pipe(
@@ -388,7 +388,7 @@ export class OmpAgentProfileStore {
         `tools: ${tools}`,
         `model: ${frontmatterScalar(profile.model)}`,
         `thinking-level: ${frontmatterScalar(profile.effort)}`,
-        ...(profile.canSpawn ? ["spawns: *"] : []),
+        ...(profile.canSpawn ? ['spawns: "*"'] : []),
         "---",
       ].join("\n");
       const file = this.#path.join(agentsDir, `${profile.name}.md`);

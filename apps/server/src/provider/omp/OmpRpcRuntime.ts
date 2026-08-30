@@ -172,6 +172,8 @@ export interface OmpEnsureSessionInput {
   readonly cwd: string;
   readonly resumeCursor: string | null;
   readonly extraEnv?: Record<string, string>;
+  /** Additional OMP CLI arguments that are scoped to this child session. */
+  readonly extraArgs?: ReadonlyArray<string>;
   /** Optional Pivot-managed root instruction file for this session. */
   readonly appendSystemPromptFile?: string;
 }
@@ -314,6 +316,7 @@ export class OmpRpcRuntime {
           ChildProcess.make(
             this.#binaryPath,
             [
+              ...(input.extraArgs ?? []),
               "--mode",
               "rpc-ui",
               ...(input.appendSystemPromptFile

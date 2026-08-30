@@ -60,6 +60,8 @@ export class FakeOmpRpc {
     readonly cwd: string;
     readonly resumeCursor: string | null;
     readonly extraEnv?: Record<string, string>;
+    readonly extraArgs?: ReadonlyArray<string>;
+    readonly appendSystemPromptFile?: string;
   }): Effect.Effect<{ sessionKey: string; sessionFile: string }, OmpSpawnError> {
     return Effect.gen({ self: this }, function* () {
       if (!this.frames.has(input.sessionKey)) {

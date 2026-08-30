@@ -365,11 +365,14 @@ describe("OmpRpcRuntime", () => {
         sessionKey: "thread-prompt",
         cwd: "/proj",
         resumeCursor: null,
+        extraArgs: ["--extension", "/pivot/userdata/omp-agent-modes"],
         appendSystemPromptFile:
           "/pivot/userdata/omp-agent-modes/sessions/thread-prompt-orchestrator.md",
       });
 
       NodeAssert.deepEqual(fake.spawns[1]?.args, [
+        "--extension",
+        "/pivot/userdata/omp-agent-modes",
         "--mode",
         "rpc-ui",
         "--append-system-prompt",

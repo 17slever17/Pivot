@@ -434,19 +434,16 @@ export class OmpAdapter {
               .managedAgentDirectory()
               .pipe(Effect.mapError((cause) => mapOmpAgentProfileError("startSession", cause)))
           : undefined;
-      const sessionEnv =
-        managedAgentDir === undefined
-          ? extraEnv
-          : {
-              ...(extraEnv === undefined ? {} : extraEnv),
-              PI_CODING_AGENT_DIR: managedAgentDir,
-            };
       const handle = yield* this.#runtime
         .ensureSession({
           sessionKey: input.threadId,
           cwd,
           resumeCursor,
-          ...(sessionEnv !== undefined ? { extraEnv: sessionEnv } : {}),
+          ...(extraEnv !== undefined ? { extraEnv } : {}),
+          // `PI_CODING_AGENT_DIR` replaces OMP's whole agent state directory,
+          // including auth/settings databases. Use OMP's supported extension
+          // discovery lane for Pivot-managed task-agent definitions instead.
+          ...(managedAgentDir !== undefined ? { extraArgs: ["--extension", managedAgentDir] } : {}),
           ...(appendSystemPromptFile ? { appendSystemPromptFile } : {}),
         })
         .pipe(
