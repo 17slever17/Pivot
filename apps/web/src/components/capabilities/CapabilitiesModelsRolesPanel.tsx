@@ -22,9 +22,13 @@ import { useSettingsProjectGroups } from "../settings/ProjectSettingsPanel";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "../settings/settingsLayout";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 
-import { modelRolesFromSettingsEntries } from "./CapabilitiesModelsRolesPanel.logic";
+import {
+  availableOmpModelRolePresets,
+  modelRolesFromSettingsEntries,
+} from "./CapabilitiesModelsRolesPanel.logic";
 import { resolveCapabilitiesProjectIdForView } from "./CapabilitiesOverviewPanel.logic";
 import { buildWriteSettingInput } from "./CapabilitiesSettingsPanel.logic";
 
@@ -75,6 +79,7 @@ export function CapabilitiesModelsRolesPanel({
 
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleModel, setNewRoleModel] = useState("");
+  const [selectedRolePreset, setSelectedRolePreset] = useState<string | null>(null);
   const [modelQuery, setModelQuery] = useState("");
   const [showAllModels, setShowAllModels] = useState(false);
 
@@ -92,6 +97,7 @@ export function CapabilitiesModelsRolesPanel({
     () => (snapshot === null ? {} : modelRolesFromSettingsEntries(snapshot.settings.entries)),
     [snapshot],
   );
+  const availableRolePresets = useMemo(() => availableOmpModelRolePresets(roles), [roles]);
 
   /** Every available model across instances, for the Models catalog. */
   const allModels = useMemo(() => {
@@ -209,6 +215,7 @@ export function CapabilitiesModelsRolesPanel({
     void writeRoles({ ...roles, [name]: newRoleModel });
     setNewRoleName("");
     setNewRoleModel("");
+    setSelectedRolePreset(null);
   };
 
   if (environmentId === null) {
@@ -331,7 +338,7 @@ export function CapabilitiesModelsRolesPanel({
       <SettingsSection title="Roles">
         <SettingsRow
           title="Role to model mapping"
-          description="A role names a model for a specific job. The review agent uses the 'review' role when it is set; otherwise it falls back to your current model."
+          description="OMP model-routing roles choose a model for each job. They are not Codex subagent types such as worker or verifier. The @smol selector is stored as smol."
         />
         {defaultInstanceId === null ? (
           <p className="text-sm text-muted-foreground">
@@ -393,14 +400,59 @@ export function CapabilitiesModelsRolesPanel({
                 )}
                 <tr className="border-t border-border/60 bg-muted/20">
                   <td className="w-40 px-4 py-2.5">
-                    <Input
-                      size="sm"
-                      className="h-8 font-mono"
-                      value={newRoleName}
-                      onChange={(event) => setNewRoleName(event.currentTarget.value)}
-                      placeholder="review"
-                      aria-label="New role name"
-                    />
+                    <div className="grid gap-1.5">
+                      <Select
+                        value={selectedRolePreset}
+                        onValueChange={(value) => {
+                          if (value === null) return;
+                          setSelectedRolePreset(value);
+                          setNewRoleName(value);
+                        }}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="h-8 w-full text-xs"
+                          aria-label="OMP role preset"
+                          disabled={availableRolePresets.length === 0}
+                        >
+                          <SelectValue placeholder="Choose an OMP role preset">
+                            {selectedRolePreset === null ? undefined : `@${selectedRolePreset}`}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectPopup
+                          align="start"
+                          alignItemWithTrigger={false}
+                          popupClassName="min-w-80"
+                        >
+                          {availableRolePresets.map((preset) => (
+                            <SelectItem
+                              key={preset.id}
+                              value={preset.id}
+                              hideIndicator
+                              className="items-start py-2"
+                            >
+                              <span className="grid gap-0.5">
+                                <span className="font-mono text-foreground">@{preset.id}</span>
+                                <span className="text-muted-foreground text-xs leading-4">
+                                  {preset.description}
+                                </span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectPopup>
+                      </Select>
+                      <Input
+                        size="sm"
+                        className="h-8 font-mono"
+                        value={newRoleName}
+                        onChange={(event) => {
+                          setNewRoleName(event.currentTarget.value);
+                          setSelectedRolePreset(null);
+                        }}
+                        placeholder="custom-role"
+                        aria-label="New role name"
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <ProviderModelPicker

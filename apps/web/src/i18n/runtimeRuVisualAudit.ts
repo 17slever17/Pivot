@@ -93,12 +93,26 @@ export const RU_VISUAL_AUDIT: Readonly<Record<string, string>> = {
   "No models available — connect a provider.": "Нет доступных моделей — подключите провайдера.",
   "Show fewer": "Показать меньше",
   "Role to model mapping": "Сопоставление ролей и моделей",
-  "A role names a model for a specific job. The review agent uses the 'review' role when it is set; otherwise it falls back to your current model.":
-    "Роль задаёт модель для конкретной задачи. Агент ревью использует роль 'review', если она назначена; иначе используется текущая модель.",
+  "OMP model-routing roles choose a model for each job. They are not Codex subagent types such as worker or verifier. The @smol selector is stored as smol.":
+    "Роли маршрутизации моделей OMP выбирают модель для каждой задачи. Это не типы субагентов Codex, такие как worker или verifier. Селектор @smol сохраняется как smol.",
   "Connect a provider to pick models for your roles.":
     "Подключите провайдера, чтобы выбрать модели для ролей.",
   "No roles yet — add one below.": "Ролей пока нет — добавьте роль ниже.",
   "New role name": "Название новой роли",
+  "OMP role preset": "Предустановка роли OMP",
+  "Choose an OMP role preset": "Выберите предустановленную роль OMP",
+  "custom-role": "своя-роль",
+  "Primary model for ordinary work.": "Основная модель для обычной работы.",
+  "Fast mechanical task agents (scout, librarian, and sonic).":
+    "Быстрые агенты для механических задач (scout, librarian и sonic).",
+  "Slower reviewer for careful analysis.": "Более медленная модель для тщательной проверки.",
+  "Image and visual-understanding tasks.": "Задачи с изображениями и визуальным пониманием.",
+  "Planning and decomposition.": "Планирование и декомпозиция.",
+  "Design and UI-focused work.": "Задачи по дизайну и интерфейсам.",
+  "Small commit/message-oriented tasks.": "Небольшие задачи для коммитов и сообщений.",
+  "Lightweight background work and thread titles.": "Лёгкие фоновые задачи и заголовки чатов.",
+  "Full subagents for substantial tasks.": "Полноценные субагенты для больших задач.",
+  "Secondary advice/reasoning model.": "Дополнительная модель для советов и рассуждений.",
   "Saved model roles": "Роли моделей сохранены",
   "Cleared model roles": "Роли моделей очищены",
 
