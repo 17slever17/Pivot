@@ -217,6 +217,11 @@ export function CapabilitiesAgentProfilesPanel({
     label: "omp-agent-profiles-import-codex",
     reportFailure: false,
   });
+  const rootPromptBundlesAtom = serverEnvironment.ompRootPromptBundlesGet({
+    environmentId,
+    input: instanceId === null ? {} : { instanceId },
+  });
+  const refreshRootPromptBundles = useAtomRefresh(rootPromptBundlesAtom);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentProfileDraft | null>(null);
   const [pendingAction, setPendingAction] = useState<"save" | "delete" | "import" | null>(null);
@@ -320,6 +325,7 @@ export function CapabilitiesAgentProfilesPanel({
     setImportedAt(outcome.value.importedAt);
     toastManager.add({ type: "success", title: "Codex setup imported" });
     refreshProfiles();
+    refreshRootPromptBundles();
   };
 
   const importSummary = importedProfiles ? summarizeImportedProfiles(importedProfiles) : null;

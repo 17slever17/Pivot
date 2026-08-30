@@ -807,6 +807,20 @@ export function createServerEnvironmentAtoms<R, E>(
           `${environmentId}:${input.instanceId ?? "omp"}:agent-profiles-import-codex`,
       },
     }),
+    ompRootPromptBundlesGet: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:server:omp-root-prompt-bundles-get",
+      tag: WS_METHODS.serverOmpRootPromptBundlesGet,
+      staleTimeMs: 30_000,
+    }),
+    ompRootPromptBundlesUpdate: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:omp-root-prompt-bundles-update",
+      tag: WS_METHODS.serverOmpRootPromptBundlesUpdate,
+      concurrency: {
+        mode: "singleFlight",
+        key: ({ environmentId, input }) =>
+          `${environmentId}:${input.instanceId ?? "omp"}:root-prompt-bundles-update`,
+      },
+    }),
     capabilitiesSnapshot: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:server:omp-capabilities-snapshot",
       tag: WS_METHODS.serverOmpCapabilitiesGetSnapshot,

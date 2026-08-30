@@ -30,6 +30,7 @@ import {
   modelRolesFromSettingsEntries,
 } from "./CapabilitiesModelsRolesPanel.logic";
 import { CapabilitiesAgentProfilesPanel } from "./CapabilitiesAgentProfilesPanel";
+import { CapabilitiesRootPromptsPanel } from "./CapabilitiesRootPromptsPanel";
 import { resolveCapabilitiesProjectIdForView } from "./CapabilitiesOverviewPanel.logic";
 import { buildWriteSettingInput } from "./CapabilitiesSettingsPanel.logic";
 
@@ -492,6 +493,7 @@ export function CapabilitiesModelsRolesPanel({
         instanceEntries={instanceEntries}
         modelOptionsByInstance={modelOptionsByInstance}
       />
+      <CapabilitiesRootPromptsPanel environmentId={environmentId} instanceId={defaultInstanceId} />
     </SettingsPageContainer>
   );
 }
