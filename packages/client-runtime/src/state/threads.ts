@@ -252,6 +252,23 @@ export const makeEnvironmentThreadState = Effect.fn("EnvironmentThreadState.make
       ),
     );
 
+  // A subscription can fail with not-found while a draft's detail projection
+  // catches up with its shell entry. Keep that case retryable, but remember an
+  // explicit deletion so a foreground resubscribe cannot start a retry loop.
+  let authoritativeDeleted = false;
+  const isThreadNotFoundSubscriptionFailure = (cause: Cause.Cause<unknown>): boolean =>
+    cause.reasons.some(
+      (reason) =>
+        reason._tag === "Fail" &&
+        typeof reason.error === "object" &&
+        reason.error !== null &&
+        "_tag" in reason.error &&
+        reason.error._tag === "OrchestrationGetSnapshotError" &&
+        "message" in reason.error &&
+        typeof reason.error.message === "string" &&
+        reason.error.message === `Thread ${threadId} was not found`,
+    );
+
   const setThread = Effect.fn("EnvironmentThreadState.setThread")(function* (
     thread: OrchestrationThread,
     // "keep" preserves the current page state (live events touch only loaded
@@ -292,6 +309,7 @@ export const makeEnvironmentThreadState = Effect.fn("EnvironmentThreadState.make
   });
 
   const setDeleted = Effect.fn("EnvironmentThreadState.setDeleted")(function* () {
+    authoritativeDeleted = true;
     yield* Ref.set(awaitingCompletion, false);
     yield* Ref.update(historyEpoch, (epoch) => epoch + 1);
     yield* SubscriptionRef.set(state, {
@@ -637,12 +655,13 @@ export const makeEnvironmentThreadState = Effect.fn("EnvironmentThreadState.make
         };
       }),
       {
-        // A draft bootstrap creates the shell entry before its detail projection
-        // is visible. The detail subscription can therefore report a typed
-        // "thread not found" transiently; only an authoritative thread.deleted
-        // event should mark a live state as deleted.
-        onExpectedFailure: setStreamError,
+        onExpectedFailure: (cause) =>
+          isThreadNotFoundSubscriptionFailure(cause) && authoritativeDeleted
+            ? Effect.void
+            : setStreamError(cause),
         retryExpectedFailureAfter: "250 millis",
+        shouldRetryExpectedFailure: (cause) =>
+          !(isThreadNotFoundSubscriptionFailure(cause) && authoritativeDeleted),
         resubscribe: foregroundResubscriptions,
       },
     ).pipe(Stream.runForEach(applyItem)),
