@@ -1985,13 +1985,13 @@ describe("OmpAdapter", () => {
     }),
   );
 
-  it.effect("startSession subscribes to omp subagent progress frames", () =>
+  it.effect("startSession subscribes to omp subagent events", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
       const adapter = new OmpAdapter(fake, testRandomUUID);
       yield* adapter.startSession(startInput);
       NodeAssert.equal(fake.sent[0]?.type, "set_subagent_subscription");
-      NodeAssert.equal(fake.sent[0]?.level, "progress");
+      NodeAssert.equal(fake.sent[0]?.level, "events");
     }),
   );
 
@@ -2035,6 +2035,7 @@ describe("OmpAdapter", () => {
             currentTool: "read",
             currentToolArgs: "src/provider/omp/OmpAdapter.ts",
             currentToolStartMs: 1_700_000_000_000,
+            recentOutput: ["Latest child summary", "Older child summary"],
             toolCount: 7,
             tokens: 44_000,
             durationMs: 123_000,
@@ -2074,6 +2075,7 @@ describe("OmpAdapter", () => {
       NodeAssert.equal(progress?.payload.lastIntent, "Inspecting repository structure");
       NodeAssert.equal(progress?.payload.currentToolArgs, "src/provider/omp/OmpAdapter.ts");
       NodeAssert.equal(progress?.payload.currentToolStartMs, 1_700_000_000_000);
+      NodeAssert.equal(progress?.payload.summary, "Latest child summary");
       NodeAssert.deepEqual(progress?.payload.typedUsage, {
         totalTokens: 44_000,
         toolUses: 7,
@@ -2083,6 +2085,7 @@ describe("OmpAdapter", () => {
       NodeAssert.equal(progress?.payload.status, "running");
       NodeAssert.equal(completed?.payload.taskId, RuntimeTaskId.make("agent-1"));
       NodeAssert.equal(completed?.payload.status, "completed");
+      NodeAssert.equal(completed?.payload.summary, "Latest child summary");
     }),
   );
 
@@ -2094,6 +2097,7 @@ describe("OmpAdapter", () => {
         Effect.forkChild,
       );
       yield* adapter.startSession(startInput);
+      NodeAssert.equal(fake.sent[0]?.level, "events");
       yield* adapter.sendTurn({ threadId: THREAD_ID, input: "spawn" });
       yield* fake.offer(THREAD_ID, {
         type: "subagent_lifecycle",

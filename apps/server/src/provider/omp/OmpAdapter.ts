@@ -403,7 +403,7 @@ export class OmpAdapter {
       yield* this.#runtime
         .send(input.threadId, {
           type: "set_subagent_subscription",
-          level: "progress",
+          level: "events",
         })
         .pipe(Effect.mapError((cause) => mapOmpSpawnError(input.threadId, cause)));
       yield* this.#applyModelSelection(input.threadId, input.modelSelection?.model);
@@ -1117,7 +1117,7 @@ export class OmpAdapter {
     if (progress.usage !== undefined) {
       state.usage = progress.usage;
     }
-    const summary = readNonEmptyText(progress.recentOutput) ?? lastIntent;
+    const summary = readOmpRecentOutput(progress.recentOutput) ?? lastIntent;
     const error = readOmpErrorText(progress.retryFailure);
     return this.#emitSubagentTaskProgress(session, state, {
       ...(status === undefined ? {} : { status }),
@@ -2381,6 +2381,19 @@ function runtimeTaskStatusFromOmpProgress(status: unknown): RuntimeTaskStatus | 
 
 function readNonEmptyText(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function readOmpRecentOutput(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = readNonEmptyText(item);
+      if (text !== undefined) {
+        return text;
+      }
+    }
+    return undefined;
+  }
+  return readNonEmptyText(value);
 }
 
 function truncateSubagentActivity(value: string, maxLength = 500): string {
