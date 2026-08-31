@@ -365,42 +365,18 @@ export const make = Effect.gen(function* () {
     return yield* updateCachedRemoteStatus(cwd, remote, { publish: true });
   });
 
-  const refreshRemoteStatusInBackground = Effect.fn(
-    "VcsStatusBroadcaster.refreshRemoteStatusInBackground",
-  )(function* (cwd: string) {
-    yield* refreshRemoteStatus(cwd).pipe(
-      Effect.catchAllCause((cause) =>
-        Effect.logWarning("VCS remote status refresh failed after explicit local refresh", {
-          cwdLength: cwd.length,
-          ...remoteRefreshFailureDiagnostics(cause),
-        }),
-      ),
-    );
-  });
-
   const refreshStatus: VcsStatusBroadcaster["Service"]["refreshStatus"] = Effect.fn(
     "VcsStatusBroadcaster.refreshStatus",
   )(function* (rawCwd) {
     const cwd = yield* withFileSystem(normalizeCwd(rawCwd));
-    // The local status is the latency-sensitive part of an explicit refresh.
-    // Remote status also performs hosting-provider PR lookup, which can take
-    // tens of seconds, so keep it managed by the broadcaster scope and publish
-    // its result separately when it completes.
-    yield* workflow.invalidateLocalStatus(cwd);
-    const local = yield* workflow.localStatus({ cwd });
-    const cached = yield* getCachedStatus(cwd);
-    const remote = cached?.remote?.value ?? null;
-    const snapshot = yield* updateCachedStatus(cwd, local, remote, { publish: true });
-
-    // Start remote work before returning the local snapshot, while keeping it
-    // attached to the broadcaster scope. The remote workflow yields at its
-    // first asynchronous boundary, so the RPC remains local-first.
-    yield* refreshRemoteStatusInBackground(cwd).pipe(
-      Effect.forkIn(broadcasterScope, { startImmediately: true }),
-      Effect.asVoid,
+    // invalidateStatus (not the two partial invalidations) so an explicit
+    // refresh also bypasses GitManager's slow PR-lookup cache.
+    yield* workflow.invalidateStatus(cwd);
+    const [local, remote] = yield* Effect.all(
+      [workflow.localStatus({ cwd }), workflow.remoteStatus({ cwd })],
+      { concurrency: "unbounded" },
     );
-
-    return snapshot;
+    return yield* updateCachedStatus(cwd, local, remote, { publish: true });
   });
 
   const makeRemoteRefreshLoop = (
