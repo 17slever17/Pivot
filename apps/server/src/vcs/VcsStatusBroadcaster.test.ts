@@ -357,7 +357,10 @@ describe("VcsStatusBroadcaster", () => {
           ...baseRemoteStatus,
         });
       }
-      assert.deepStrictEqual(cached, baseStatus);
+      assert.deepStrictEqual(cached, {
+        ...state.currentLocalStatus,
+        ...baseRemoteStatus,
+      });
       assert.isTrue(
         messages.some(
           (message) => message[0] === "VCS remote status refresh failed after explicit local refresh",
