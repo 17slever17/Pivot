@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   ServerConfig,
+  ServerOmpGetSubagentMessagesResult,
   ServerProvider,
   ServerProviders,
   ServerUpsertKeybindingResult,
@@ -12,6 +13,7 @@ const decodeServerProvider = Schema.decodeUnknownSync(ServerProvider);
 const decodeServerProviders = Schema.decodeUnknownSync(ServerProviders);
 const decodeUpsertKeybindingResult = Schema.decodeUnknownSync(ServerUpsertKeybindingResult);
 const decodeAvailableEditors = Schema.decodeUnknownSync(ServerConfig.fields.availableEditors);
+const decodeOmpSubagentMessages = Schema.decodeUnknownSync(ServerOmpGetSubagentMessagesResult);
 
 const baseProviderSnapshot = {
   instanceId: "codex",
@@ -24,6 +26,29 @@ const baseProviderSnapshot = {
   checkedAt: "2026-04-10T00:00:00.000Z",
   models: [],
 };
+
+describe("ServerOmpGetSubagentMessagesResult", () => {
+  it("accepts the complete transcript projection while retaining old responses", () => {
+    const legacy = decodeOmpSubagentMessages({
+      sessionFile: "/tmp/subagent.jsonl",
+      fromByte: 0,
+      nextByte: 10,
+      reset: false,
+      messages: [{ role: "assistant", content: "hello" }],
+    });
+    expect(legacy.entries).toBeUndefined();
+
+    const current = decodeOmpSubagentMessages({
+      sessionFile: "/tmp/subagent.jsonl",
+      fromByte: 10,
+      nextByte: 30,
+      reset: false,
+      entries: [{ type: "tool_call", name: "read" }],
+      messages: [],
+    });
+    expect(current.entries).toEqual([{ type: "tool_call", name: "read" }]);
+  });
+});
 
 describe("ServerProvider", () => {
   it("defaults capability arrays when decoding provider snapshots", () => {

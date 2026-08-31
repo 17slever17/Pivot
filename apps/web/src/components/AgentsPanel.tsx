@@ -60,9 +60,14 @@ export function formatOmpTranscriptMessage(message: unknown): string {
         if (typeof part === "string") {
           return part;
         }
-        if (typeof part === "object" && part !== null && "text" in part) {
-          const text = (part as { text?: unknown }).text;
-          return typeof text === "string" ? text : "";
+        if (typeof part === "object" && part !== null) {
+          const block = part as { type?: unknown; text?: unknown; thinking?: unknown };
+          if (block.type === "thinking" && typeof block.thinking === "string") {
+            return `Reasoning summary: ${block.thinking}`;
+          }
+          if (typeof block.text === "string") {
+            return block.text;
+          }
         }
         return "";
       })
@@ -73,6 +78,44 @@ export function formatOmpTranscriptMessage(message: unknown): string {
     return record.text;
   }
   return JSON.stringify(record);
+}
+
+/**
+ * Formats one OMP JSONL entry without throwing away non-message activity.
+ * OMP's transcript reader returns status, tool-call/result, compaction and
+ * message entries; the old UI rendered only the latter. Reasoning is shown
+ * only when OMP supplied it as a visible thinking block.
+ */
+export function formatOmpTranscriptEntry(entry: unknown): string {
+  if (typeof entry !== "object" || entry === null) {
+    return formatOmpTranscriptMessage(entry);
+  }
+  const record = entry as Record<string, unknown>;
+  if (record.type === "message" && record.message !== undefined) {
+    const messageRecord =
+      typeof record.message === "object" && record.message !== null
+        ? (record.message as Record<string, unknown>)
+        : null;
+    const role = typeof messageRecord?.role === "string" ? messageRecord.role : "message";
+    return `${role}: ${formatOmpTranscriptMessage(record.message)}`;
+  }
+  if (typeof record.type === "string") {
+    return `${record.type}\n${formatOmpTranscriptMessage(record)}`;
+  }
+  return formatOmpTranscriptMessage(entry);
+}
+
+function ompTranscriptEntryKey(entry: unknown, index: number): string {
+  if (typeof entry === "object" && entry !== null) {
+    const record = entry as Record<string, unknown>;
+    if (typeof record.id === "string" && record.id.length > 0) {
+      return record.id;
+    }
+    if (typeof record.type === "string") {
+      return `${record.type}:${index}`;
+    }
+  }
+  return `entry:${index}`;
 }
 
 type ParentAction = "steer" | "stop";
@@ -349,11 +392,12 @@ function NestedSubagentTranscriptPane({
   agent: RuntimeSubagent;
   onClose: () => void;
 }) {
-  const [messages, setMessages] = useState<ReadonlyArray<unknown>>([]);
+  const [entries, setEntries] = useState<ReadonlyArray<unknown>>([]);
   const [steerText, setSteerText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialReady, setInitialReady] = useState(false);
   const [parentAction, setParentAction] = useState<ParentAction | null>(null);
   const [parentActionError, setParentActionError] = useState<string | null>(null);
   const getMessages = useAtomCommand(serverEnvironment.ompGetSubagentMessages, {
@@ -361,92 +405,110 @@ function NestedSubagentTranscriptPane({
   });
   const steer = useAtomCommand(serverEnvironment.ompSteer, { reportFailure: false });
   const interruptTurn = useAtomCommand(threadEnvironment.interruptTurn, { reportFailure: false });
-  const transcriptActivityKey = [
-    agent.status,
-    agent.progress ?? "",
-    agent.lastToolName ?? "",
-    agent.lastIntent ?? "",
-    agent.currentToolArgs ?? "",
-    agent.result ?? "",
-    agent.error ?? "",
-  ].join("\0");
-  const latestActivityKeyRef = useRef(transcriptActivityKey);
-  latestActivityKeyRef.current = transcriptActivityKey;
-  const initialLoadRef = useRef(true);
-  const loadedActivityKeyRef = useRef(transcriptActivityKey);
+  const cursorRef = useRef(0);
+  const sessionFileRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
   const loadGenerationRef = useRef(0);
+  const transcriptLive =
+    agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
 
   const loadMessages = useCallback(
-    async (initial: boolean) => {
+    async (mode: "initial" | "refresh" | "poll") => {
+      if (mode === "poll" && inFlightRef.current) return;
+      inFlightRef.current = true;
       const generation = loadGenerationRef.current + 1;
       loadGenerationRef.current = generation;
-      if (initial) {
+      if (mode === "initial") {
         setLoading(true);
-      } else {
+      } else if (mode === "refresh") {
         setRefreshing(true);
       }
       setError(null);
       let result;
       try {
+        const fromByte = mode === "initial" ? undefined : cursorRef.current;
         result = await getMessages({
           environmentId,
-          input: { threadId, subagentId: agent.id },
+          input: {
+            threadId,
+            subagentId: agent.id,
+            ...(fromByte === undefined ? {} : { fromByte }),
+          },
         });
       } catch {
         if (generation !== loadGenerationRef.current) {
+          inFlightRef.current = false;
           return;
         }
         setError("Failed to load transcript");
         setLoading(false);
-        setRefreshing(false);
+        if (mode === "refresh") setRefreshing(false);
+        inFlightRef.current = false;
         return;
       }
       if (generation !== loadGenerationRef.current) {
+        inFlightRef.current = false;
         return;
       }
       if (result._tag === "Success") {
-        setMessages(result.value.messages);
+        const nextEntries = Array.isArray(result.value.entries)
+          ? result.value.entries
+          : result.value.messages;
+        const sessionFile = result.value.sessionFile || null;
+        const sessionChanged =
+          sessionFileRef.current !== null &&
+          sessionFile !== null &&
+          sessionFileRef.current !== sessionFile;
+        sessionFileRef.current = sessionFile;
+        cursorRef.current = result.value.nextByte;
+        if (mode === "initial" || result.value.reset || sessionChanged) {
+          setEntries(nextEntries);
+        } else if (nextEntries.length > 0) {
+          setEntries((current) => [...current, ...nextEntries]);
+        }
         setError(null);
       } else {
         setError("Failed to load transcript");
       }
       setLoading(false);
-      setRefreshing(false);
+      if (mode === "refresh") setRefreshing(false);
+      inFlightRef.current = false;
     },
     [agent.id, environmentId, getMessages, threadId],
   );
 
   useEffect(() => {
     let cancelled = false;
-    initialLoadRef.current = true;
-    loadedActivityKeyRef.current = transcriptActivityKey;
+    setInitialReady(false);
+    cursorRef.current = 0;
+    sessionFileRef.current = null;
+    setEntries([]);
     void (async () => {
-      await loadMessages(true);
+      await loadMessages("initial");
       if (cancelled) {
         return;
       }
-      initialLoadRef.current = false;
-      loadedActivityKeyRef.current = latestActivityKeyRef.current;
+      setInitialReady(true);
     })();
     return () => {
       cancelled = true;
       loadGenerationRef.current += 1;
+      inFlightRef.current = false;
     };
   }, [agent.id, environmentId, loadMessages, threadId]);
 
-  // The current OMP messages RPC has no cursor or message subscription payload.
-  // Reload only when a coarse activity signal changes; this is event-driven,
-  // not a timer, and Refresh remains available for prose-only updates.
+  // OMP tails the child JSONL by byte offset. Poll only while a transcript is
+  // open; this picks up prose-only messages and tool/status entries even when
+  // no coarse task activity event was emitted. Requests are single-flight.
   useEffect(() => {
-    if (initialLoadRef.current || loadedActivityKeyRef.current === transcriptActivityKey) {
-      return;
-    }
-    loadedActivityKeyRef.current = transcriptActivityKey;
-    void loadMessages(false);
-  }, [loadMessages, transcriptActivityKey]);
+    if (!initialReady || !transcriptLive) return;
+    const interval = window.setInterval(() => {
+      void loadMessages("poll");
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [initialReady, loadMessages, transcriptLive]);
 
-  const live =
-    agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
+  const live = transcriptLive;
 
   const handleSteerParent = async () => {
     const message = steerText.trim();
@@ -501,7 +563,7 @@ function NestedSubagentTranscriptPane({
         </span>
         <button
           type="button"
-          onClick={() => void loadMessages(false)}
+          onClick={() => void loadMessages("refresh")}
           disabled={loading || refreshing}
           aria-label="Refresh transcript"
           className="inline-flex items-center gap-1 rounded-sm border border-border/60 px-1.5 py-0.5 text-[.65rem] text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
@@ -520,20 +582,20 @@ function NestedSubagentTranscriptPane({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 p-2">
-          {loading && messages.length === 0 ? (
+          {loading && entries.length === 0 ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : error && messages.length === 0 ? (
+          ) : error && entries.length === 0 ? (
             <p className="text-xs text-destructive-foreground">{error}</p>
-          ) : messages.length === 0 ? (
+          ) : entries.length === 0 ? (
             <p className="text-xs text-muted-foreground">No messages yet.</p>
           ) : (
             <>
-              {messages.map((message, index) => (
+              {entries.map((entry, index) => (
                 <pre
-                  key={index}
+                  key={ompTranscriptEntryKey(entry, index)}
                   className="whitespace-pre-wrap break-words rounded-md border border-border/40 bg-background/50 p-2 font-mono text-[.7rem] leading-relaxed"
                 >
-                  {formatOmpTranscriptMessage(message)}
+                  {formatOmpTranscriptEntry(entry)}
                 </pre>
               ))}
               {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}

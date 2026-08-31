@@ -640,6 +640,12 @@ export const ServerOmpGetSubagentMessagesResult = Schema.Struct({
   fromByte: Schema.Number,
   nextByte: Schema.Number,
   reset: Schema.Boolean,
+  /**
+   * All complete JSONL entries read from the requested byte range. Older
+   * servers only returned the message projection, so this remains optional
+   * on the wire for backwards compatibility.
+   */
+  entries: Schema.optional(Schema.Array(Schema.Unknown)),
   messages: Schema.Array(Schema.Unknown),
 });
 export type ServerOmpGetSubagentMessagesResult = typeof ServerOmpGetSubagentMessagesResult.Type;

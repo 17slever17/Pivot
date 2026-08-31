@@ -2460,6 +2460,10 @@ describe("OmpAdapter", () => {
         fromByte: 0,
         nextByte: 42,
         reset: false,
+        entries: [
+          { type: "tool_call", name: "read" },
+          { type: "message", message: { role: "assistant", content: "nested" } },
+        ],
         messages: [{ role: "assistant", content: "nested" }],
       };
       const adapter = new OmpAdapter(fake, testRandomUUID);
@@ -2474,6 +2478,7 @@ describe("OmpAdapter", () => {
       NodeAssert.equal(fake.sent.at(-1)?.fromByte, 10);
       NodeAssert.equal(page.sessionFile, "/tmp/sub.jsonl");
       NodeAssert.equal(page.nextByte, 42);
+      NodeAssert.equal(page.entries.length, 2);
       NodeAssert.equal(page.messages.length, 1);
     }),
   );

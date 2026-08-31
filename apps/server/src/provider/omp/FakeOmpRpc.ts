@@ -41,6 +41,7 @@ export class FakeOmpRpc {
         readonly fromByte: number;
         readonly nextByte: number;
         readonly reset: boolean;
+        readonly entries?: ReadonlyArray<object>;
         readonly messages: ReadonlyArray<object>;
       }
     | undefined = undefined;
@@ -154,6 +155,7 @@ export class FakeOmpRpc {
           fromByte: 0,
           nextByte: 0,
           reset: false,
+          entries: [],
           messages: [],
         },
       });

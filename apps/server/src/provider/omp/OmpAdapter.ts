@@ -266,6 +266,8 @@ export interface OmpSubagentTranscriptPage {
   readonly fromByte: number;
   readonly nextByte: number;
   readonly reset: boolean;
+  /** All complete JSONL entries, including tool/status records. */
+  readonly entries: ReadonlyArray<unknown>;
   readonly messages: ReadonlyArray<unknown>;
 }
 
@@ -680,11 +682,15 @@ export class OmpAdapter {
       }
       const data = response.data;
       const messages = Array.isArray(data.messages) ? data.messages : [];
+      // OMP v18.0.11+ includes `entries`; retain the message projection as a
+      // compatibility fallback for an older managed binary.
+      const entries = Array.isArray(data.entries) ? data.entries : messages;
       return {
         sessionFile: typeof data.sessionFile === "string" ? data.sessionFile : "",
         fromByte: typeof data.fromByte === "number" ? data.fromByte : 0,
         nextByte: typeof data.nextByte === "number" ? data.nextByte : 0,
         reset: data.reset === true,
+        entries,
         messages,
       } satisfies OmpSubagentTranscriptPage;
     });

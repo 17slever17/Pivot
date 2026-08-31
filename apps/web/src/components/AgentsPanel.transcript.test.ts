@@ -4,6 +4,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   closeAgentTranscriptTab,
   formatAgentActivityText,
+  formatOmpTranscriptEntry,
   formatOmpTranscriptMessage,
   openAgentTranscriptTab,
   resolveParentActionOutcome,
@@ -77,6 +78,30 @@ describe("formatOmpTranscriptMessage", () => {
         ],
       }),
     ).toBe("ab");
+  });
+});
+
+describe("formatOmpTranscriptEntry", () => {
+  it("keeps non-message OMP entries in the journal", () => {
+    expect(
+      formatOmpTranscriptEntry({
+        type: "tool_call",
+        name: "read",
+        arguments: { path: "src/index.ts" },
+      }),
+    ).toContain("tool_call");
+  });
+
+  it("renders provider-supplied reasoning summaries without requiring raw fields", () => {
+    expect(
+      formatOmpTranscriptEntry({
+        type: "message",
+        message: {
+          role: "assistant",
+          content: [{ type: "thinking", thinking: "Checking the dependency graph" }],
+        },
+      }),
+    ).toBe("assistant: Reasoning summary: Checking the dependency graph");
   });
 });
 
