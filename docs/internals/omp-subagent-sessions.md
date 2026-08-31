@@ -16,6 +16,11 @@ There are deliberate limits. A hard abort/kill leaves a child non-reusable,
 and isolated or one-shot children are not reusable by design. The Agents panel
 does not claim to steer or stop a child when OMP only exposes controls for the
 parent session. A live OMP root process can revive a parked child through its
-native Hub, but the durable server-restart roster/UI bridge is a separate
-stage; UI persistence should not be read as a promise that an active process
-survives a server restart.
+native Hub. After a Pivot/OMP restart, the persisted root binding retains the
+OMP session file; the first transcript or child-message operation lazily
+relaunches OMP and issues `switch_session` for that exact root file. OMP then
+rebuilds its parked child roster from the root JSONL, so the existing child id
+can be queried or messaged without guessing a child path. UI activity rows
+remain the durable roster source, while the child transcript is fetched from
+OMP on demand. This restores a process and its persisted session; it does not
+promise that an active in-flight process survived a server restart.

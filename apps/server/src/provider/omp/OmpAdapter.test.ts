@@ -2483,6 +2483,40 @@ describe("OmpAdapter", () => {
     }),
   );
 
+  it.effect("routes a child transcript through the persisted root session", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      fake.subagentMessages = {
+        sessionFile: "/tmp/subagent-after-restart.jsonl",
+        fromByte: 42,
+        nextByte: 84,
+        reset: false,
+        entries: [{ type: "message", message: { role: "assistant", content: "continued" } }],
+        messages: [{ role: "assistant", content: "continued" }],
+      };
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      yield* adapter.startSession({ ...startInput, resumeCursor: "/tmp/root-after-restart.jsonl" });
+
+      const sentBefore = fake.sent.length;
+      const page = yield* adapter.fetchSubagentTranscript(THREAD_ID, "worker-42", 42);
+
+      NodeAssert.equal(
+        fake.ensureSessionInputs.at(-1)?.resumeCursor,
+        "/tmp/root-after-restart.jsonl",
+      );
+      NodeAssert.deepEqual(
+        fake.sent.slice(sentBefore).map((command) => ({
+          type: command.type,
+          subagentId: command.subagentId,
+          fromByte: command.fromByte,
+        })),
+        [{ type: "get_subagent_messages", subagentId: "worker-42", fromByte: 42 }],
+      );
+      NodeAssert.equal(page.sessionFile, "/tmp/subagent-after-restart.jsonl");
+      NodeAssert.equal(page.entries.length, 1);
+    }),
+  );
+
   it.effect("steerSession sends steer", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

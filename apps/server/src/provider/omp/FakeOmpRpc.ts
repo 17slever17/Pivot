@@ -53,6 +53,15 @@ export class FakeOmpRpc {
         readonly durationMs?: number;
       }
     | undefined = undefined;
+  /** Inputs seen by the fake, including the persisted root resume cursor. */
+  readonly ensureSessionInputs: Array<{
+    readonly sessionKey: string;
+    readonly cwd: string;
+    readonly resumeCursor: string | null;
+    readonly extraEnv?: Record<string, string>;
+    readonly extraArgs?: ReadonlyArray<string>;
+    readonly appendSystemPromptFile?: string;
+  }> = [];
   readonly sent: Array<Record<string, unknown>> = [];
   readonly frames = new Map<string, Queue.Queue<object>>();
 
@@ -65,6 +74,7 @@ export class FakeOmpRpc {
     readonly appendSystemPromptFile?: string;
   }): Effect.Effect<{ sessionKey: string; sessionFile: string }, OmpSpawnError> {
     return Effect.gen({ self: this }, function* () {
+      this.ensureSessionInputs.push(input);
       if (!this.frames.has(input.sessionKey)) {
         this.frames.set(input.sessionKey, yield* Queue.unbounded<object>());
       }
