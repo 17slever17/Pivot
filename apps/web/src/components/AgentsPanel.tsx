@@ -167,6 +167,48 @@ export function resolveParentActionOutcome(
 }
 
 /**
+ * OMP transcript synchronization follows the parent roster's activity
+ * version, with a slow safety net for provider output that does not emit a
+ * coarse activity event (for example prose-only JSONL entries). The returned
+ * handle is deliberately independent of React so its lifecycle can be tested
+ * without mounting the full panel.
+ */
+export const SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS = 3_000;
+
+export interface SubagentTranscriptSync {
+  /** Fetch the next transcript page immediately after a roster activity. */
+  readonly wake: () => void;
+  /** Stop future fetches and release the fallback timer. */
+  readonly dispose: () => void;
+}
+
+export function createSubagentTranscriptSync({
+  live,
+  poll,
+}: {
+  readonly live: boolean;
+  readonly poll: () => void;
+}): SubagentTranscriptSync {
+  let disposed = false;
+  const interval = live
+    ? globalThis.setInterval(() => {
+        if (!disposed) poll();
+      }, SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS)
+    : null;
+
+  return {
+    wake: () => {
+      if (!disposed && live) poll();
+    },
+    dispose: () => {
+      if (disposed) return;
+      disposed = true;
+      if (interval !== null) globalThis.clearInterval(interval);
+    },
+  };
+}
+
+/**
  * In-flight states all present as Working (one steady state, per the
  * monitoring-pill design: detail belongs in the activity sub-line, and a
  * stalled/waiting/queued subagent is still the fleet doing its job, not a
@@ -409,6 +451,7 @@ function NestedSubagentTranscriptPane({
   const sessionFileRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
   const loadGenerationRef = useRef(0);
+  const transcriptSyncRef = useRef<SubagentTranscriptSync | null>(null);
   const transcriptLive =
     agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
 
@@ -497,16 +540,29 @@ function NestedSubagentTranscriptPane({
     };
   }, [agent.id, environmentId, loadMessages, threadId]);
 
-  // OMP tails the child JSONL by byte offset. Poll only while a transcript is
-  // open; this picks up prose-only messages and tool/status entries even when
-  // no coarse task activity event was emitted. Requests are single-flight.
+  // OMP tails the child JSONL by byte offset. Activity/status folds update
+  // RuntimeSubagent.updatedAt, so transcript pages wake immediately while the
+  // open live pane is active. The fallback picks up prose-only messages and
+  // tool/status entries even when no coarse task activity event was emitted.
+  // Requests remain single-flight inside loadMessages.
+  useEffect(() => {
+    if (!initialReady) return;
+    const sync = createSubagentTranscriptSync({
+      live: transcriptLive,
+      poll: () => void loadMessages("poll"),
+    });
+    transcriptSyncRef.current = sync;
+    return () => {
+      sync.dispose();
+      if (transcriptSyncRef.current === sync) transcriptSyncRef.current = null;
+    };
+  }, [initialReady, loadMessages, transcriptLive]);
+
   useEffect(() => {
     if (!initialReady || !transcriptLive) return;
-    const interval = window.setInterval(() => {
-      void loadMessages("poll");
-    }, 500);
-    return () => window.clearInterval(interval);
-  }, [initialReady, loadMessages, transcriptLive]);
+    // updatedAt is the fold's activity/status version, not a wall-clock tick.
+    transcriptSyncRef.current?.wake();
+  }, [agent.status, agent.updatedAt, initialReady, transcriptLive]);
 
   const live = transcriptLive;
 

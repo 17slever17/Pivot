@@ -125,7 +125,11 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       const singlePath = yield* store.rootPromptPath("thread-root-prompts", "single");
       const orchestratorPath = yield* store.rootPromptPath("thread-root-prompts", "orchestrator");
       expect(yield* fs.readFileString(singlePath)).toBe(`${updated.commonPrompt}\n`);
-      expect(yield* fs.readFileString(orchestratorPath)).toBe(`${updated.orchestratorPrompt}\n`);
+      const effectiveOrchestratorPrompt = yield* fs.readFileString(orchestratorPath);
+      expect(effectiveOrchestratorPrompt).toContain(`${updated.orchestratorPrompt}\n`);
+      expect(effectiveOrchestratorPrompt).toContain("## OMP Hub child reuse");
+      expect(effectiveOrchestratorPrompt).toContain("hub op=send");
+      expect(yield* fs.readFileString(singlePath)).not.toContain("OMP Hub child reuse");
 
       const tooLong = yield* Effect.exit(
         store.updateRootPromptBundles({

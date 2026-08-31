@@ -1,14 +1,20 @@
 import type { RuntimeSubagent } from "@t3tools/client-runtime/state/subagentRuntime";
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   closeAgentTranscriptTab,
+  createSubagentTranscriptSync,
   formatAgentActivityText,
   formatOmpTranscriptEntry,
   formatOmpTranscriptMessage,
   openAgentTranscriptTab,
   resolveParentActionOutcome,
+  SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS,
 } from "./AgentsPanel";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("formatAgentActivityText", () => {
   it("combines OMP intent, current tool args, and tool age", () => {
@@ -156,5 +162,42 @@ describe("agent transcript tabs", () => {
     expect(
       closeAgentTranscriptTab({ openIds: ["worker", "reviewer"], activeId: "reviewer" }, "worker"),
     ).toEqual({ openIds: ["reviewer"], activeId: "reviewer" });
+  });
+});
+
+describe("agent transcript synchronization", () => {
+  it("wakes immediately for activity and falls back slowly until disposed", () => {
+    vi.useFakeTimers();
+    const poll = vi.fn();
+    const sync = createSubagentTranscriptSync({ live: true, poll });
+
+    sync.wake();
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS - 1);
+    expect(poll).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
+    expect(poll).toHaveBeenCalledTimes(2);
+
+    sync.dispose();
+    vi.advanceTimersByTime(SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS);
+    sync.wake();
+    expect(poll).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not schedule or poll closed and settled transcripts", () => {
+    vi.useFakeTimers();
+    const poll = vi.fn();
+    const closed = createSubagentTranscriptSync({ live: false, poll });
+
+    closed.wake();
+    vi.advanceTimersByTime(SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS * 2);
+    expect(poll).not.toHaveBeenCalled();
+    closed.dispose();
+
+    const live = createSubagentTranscriptSync({ live: true, poll });
+    live.dispose();
+    vi.advanceTimersByTime(SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS);
+    expect(poll).not.toHaveBeenCalled();
   });
 });

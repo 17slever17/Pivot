@@ -27,6 +27,18 @@ const MANAGED_MARKER = ".pivot-managed";
 const MAX_SYSTEM_PROMPT_CHARS = 100_000;
 const MAX_ROOT_PROMPT_BYTES = OMP_ROOT_PROMPT_MAX_CHARS * 4;
 const DEFAULT_ORCHESTRATOR_PROMPT = `You are the root orchestration agent for Pivot. Break substantial work into focused named subagent tasks when useful, report progress, and integrate their results. Use only the Pivot-managed OMP agent profiles that are available in this session.`;
+/**
+ * This is appended at the adapter boundary, rather than stored in the
+ * editable root bundle. It keeps the lifecycle contract intact when a user
+ * imports or replaces the visible AGENTS.md-style prompt.
+ */
+const OMP_HUB_REUSE_INSTRUCTIONS = `## OMP Hub child reuse
+- When orchestration is enabled, spawn worker and verifier children as keep-alive/reusable sessions when follow-up work is likely.
+- After a child completes, prefer \`hub op=send\` to its known exact child ID to continue that context instead of spawning a replacement.
+- Do not abort or kill a reusable child without a concrete reason; preserve it for later assignments.
+- Tell the user that the same child's context remains in its OMP JSONL session and can be continued.
+- Honor single mode: do not create worker or verifier children unless the user explicitly switches back to orchestration.
+`;
 const isOmpAgentProfileError = Schema.is(OmpAgentProfileError);
 
 const ProfileFileSchema = Schema.Struct({
@@ -502,7 +514,14 @@ export class OmpAgentProfileStore {
   ): Effect.Effect<string, OmpAgentProfileError> {
     return Effect.gen({ self: this }, function* () {
       const bundles = yield* this.rootPromptBundles();
-      const prompt = mode === "orchestrator" ? bundles.orchestratorPrompt : bundles.commonPrompt;
+      const configuredPrompt =
+        mode === "orchestrator" ? bundles.orchestratorPrompt : bundles.commonPrompt;
+      const prompt =
+        mode === "orchestrator"
+          ? [configuredPrompt, OMP_HUB_REUSE_INSTRUCTIONS]
+              .filter((part) => part.length > 0)
+              .join("\n\n")
+          : configuredPrompt;
       if (!prompt) return "";
       const sessionDir = this.#path.join(this.#root, "sessions");
       yield* this.#fileSystem.makeDirectory(sessionDir, { recursive: true });
