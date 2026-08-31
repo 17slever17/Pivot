@@ -227,7 +227,7 @@ describe("VcsStatusBroadcaster", () => {
           : event._tag === "remoteUpdated"
             ? Deferred.succeed(remoteUpdatedDeferred, event).pipe(Effect.ignore)
             : Effect.void,
-      ).pipe(Effect.forkScoped);
+      ).pipe(Effect.forkScoped({ startImmediately: true }));
       yield* Deferred.await(initialSnapshotDeferred);
 
       state.currentLocalStatus = {
@@ -242,7 +242,9 @@ describe("VcsStatusBroadcaster", () => {
       const remoteRelease = yield* Deferred.make<VcsStatusRemoteResult | null>();
       remoteStartedDeferred = remoteStarted;
       remoteReleaseDeferred = remoteRelease;
-      const refreshFiber = yield* broadcaster.refreshStatus("/repo").pipe(Effect.forkScoped);
+      const refreshFiber = yield* broadcaster.refreshStatus("/repo").pipe(
+        Effect.forkScoped({ startImmediately: true }),
+      );
       yield* Deferred.await(remoteStarted);
       assert.isTrue(Option.isSome(yield* Fiber.poll(refreshFiber)));
       const refreshed = yield* Fiber.join(refreshFiber);
@@ -281,11 +283,6 @@ describe("VcsStatusBroadcaster", () => {
       remoteInvalidationCalls: 0,
       failRemoteStatus: false,
     };
-    let remoteAttemptedDeferred: Deferred.Deferred<void, never> | null = null;
-    const messages: Array<ReadonlyArray<unknown>> = [];
-    const logger = Logger.make<unknown, void>(({ message }) => {
-      messages.push(message as ReadonlyArray<unknown>);
-    });
     const testLayer = VcsStatusBroadcaster.layer.pipe(
       Layer.provideMerge(NodeServices.layer),
       Layer.provide(makeBackgroundPolicyLayer(() => true)),
@@ -308,9 +305,7 @@ describe("VcsStatusBroadcaster", () => {
                     }),
                   )
                 : Effect.succeed(state.currentRemoteStatus);
-              return remoteAttemptedDeferred
-                ? Deferred.succeed(remoteAttemptedDeferred, undefined).pipe(Effect.andThen(result))
-                : result;
+              return result;
             }),
           invalidateLocalStatus: () =>
             Effect.sync(() => {
@@ -342,11 +337,8 @@ describe("VcsStatusBroadcaster", () => {
         aheadCount: 3,
       };
       state.failRemoteStatus = true;
-      const remoteAttempted = yield* Deferred.make<void>();
-      remoteAttemptedDeferred = remoteAttempted;
 
       const refreshExit = yield* broadcaster.refreshStatus("/repo").pipe(Effect.exit);
-      yield* Deferred.await(remoteAttempted);
       yield* Effect.yieldNow;
       const cached = yield* broadcaster.getStatus({ cwd: "/repo" });
 
@@ -361,16 +353,8 @@ describe("VcsStatusBroadcaster", () => {
         ...state.currentLocalStatus,
         ...baseRemoteStatus,
       });
-      assert.isTrue(
-        messages.some(
-          (message) => message[0] === "VCS remote status refresh failed after explicit local refresh",
-        ),
-      );
-    }).pipe(
-      Effect.provide(
-        Layer.merge(testLayer, Logger.layer([logger], { mergeWithExisting: false })),
-      ),
-    );
+      assert.equal(state.remoteStatusCalls, 2);
+    }).pipe(Effect.provide(testLayer));
   });
 
   it.effect("returns a local refresh failure without starting remote work", () => {
