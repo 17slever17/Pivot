@@ -1028,37 +1028,6 @@ routing.layer("ProviderServiceLive routing", (it) => {
         assert.equal(startPayload.threadId, session.threadId);
       }
       assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
-
-      // The sendTurn lifecycle write must retain the mode and model too. A
-      // second recovery after the resumed adapter is lost exercises that
-      // persisted projection rather than the original start write.
-      yield* routing.codex.stopAll();
-      routing.codex.startSession.mockClear();
-      routing.codex.sendTurn.mockClear();
-      yield* provider.sendTurn({
-        threadId: initial.threadId,
-        input: "resume after send write",
-        attachments: [],
-      });
-
-      assert.equal(routing.codex.startSession.mock.calls.length, 1);
-      const resumedAfterSendInput = routing.codex.startSession.mock.calls[0]?.[0];
-      assert.equal(
-        typeof resumedAfterSendInput === "object" && resumedAfterSendInput !== null,
-        true,
-      );
-      if (resumedAfterSendInput && typeof resumedAfterSendInput === "object") {
-        const startPayload = resumedAfterSendInput as {
-          modelSelection?: unknown;
-          agentMode?: string;
-        };
-        assert.deepEqual(
-          startPayload.modelSelection,
-          createModelSelection(codexInstanceId, "gpt-5.6-luna", [{ id: "effort", value: "high" }]),
-        );
-        assert.equal(startPayload.agentMode, "orchestrator");
-      }
-      assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
     }),
   );
 
@@ -1223,6 +1192,37 @@ routing.layer("ProviderServiceLive routing", (it) => {
         assert.deepEqual(startPayload.resumeCursor, initial.resumeCursor);
         assert.equal(startPayload.agentMode, "orchestrator");
         assert.equal(startPayload.threadId, initial.threadId);
+      }
+      assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
+
+      // The sendTurn lifecycle write must retain the mode and model too. A
+      // second recovery after the resumed adapter is lost exercises that
+      // persisted projection rather than the original start write.
+      yield* routing.codex.stopAll();
+      routing.codex.startSession.mockClear();
+      routing.codex.sendTurn.mockClear();
+      yield* provider.sendTurn({
+        threadId: initial.threadId,
+        input: "resume after send write",
+        attachments: [],
+      });
+
+      assert.equal(routing.codex.startSession.mock.calls.length, 1);
+      const resumedAfterSendInput = routing.codex.startSession.mock.calls[0]?.[0];
+      assert.equal(
+        typeof resumedAfterSendInput === "object" && resumedAfterSendInput !== null,
+        true,
+      );
+      if (resumedAfterSendInput && typeof resumedAfterSendInput === "object") {
+        const startPayload = resumedAfterSendInput as {
+          modelSelection?: unknown;
+          agentMode?: string;
+        };
+        assert.deepEqual(
+          startPayload.modelSelection,
+          createModelSelection(codexInstanceId, "gpt-5.6-luna", [{ id: "effort", value: "high" }]),
+        );
+        assert.equal(startPayload.agentMode, "orchestrator");
       }
       assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
     }),
