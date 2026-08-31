@@ -414,10 +414,11 @@ describe("VcsStatusBroadcaster", () => {
 
       assert.isTrue(Exit.isFailure(refreshExit));
       if (Exit.isFailure(refreshExit)) {
-        assert.deepStrictEqual(refreshExit.cause.reasons[0], {
-          _tag: "Fail",
-          error: localFailure,
-        });
+        const failure = Cause.findErrorOption(refreshExit.cause);
+        assert.isTrue(Option.isSome(failure));
+        if (Option.isSome(failure)) {
+          assert.equal(failure.value, localFailure);
+        }
       }
       assert.equal(state.remoteStatusCalls, 0);
       assert.equal(state.localInvalidationCalls, 1);

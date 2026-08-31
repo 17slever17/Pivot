@@ -393,7 +393,7 @@ export const make = Effect.gen(function* () {
     const snapshot = yield* updateCachedStatus(cwd, local, remote, { publish: true });
 
     yield* refreshRemoteStatusInBackground(cwd).pipe(
-      Effect.forkIn(broadcasterScope),
+      Effect.forkIn(broadcasterScope, { startImmediately: true }),
       Effect.asVoid,
     );
 
