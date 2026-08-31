@@ -2331,13 +2331,17 @@ export class OmpAdapter {
 
   #clearLiveSession(threadId: ThreadId) {
     return Effect.gen({ self: this }, function* () {
-      yield* this.#uninstallPreviewMcp(threadId);
       const session = this.#sessions.get(threadId);
       this.#sessions.delete(threadId);
       if (session) {
         yield* Scope.close(session.scope, Exit.void).pipe(Effect.ignore);
       }
       yield* this.#runtime.dispose(threadId);
+      // The OMP process owns the MCP extension and, on Windows, may still
+      // hold its SQLite cache while the adapter scope is closing. Remove the
+      // process-private overlay only after both owners have been released.
+      // The injector retains a bounded Busy fallback for residual handles.
+      yield* this.#uninstallPreviewMcp(threadId);
     });
   }
 

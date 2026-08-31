@@ -133,8 +133,14 @@ function toRuntimePayloadFromSession(
     readonly lastRuntimeEvent?: string;
     readonly lastRuntimeEventAt?: string;
   },
+  previousRuntimePayload?: unknown,
 ): Record<string, unknown> {
   return {
+    ...(previousRuntimePayload !== null &&
+    typeof previousRuntimePayload === "object" &&
+    !Array.isArray(previousRuntimePayload)
+      ? previousRuntimePayload
+      : {}),
     cwd: session.cwd ?? null,
     model: session.model ?? null,
     activeTurnId: session.activeTurnId ?? null,
@@ -145,6 +151,20 @@ function toRuntimePayloadFromSession(
     ...(extra?.lastRuntimeEventAt !== undefined
       ? { lastRuntimeEventAt: extra.lastRuntimeEventAt }
       : {}),
+  };
+}
+
+function mergeRuntimePayload(
+  previousRuntimePayload: unknown,
+  updates: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  return {
+    ...(previousRuntimePayload !== null &&
+    typeof previousRuntimePayload === "object" &&
+    !Array.isArray(previousRuntimePayload)
+      ? previousRuntimePayload
+      : {}),
+    ...updates,
   };
 }
 
@@ -281,6 +301,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
     extra?: {
       readonly modelSelection?: unknown;
       readonly agentMode?: unknown;
+      readonly runtimePayload?: unknown;
       readonly lastRuntimeEvent?: string;
       readonly lastRuntimeEventAt?: string;
     },
@@ -290,6 +311,10 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         "ProviderService.upsertSessionBinding",
         session,
       );
+      const persistedBinding = yield* directory.getBinding(threadId);
+      const previousRuntimePayload =
+        extra?.runtimePayload ??
+        (Option.isSome(persistedBinding) ? persistedBinding.value.runtimePayload : undefined);
       yield* directory.upsert({
         threadId,
         provider: session.provider,
@@ -297,7 +322,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         runtimeMode: session.runtimeMode,
         status: toRuntimeStatus(session),
         ...(session.resumeCursor !== undefined ? { resumeCursor: session.resumeCursor } : {}),
-        runtimePayload: toRuntimePayloadFromSession(session, extra),
+        runtimePayload: toRuntimePayloadFromSession(session, extra, previousRuntimePayload),
       });
     });
 
@@ -526,12 +551,10 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
                 return;
               }
 
-              // Revoke the preview credential before asking the adapter to
-              // tear down its process. The adapter's overlay cleanup can be
-              // deferred briefly on Windows while its MCP extension releases
-              // SQLite handles; no new preview request should be admitted in
-              // that interval.
-              yield* clearMcpSession(input.threadId);
+              // Do not revoke by thread here: the replacement adapter has
+              // already issued the current credential for this same thread.
+              // Revoking by thread would invalidate the new session while the
+              // stale adapter is being torn down.
               yield* adapter.stopSession(input.threadId).pipe(
                 Effect.tap(() =>
                   analytics.record("provider.session.stopped", {
@@ -587,11 +610,11 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           provider: adapter.provider,
           providerInstanceId: instanceId,
           status: "stopped",
-          runtimePayload: {
+          runtimePayload: mergeRuntimePayload(binding.runtimePayload, {
             activeTurnId: null,
             lastRuntimeEvent: "provider.boot-reconcile",
             lastRuntimeEventAt: yield* nowIso,
-          },
+          }),
         })
         .pipe(
           Effect.catchCause((cause) =>
@@ -831,18 +854,19 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
       // browser tool calls used to lose the toolkit outright.
       yield* McpSessionRegistry.touchActiveMcpThread(input.threadId);
       const turn = yield* routed.adapter.sendTurn(input);
+      const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
       yield* directory.upsert({
         threadId: input.threadId,
         provider: routed.adapter.provider,
         providerInstanceId: routed.instanceId,
         status: "running",
         ...(turn.resumeCursor !== undefined ? { resumeCursor: turn.resumeCursor } : {}),
-        runtimePayload: {
+        runtimePayload: mergeRuntimePayload(persistedBinding?.runtimePayload, {
           ...(input.modelSelection !== undefined ? { modelSelection: input.modelSelection } : {}),
           activeTurnId: turn.turnId,
           lastRuntimeEvent: "provider.sendTurn",
           lastRuntimeEventAt: yield* nowIso,
-        },
+        }),
       });
       yield* analytics.record("provider.turn.sent", {
         provider: routed.adapter.provider,
@@ -1010,6 +1034,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         if (routed.isActive) {
           yield* routed.adapter.stopSession(routed.threadId);
         }
+        const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
         yield* directory.upsert({
           threadId: input.threadId,
           provider: routed.adapter.provider,
@@ -1018,9 +1043,9 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           ...(activeSession?.resumeCursor !== undefined
             ? { resumeCursor: activeSession.resumeCursor }
             : {}),
-          runtimePayload: {
+          runtimePayload: mergeRuntimePayload(persistedBinding?.runtimePayload, {
             activeTurnId: null,
-          },
+          }),
         });
         yield* analytics.record("provider.session.stopped", {
           provider: routed.adapter.provider,
@@ -1256,11 +1281,11 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           provider: binding.provider,
           providerInstanceId,
           status: "stopped",
-          runtimePayload: {
+          runtimePayload: mergeRuntimePayload(binding.runtimePayload, {
             activeTurnId: null,
             lastRuntimeEvent: "provider.stopAll",
             lastRuntimeEventAt: yield* nowIso,
-          },
+          }),
         });
       }),
     ).pipe(Effect.asVoid);

@@ -4,6 +4,7 @@ import { EnvironmentId, ProviderInstanceId, ThreadId } from "@t3tools/contracts"
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Fiber from "effect/Fiber";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
@@ -117,6 +118,7 @@ it.layer(NodeServices.layer)("OmpPreviewMcpInjector", (it) => {
       Effect.gen(function* () {
         const { fs, path, overlayRoot, injector } = yield* makeOverlayFixture;
         let removeAttempts = 0;
+        const firstAttempt = yield* Deferred.make<void>();
         const busyThenRemove = () => {
           removeAttempts += 1;
           return removeAttempts === 1
@@ -127,16 +129,17 @@ it.layer(NodeServices.layer)("OmpPreviewMcpInjector", (it) => {
                   method: "remove",
                   pathOrDescriptor: "preview-overlay",
                 }),
-              )
+              ).pipe(Effect.tapError(() => Deferred.succeed(firstAttempt, undefined)))
             : fs.remove(overlayRoot, { recursive: true, force: true });
         };
         const testFileSystem = { ...fs, remove: busyThenRemove } as FileSystem.FileSystem;
         const testInjector = new OmpPreviewMcpInjector(testFileSystem, path, overlayRoot);
 
-        yield* testInjector.uninstall(THREAD_ID);
+        const cleanupFiber = yield* testInjector.uninstall(THREAD_ID).pipe(Effect.forkChild);
+        yield* Deferred.await(firstAttempt);
         yield* testInjector.install(THREAD_ID, sessionConfig, AGENT_DIR);
-        yield* TestClock.adjust("50 millis");
-        yield* Effect.yieldNow;
+        yield* TestClock.adjust("1 second");
+        yield* Fiber.join(cleanupFiber);
 
         expect(removeAttempts).toBe(1);
         expect(yield* fs.exists(path.join(overlayRoot, THREAD_ID))).toBe(true);
@@ -150,7 +153,7 @@ it.layer(NodeServices.layer)("OmpPreviewMcpInjector", (it) => {
         const { fs, path, overlayRoot, injector } = yield* makeOverlayFixture;
         const overlayHome = path.join(overlayRoot, THREAD_ID);
         yield* injector.install(THREAD_ID, sessionConfig, AGENT_DIR);
-        const removalCompleted = yield* Deferred.make<void>();
+        const firstAttempt = yield* Deferred.make<void>();
         let removeAttempts = 0;
         const busyThenRemove = () => {
           removeAttempts += 1;
@@ -162,18 +165,17 @@ it.layer(NodeServices.layer)("OmpPreviewMcpInjector", (it) => {
                   method: "remove",
                   pathOrDescriptor: "preview-overlay",
                 }),
-              )
-            : fs
-                .remove(overlayHome, { recursive: true, force: true })
-                .pipe(Effect.tap(() => Deferred.succeed(removalCompleted, undefined)));
+              ).pipe(Effect.tapError(() => Deferred.succeed(firstAttempt, undefined)))
+            : fs.remove(overlayHome, { recursive: true, force: true });
         };
         const testFileSystem = { ...fs, remove: busyThenRemove } as FileSystem.FileSystem;
         const testInjector = new OmpPreviewMcpInjector(testFileSystem, path, overlayRoot);
 
-        yield* testInjector.uninstall(THREAD_ID);
+        const cleanupFiber = yield* testInjector.uninstall(THREAD_ID).pipe(Effect.forkChild);
+        yield* Deferred.await(firstAttempt);
         expect(removeAttempts).toBe(1);
-        yield* TestClock.adjust("50 millis");
-        yield* Deferred.await(removalCompleted);
+        yield* TestClock.adjust("1 second");
+        yield* Fiber.join(cleanupFiber);
 
         expect(removeAttempts).toBe(2);
         expect(yield* fs.exists(overlayHome)).toBe(false);

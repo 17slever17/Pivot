@@ -71,32 +71,18 @@ export class OmpPreviewMcpInjector {
         recursive: true,
         force: true,
       });
-    const deferredRemove = Effect.delay(
-      Effect.retry(
-        Effect.suspend(() =>
-          this.isCleanupCurrent(threadId, generation) ? remove() : Effect.void,
+    const retryBusyRemove = Effect.retry(
+      Effect.suspend(() => (this.isCleanupCurrent(threadId, generation) ? remove() : Effect.void)),
+      {
+        schedule: Schedule.exponential(BUSY_CLEANUP_INITIAL_DELAY).pipe(
+          Schedule.upTo({ times: BUSY_CLEANUP_RETRY_LIMIT }),
         ),
-        {
-          schedule: Schedule.exponential("50 millis").pipe(
-            Schedule.upTo({ times: BUSY_CLEANUP_RETRY_LIMIT }),
-          ),
-          while: (error) =>
-            error instanceof PlatformError.PlatformError && error.reason._tag === "Busy",
-        },
-      ),
-      BUSY_CLEANUP_INITIAL_DELAY,
-    ).pipe(
-      Effect.tap(() => Effect.sync(() => this.completeCleanup(threadId, generation))),
-      Effect.catchCause((cause) =>
-        Effect.logError("preview MCP overlay cleanup failed after a busy retry", {
-          threadId,
-          cause,
-        }),
-      ),
+        while: (error) =>
+          error instanceof PlatformError.PlatformError && error.reason._tag === "Busy",
+      },
     );
 
     return remove().pipe(
-      Effect.tap(() => Effect.sync(() => this.completeCleanup(threadId, generation))),
       Effect.catchTag("PlatformError", (error) => {
         if (error.reason._tag !== "Busy") {
           return Effect.fail(error);
@@ -104,10 +90,25 @@ export class OmpPreviewMcpInjector {
         return Effect.logWarning("preview MCP overlay cleanup deferred while it is busy", {
           threadId,
           path: this.overlayHome(threadId),
-        }).pipe(Effect.andThen(deferredRemove.pipe(Effect.forkDetach)), Effect.asVoid);
+        }).pipe(
+          Effect.andThen(
+            retryBusyRemove.pipe(
+              Effect.catchTag("PlatformError", (retryError) =>
+                retryError.reason._tag === "Busy"
+                  ? Effect.logError("preview MCP overlay cleanup failed after a busy retry", {
+                      threadId,
+                      error: retryError,
+                    })
+                  : Effect.fail(retryError),
+              ),
+            ),
+          ),
+          Effect.asVoid,
+        );
       }),
+      Effect.tap(() => Effect.sync(() => this.completeCleanup(threadId, generation))),
       // Preserve the existing fail-closed behavior for permanent filesystem
-      // failures. Only the normalized Windows Busy case is deferred above.
+      // failures. Only the normalized Windows Busy case is recovered above.
       Effect.orDie,
     );
   }

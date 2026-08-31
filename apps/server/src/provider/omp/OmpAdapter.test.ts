@@ -3343,6 +3343,60 @@ describe("OmpAdapter preview MCP overlay", () => {
   );
 
   it.effect(
+    "Given an injected session, When stopSession runs, Then runtime owners close before overlay cleanup",
+    () =>
+      Effect.gen(function* () {
+        const threadId = ThreadId.make("thread-preview-ordering");
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const overlayRoot = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-preview-mcp-" });
+        const overlayHome = path.join(overlayRoot, threadId);
+        const overlayMcpJsonPath = path.join(overlayHome, ".cursor", "mcp.json");
+        let runtimeDisposed = false;
+        let uninstallSawDisposedRuntime = false;
+        const remove: FileSystem.FileSystem["remove"] = (target, options) => {
+          if (target === overlayHome) {
+            uninstallSawDisposedRuntime = runtimeDisposed;
+          }
+          return fs.remove(target, options);
+        };
+        const injector = new OmpPreviewMcpInjector(
+          { ...fs, remove } as FileSystem.FileSystem,
+          path,
+          overlayRoot,
+        );
+        const fake = new OverlayObservingFakeOmpRpc(fs, overlayMcpJsonPath);
+        const originalDispose = fake.dispose.bind(fake);
+        fake.dispose = (sessionKey) => {
+          runtimeDisposed = true;
+          return originalDispose(sessionKey);
+        };
+        const adapter = new OmpAdapter(fake, testRandomUUID, {
+          previewMcpInjector: injector,
+          agentDir: PREVIEW_AGENT_DIR,
+        });
+        setMcpProviderSession(makePreviewSessionConfig(threadId));
+
+        yield* adapter.startSession({
+          threadId,
+          provider: PROVIDER,
+          cwd: "/proj",
+          runtimeMode: "full-access",
+        });
+        yield* adapter.stopSession(threadId);
+
+        NodeAssert.equal(runtimeDisposed, true);
+        NodeAssert.equal(uninstallSawDisposedRuntime, true);
+        NodeAssert.equal(yield* fs.exists(overlayHome), false);
+      }).pipe(
+        Effect.ensuring(
+          Effect.sync(() => clearMcpProviderSession(ThreadId.make("thread-preview-ordering"))),
+        ),
+        Effect.provide(NodeServices.layer),
+      ),
+  );
+
+  it.effect(
     "Given overlay install then spawn failure, When startSession fails, Then the overlay directory is gone",
     () =>
       Effect.gen(function* () {

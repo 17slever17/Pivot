@@ -1028,6 +1028,37 @@ routing.layer("ProviderServiceLive routing", (it) => {
         assert.equal(startPayload.threadId, session.threadId);
       }
       assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
+
+      // The sendTurn lifecycle write must retain the mode and model too. A
+      // second recovery after the resumed adapter is lost exercises that
+      // persisted projection rather than the original start write.
+      yield* routing.codex.stopAll();
+      routing.codex.startSession.mockClear();
+      routing.codex.sendTurn.mockClear();
+      yield* provider.sendTurn({
+        threadId: initial.threadId,
+        input: "resume after send write",
+        attachments: [],
+      });
+
+      assert.equal(routing.codex.startSession.mock.calls.length, 1);
+      const resumedAfterSendInput = routing.codex.startSession.mock.calls[0]?.[0];
+      assert.equal(
+        typeof resumedAfterSendInput === "object" && resumedAfterSendInput !== null,
+        true,
+      );
+      if (resumedAfterSendInput && typeof resumedAfterSendInput === "object") {
+        const startPayload = resumedAfterSendInput as {
+          modelSelection?: unknown;
+          agentMode?: string;
+        };
+        assert.deepEqual(
+          startPayload.modelSelection,
+          createModelSelection(codexInstanceId, "gpt-5.6-luna", [{ id: "effort", value: "high" }]),
+        );
+        assert.equal(startPayload.agentMode, "orchestrator");
+      }
+      assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
     }),
   );
 
@@ -1133,7 +1164,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
         providerInstanceId: codexInstanceId,
         threadId: asThreadId("thread-reap-preserve"),
         cwd: "/tmp/project-reap-preserve",
+        modelSelection: createModelSelection(codexInstanceId, "gpt-5.6-luna", [
+          { id: "effort", value: "high" },
+        ]),
         runtimeMode: "full-access",
+        agentMode: "orchestrator",
       });
 
       yield* provider.stopSession({ threadId: initial.threadId });
@@ -1145,6 +1180,17 @@ routing.layer("ProviderServiceLive routing", (it) => {
       if (Option.isSome(persistedAfterStop)) {
         assert.equal(persistedAfterStop.value.status, "stopped");
         assert.deepEqual(persistedAfterStop.value.resumeCursor, initial.resumeCursor);
+        const runtimePayload =
+          persistedAfterStop.value.runtimePayload !== null &&
+          typeof persistedAfterStop.value.runtimePayload === "object" &&
+          !Array.isArray(persistedAfterStop.value.runtimePayload)
+            ? (persistedAfterStop.value.runtimePayload as Record<string, unknown>)
+            : undefined;
+        assert.deepEqual(
+          runtimePayload?.modelSelection,
+          createModelSelection(codexInstanceId, "gpt-5.6-luna", [{ id: "effort", value: "high" }]),
+        );
+        assert.equal(runtimePayload?.agentMode, "orchestrator");
       }
 
       routing.codex.startSession.mockClear();
@@ -1163,12 +1209,19 @@ routing.layer("ProviderServiceLive routing", (it) => {
         const startPayload = resumedStartInput as {
           provider?: string;
           cwd?: string;
+          modelSelection?: unknown;
           resumeCursor?: unknown;
+          agentMode?: string;
           threadId?: string;
         };
         assert.equal(startPayload.provider, "codex");
         assert.equal(startPayload.cwd, "/tmp/project-reap-preserve");
+        assert.deepEqual(
+          startPayload.modelSelection,
+          createModelSelection(codexInstanceId, "gpt-5.6-luna", [{ id: "effort", value: "high" }]),
+        );
         assert.deepEqual(startPayload.resumeCursor, initial.resumeCursor);
+        assert.equal(startPayload.agentMode, "orchestrator");
         assert.equal(startPayload.threadId, initial.threadId);
       }
       assert.equal(routing.codex.sendTurn.mock.calls.length, 1);
