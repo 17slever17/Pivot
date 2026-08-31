@@ -365,18 +365,39 @@ export const make = Effect.gen(function* () {
     return yield* updateCachedRemoteStatus(cwd, remote, { publish: true });
   });
 
+  const refreshRemoteStatusInBackground = Effect.fn(
+    "VcsStatusBroadcaster.refreshRemoteStatusInBackground",
+  )(function* (cwd: string) {
+    yield* refreshRemoteStatus(cwd).pipe(
+      Effect.catchAllCause((cause) =>
+        Effect.logWarning("VCS remote status refresh failed after explicit local refresh", {
+          cwdLength: cwd.length,
+          ...remoteRefreshFailureDiagnostics(cause),
+        }),
+      ),
+    );
+  });
+
   const refreshStatus: VcsStatusBroadcaster["Service"]["refreshStatus"] = Effect.fn(
     "VcsStatusBroadcaster.refreshStatus",
   )(function* (rawCwd) {
     const cwd = yield* withFileSystem(normalizeCwd(rawCwd));
-    // invalidateStatus (not the two partial invalidations) so an explicit
-    // refresh also bypasses GitManager's slow PR-lookup cache.
-    yield* workflow.invalidateStatus(cwd);
-    const [local, remote] = yield* Effect.all(
-      [workflow.localStatus({ cwd }), workflow.remoteStatus({ cwd })],
-      { concurrency: "unbounded" },
+    // The local status is the latency-sensitive part of an explicit refresh.
+    // Remote status also performs hosting-provider PR lookup, which can take
+    // tens of seconds, so keep it managed by the broadcaster scope and publish
+    // its result separately when it completes.
+    yield* workflow.invalidateLocalStatus(cwd);
+    const local = yield* workflow.localStatus({ cwd });
+    const cached = yield* getCachedStatus(cwd);
+    const remote = cached?.remote?.value ?? null;
+    const snapshot = yield* updateCachedStatus(cwd, local, remote, { publish: true });
+
+    yield* refreshRemoteStatusInBackground(cwd).pipe(
+      Effect.forkIn(broadcasterScope),
+      Effect.asVoid,
     );
-    return yield* updateCachedStatus(cwd, local, remote, { publish: true });
+
+    return snapshot;
   });
 
   const makeRemoteRefreshLoop = (
