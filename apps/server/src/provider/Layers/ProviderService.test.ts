@@ -1089,6 +1089,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         threadId: asThreadId("thread-1"),
         cwd: "/tmp/project",
         runtimeMode: "full-access",
+        agentMode: "orchestrator",
       });
       yield* routing.codex.stopSession(initial.threadId);
       routing.codex.startSession.mockClear();
@@ -1107,11 +1108,13 @@ routing.layer("ProviderServiceLive routing", (it) => {
           provider?: string;
           cwd?: string;
           resumeCursor?: unknown;
+          agentMode?: string;
           threadId?: string;
         };
         assert.equal(startPayload.provider, "codex");
         assert.equal(startPayload.cwd, "/tmp/project");
         assert.deepEqual(startPayload.resumeCursor, initial.resumeCursor);
+        assert.equal(startPayload.agentMode, "orchestrator");
         assert.equal(startPayload.threadId, initial.threadId);
       }
       assert.equal(routing.codex.rollbackThread.mock.calls.length, 1);

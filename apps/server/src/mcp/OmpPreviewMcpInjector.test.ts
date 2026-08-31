@@ -1,10 +1,13 @@
 import { expect, it } from "@effect/vitest";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { EnvironmentId, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
+import * as PlatformError from "effect/PlatformError";
 import * as Schema from "effect/Schema";
+import * as TestClock from "effect/testing/TestClock";
 
 import type { McpProviderSessionConfig } from "./McpProviderSession.ts";
 import { OmpPreviewMcpInjector } from "./OmpPreviewMcpInjector.ts";
@@ -106,5 +109,74 @@ it.layer(NodeServices.layer)("OmpPreviewMcpInjector", (it) => {
 
         expect(yield* fs.exists(overlayHome)).toBe(false);
       }),
+  );
+
+  it.effect(
+    "Given a busy overlay, When a new session starts, Then deferred cleanup cannot remove its overlay",
+    () =>
+      Effect.gen(function* () {
+        const { fs, path, overlayRoot, injector } = yield* makeOverlayFixture;
+        let removeAttempts = 0;
+        const busyThenRemove = () => {
+          removeAttempts += 1;
+          return removeAttempts === 1
+            ? Effect.fail(
+                PlatformError.systemError({
+                  _tag: "Busy",
+                  module: "FileSystem",
+                  method: "remove",
+                  pathOrDescriptor: "preview-overlay",
+                }),
+              )
+            : fs.remove(overlayRoot, { recursive: true, force: true });
+        };
+        const testFileSystem = { ...fs, remove: busyThenRemove } as FileSystem.FileSystem;
+        const testInjector = new OmpPreviewMcpInjector(testFileSystem, path, overlayRoot);
+
+        yield* testInjector.uninstall(THREAD_ID);
+        yield* testInjector.install(THREAD_ID, sessionConfig, AGENT_DIR);
+        yield* TestClock.adjust("50 millis");
+        yield* Effect.yieldNow;
+
+        expect(removeAttempts).toBe(1);
+        expect(yield* fs.exists(path.join(overlayRoot, THREAD_ID))).toBe(true);
+      }).pipe(Effect.provide(TestClock.layer())),
+  );
+
+  it.effect(
+    "Given a temporarily busy overlay, When the owner releases it, Then deferred cleanup retries",
+    () =>
+      Effect.gen(function* () {
+        const { fs, path, overlayRoot, injector } = yield* makeOverlayFixture;
+        const overlayHome = path.join(overlayRoot, THREAD_ID);
+        yield* injector.install(THREAD_ID, sessionConfig, AGENT_DIR);
+        const removalCompleted = yield* Deferred.make<void>();
+        let removeAttempts = 0;
+        const busyThenRemove = () => {
+          removeAttempts += 1;
+          return removeAttempts === 1
+            ? Effect.fail(
+                PlatformError.systemError({
+                  _tag: "Busy",
+                  module: "FileSystem",
+                  method: "remove",
+                  pathOrDescriptor: "preview-overlay",
+                }),
+              )
+            : fs
+                .remove(overlayHome, { recursive: true, force: true })
+                .pipe(Effect.tap(() => Deferred.succeed(removalCompleted, undefined)));
+        };
+        const testFileSystem = { ...fs, remove: busyThenRemove } as FileSystem.FileSystem;
+        const testInjector = new OmpPreviewMcpInjector(testFileSystem, path, overlayRoot);
+
+        yield* testInjector.uninstall(THREAD_ID);
+        expect(removeAttempts).toBe(1);
+        yield* TestClock.adjust("50 millis");
+        yield* Deferred.await(removalCompleted);
+
+        expect(removeAttempts).toBe(2);
+        expect(yield* fs.exists(overlayHome)).toBe(false);
+      }).pipe(Effect.provide(TestClock.layer())),
   );
 });
