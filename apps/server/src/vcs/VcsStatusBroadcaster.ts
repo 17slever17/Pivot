@@ -392,8 +392,11 @@ export const make = Effect.gen(function* () {
     const remote = cached?.remote?.value ?? null;
     const snapshot = yield* updateCachedStatus(cwd, local, remote, { publish: true });
 
+    // Start remote work before returning the local snapshot, while keeping it
+    // attached to the broadcaster scope. The remote workflow yields at its
+    // first asynchronous boundary, so the RPC remains local-first.
     yield* refreshRemoteStatusInBackground(cwd).pipe(
-      Effect.forkIn(broadcasterScope),
+      Effect.forkIn(broadcasterScope, { startImmediately: true }),
       Effect.asVoid,
     );
 
