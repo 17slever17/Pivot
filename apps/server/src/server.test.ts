@@ -7729,6 +7729,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   title: "Bootstrap Thread",
                   modelSelection: defaultModelSelection,
                   runtimeMode: "full-access",
+                  agentMode: "orchestrator",
                   interactionMode: "default",
                   branch: "main",
                   worktreePath: null,
@@ -7758,6 +7759,11 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             "thread.turn.start",
           ],
         );
+        const createdCommand = dispatchedCommands[0];
+        assertTrue(createdCommand?.type === "thread.create");
+        if (createdCommand?.type === "thread.create") {
+          assert.equal(createdCommand.agentMode, "orchestrator");
+        }
         assert.deepEqual(createWorktree.mock.calls[0]?.[0], {
           cwd: "/tmp/project",
           refName: fetchedOriginCommit,
@@ -7875,6 +7881,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   title: "Bootstrap Thread",
                   modelSelection: defaultModelSelection,
                   runtimeMode: "full-access",
+                  agentMode: "single",
                   interactionMode: "default",
                   branch: "main",
                   worktreePath: null,
@@ -7891,6 +7898,12 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             }),
           ),
         );
+
+        const createdCommand = dispatchedCommands[0];
+        assertTrue(createdCommand?.type === "thread.create");
+        if (createdCommand?.type === "thread.create") {
+          assert.equal(createdCommand.agentMode, "single");
+        }
 
         assert.deepEqual(remoteExists.mock.calls[0]?.[0], {
           cwd: "/tmp/project",
