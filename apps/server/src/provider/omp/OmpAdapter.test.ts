@@ -2655,6 +2655,81 @@ describe("OmpAdapter", () => {
     }).pipe(Effect.provide(NodeServices.layer)),
   );
 
+  it.effect("serializes transcript mappings without replaying completed writes", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-subagent-store-lock-" });
+      const rootSessionFile = path.join(stateDir, "root.jsonl");
+      const childDirectory = path.join(stateDir, "root");
+      const childA = path.join(childDirectory, "worker-a.jsonl");
+      const childB = path.join(childDirectory, "worker-b.jsonl");
+      const storeFile = path.join(stateDir, "mappings.json");
+      yield* fs.makeDirectory(childDirectory, { recursive: true });
+      yield* fs.writeFileString(rootSessionFile, '{"type":"session","id":"root"}\n');
+      yield* fs.writeFileString(
+        childA,
+        '{"type":"session","id":"child-a","cwd":"/proj"}\n{"type":"message","message":{"content":"a"}}\n',
+      );
+      yield* fs.writeFileString(
+        childB,
+        '{"type":"session","id":"child-b","cwd":"/proj"}\n{"type":"message","message":{"content":"b"}}\n',
+      );
+      let persistedWrites = 0;
+      const countingFileSystem = FileSystem.FileSystem.of({
+        ...fs,
+        writeFileString: (filePath, contents, options) => {
+          persistedWrites += 1;
+          return fs.writeFileString(filePath, contents, options);
+        },
+      });
+      const store = new OmpSubagentTranscriptStore(countingFileSystem, path, storeFile);
+      const results = yield* Effect.forEach(
+        [
+          ["worker-a", childA],
+          ["worker-b", childB],
+        ] as const,
+        ([subagentId, sessionFile]) =>
+          store.remember({
+            threadId: THREAD_ID,
+            subagentId,
+            rootSessionFile,
+            sessionFile,
+          }),
+        { concurrency: "unbounded" },
+      );
+      NodeAssert.deepEqual(results, [true, true]);
+      NodeAssert.equal(persistedWrites, 2);
+      yield* Effect.forEach(
+        ["worker-a", "worker-b", "worker-a"],
+        (subagentId) =>
+          store.readPage({
+            threadId: THREAD_ID,
+            subagentId,
+            rootSessionFile,
+          }),
+        { concurrency: "unbounded", discard: true },
+      );
+      NodeAssert.equal(persistedWrites, 2);
+      NodeAssert.deepEqual(
+        (yield* store.readPage({
+          threadId: THREAD_ID,
+          subagentId: "worker-a",
+          rootSessionFile,
+        }))?.messages[0],
+        { content: "a" },
+      );
+      NodeAssert.deepEqual(
+        (yield* store.readPage({
+          threadId: THREAD_ID,
+          subagentId: "worker-b",
+          rootSessionFile,
+        }))?.messages[0],
+        { content: "b" },
+      );
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("steerSession sends steer", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

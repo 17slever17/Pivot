@@ -3,6 +3,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as PlatformError from "effect/PlatformError";
+import * as Semaphore from "effect/Semaphore";
 
 import { writeFileStringAtomically } from "../../atomicWrite.ts";
 
@@ -160,7 +161,7 @@ export class OmpSubagentTranscriptStore {
   readonly #fileSystem: FileSystem.FileSystem;
   readonly #path: Path.Path;
   readonly #filePath: string;
-  #writeQueue: Effect.Effect<void> = Effect.void;
+  readonly #storeMutex = Effect.runSync(Semaphore.make(1));
 
   public constructor(fileSystem: FileSystem.FileSystem, path: Path.Path, filePath: string) {
     this.#fileSystem = fileSystem;
@@ -221,17 +222,17 @@ export class OmpSubagentTranscriptStore {
       rootSessionFile: this.#path.resolve(input.rootSessionFile),
       sessionFile: child,
     };
-    const operation = this.#writeQueue.pipe(
-      Effect.andThen(this.#readMappings()),
-      Effect.flatMap((mappings) => {
-        if (mappings === undefined) return Effect.succeed(false);
-        mappings.set(mappingKey(input.threadId, input.subagentId), mapping);
-        return this.#writeMappings(mappings).pipe(Effect.as(true));
-      }),
-      Effect.orElseSucceed(() => false),
-    );
-    this.#writeQueue = operation.pipe(Effect.asVoid, Effect.ignore);
-    return operation;
+    return this.#storeMutex
+      .withPermits(1)(
+        this.#readMappings().pipe(
+          Effect.flatMap((mappings) => {
+            if (mappings === undefined) return Effect.succeed(false);
+            mappings.set(mappingKey(input.threadId, input.subagentId), mapping);
+            return this.#writeMappings(mappings).pipe(Effect.as(true));
+          }),
+        ),
+      )
+      .pipe(Effect.orElseSucceed(() => false));
   }
 
   /**
@@ -245,71 +246,77 @@ export class OmpSubagentTranscriptStore {
     readonly rootSessionFile: string;
     readonly fromByte?: number;
   }): Effect.Effect<OmpSubagentTranscriptPage | undefined> {
-    return this.#writeQueue.pipe(
-      Effect.andThen(this.#readMappings()),
-      Effect.flatMap((mappings) => {
-        const mapping = mappings?.get(mappingKey(input.threadId, input.subagentId));
-        if (
-          mapping === undefined ||
-          !samePath(this.#path, mapping.rootSessionFile, input.rootSessionFile)
-        ) {
-          return Effect.succeed(undefined);
-        }
-        const child = validateOmpSubagentSessionFile(
-          this.#path,
-          input.rootSessionFile,
-          input.subagentId,
-          mapping.sessionFile,
-        );
-        if (child === undefined) return Effect.succeed(undefined);
-        return Effect.all({
-          rootTrusted: isTrustedRegularFile(this.#fileSystem, this.#path, input.rootSessionFile),
-          childTrusted: isTrustedRegularFile(this.#fileSystem, this.#path, child),
-          bytes: this.#fileSystem.readFile(child).pipe(Effect.option),
-        }).pipe(
-          Effect.map(({ rootTrusted, childTrusted, bytes }) => {
-            if (!rootTrusted || !childTrusted || Option.isNone(bytes)) {
-              return undefined;
+    return this.#storeMutex
+      .withPermits(1)(
+        this.#readMappings().pipe(
+          Effect.flatMap((mappings) => {
+            const mapping = mappings?.get(mappingKey(input.threadId, input.subagentId));
+            if (
+              mapping === undefined ||
+              !samePath(this.#path, mapping.rootSessionFile, input.rootSessionFile)
+            ) {
+              return Effect.succeed(undefined);
             }
-            const fileBytes = bytes.value;
-            if (!hasValidSessionHeader(fileBytes)) return undefined;
-            const requested =
-              input.fromByte !== undefined && Number.isFinite(input.fromByte)
-                ? Math.max(0, Math.trunc(input.fromByte))
-                : 0;
-            const reset = requested > fileBytes.length;
-            const start = reset ? 0 : requested;
-            const text = new TextDecoder().decode(fileBytes.subarray(start));
-            const lastNewline = text.lastIndexOf("\n");
-            const completeText = lastNewline >= 0 ? text.slice(0, lastNewline + 1) : "";
-            const entries: unknown[] = [];
-            for (const [index, line] of completeText.split("\n").entries()) {
-              const trimmed = line.trim();
-              if (trimmed.length === 0) continue;
-              const record = readJsonObject(trimmed);
-              if (record === undefined) continue;
-              if (start === 0 && index === 0 && isTitleSlot(record)) continue;
-              entries.push(record);
-            }
-            const nextByte = start + new TextEncoder().encode(completeText).byteLength;
-            return {
-              sessionFile: child,
-              fromByte: start,
-              nextByte,
-              reset,
-              entries,
-              messages: entries
-                .filter(
-                  (entry): entry is Record<string, unknown> =>
-                    isRecord(entry) && entry.type === "message",
-                )
-                .map((entry) => entry.message),
-            } satisfies OmpSubagentTranscriptPage;
+            const child = validateOmpSubagentSessionFile(
+              this.#path,
+              input.rootSessionFile,
+              input.subagentId,
+              mapping.sessionFile,
+            );
+            if (child === undefined) return Effect.succeed(undefined);
+            return Effect.all({
+              rootTrusted: isTrustedRegularFile(
+                this.#fileSystem,
+                this.#path,
+                input.rootSessionFile,
+              ),
+              childTrusted: isTrustedRegularFile(this.#fileSystem, this.#path, child),
+              bytes: this.#fileSystem.readFile(child).pipe(Effect.option),
+            }).pipe(
+              Effect.map(({ rootTrusted, childTrusted, bytes }) => {
+                if (!rootTrusted || !childTrusted || Option.isNone(bytes)) {
+                  return undefined;
+                }
+                const fileBytes = bytes.value;
+                if (!hasValidSessionHeader(fileBytes)) return undefined;
+                const requested =
+                  input.fromByte !== undefined && Number.isFinite(input.fromByte)
+                    ? Math.max(0, Math.trunc(input.fromByte))
+                    : 0;
+                const reset = requested > fileBytes.length;
+                const start = reset ? 0 : requested;
+                const text = new TextDecoder().decode(fileBytes.subarray(start));
+                const lastNewline = text.lastIndexOf("\n");
+                const completeText = lastNewline >= 0 ? text.slice(0, lastNewline + 1) : "";
+                const entries: unknown[] = [];
+                for (const [index, line] of completeText.split("\n").entries()) {
+                  const trimmed = line.trim();
+                  if (trimmed.length === 0) continue;
+                  const record = readJsonObject(trimmed);
+                  if (record === undefined) continue;
+                  if (start === 0 && index === 0 && isTitleSlot(record)) continue;
+                  entries.push(record);
+                }
+                const nextByte = start + new TextEncoder().encode(completeText).byteLength;
+                return {
+                  sessionFile: child,
+                  fromByte: start,
+                  nextByte,
+                  reset,
+                  entries,
+                  messages: entries
+                    .filter(
+                      (entry): entry is Record<string, unknown> =>
+                        isRecord(entry) && entry.type === "message",
+                    )
+                    .map((entry) => entry.message),
+                } satisfies OmpSubagentTranscriptPage;
+              }),
+              Effect.orElseSucceed(() => undefined),
+            );
           }),
-          Effect.orElseSucceed(() => undefined),
-        );
-      }),
-      Effect.orElseSucceed(() => undefined),
-    );
+        ),
+      )
+      .pipe(Effect.orElseSucceed(() => undefined));
   }
 }
