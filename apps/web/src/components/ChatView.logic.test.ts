@@ -31,6 +31,7 @@ import {
   resolveThreadMetadataUpdateForNextTurn,
   resolveSendEnvMode,
   resolveAgentModeDraftAfterCommand,
+  resolveDisplayedAgentMode,
   scheduleEnvironmentReconnectWarning,
   startNewThreadForProject,
   threadHasProjectedUserMessage,
@@ -130,6 +131,61 @@ describe("thread agent mode changes", () => {
         commandSucceeded: false,
       }),
     ).toBeNull();
+  });
+
+  it("uses the authoritative server mode after hydration instead of a stale draft", () => {
+    expect(
+      resolveDisplayedAgentMode({
+        isLocalDraftThread: false,
+        composerAgentMode: "single",
+        serverAgentMode: "orchestrator",
+      }),
+    ).toBe("orchestrator");
+  });
+
+  it("keeps an explicit draft mode during first-send promotion", () => {
+    expect(
+      resolveDisplayedAgentMode({
+        isLocalDraftThread: false,
+        composerAgentMode: null,
+        serverAgentMode: "single",
+        promotingDraftAgentMode: "orchestrator",
+        serverHasProjectedUserMessage: false,
+      }),
+    ).toBe("orchestrator");
+  });
+
+  it("reconciles a promoted draft to the server once its first message is projected", () => {
+    expect(
+      resolveDisplayedAgentMode({
+        isLocalDraftThread: false,
+        composerAgentMode: "orchestrator",
+        serverAgentMode: "single",
+        promotingDraftAgentMode: "orchestrator",
+        serverHasProjectedUserMessage: true,
+      }),
+    ).toBe("single");
+  });
+
+  it("defaults a genuinely untouched new draft to single mode", () => {
+    expect(
+      resolveDisplayedAgentMode({
+        isLocalDraftThread: true,
+        composerAgentMode: null,
+        localDraftAgentMode: "single",
+      }),
+    ).toBe("single");
+  });
+
+  it("shows a settled-thread change optimistically while its event is pending", () => {
+    expect(
+      resolveDisplayedAgentMode({
+        isLocalDraftThread: false,
+        composerAgentMode: "single",
+        serverAgentMode: "single",
+        pendingAgentMode: "orchestrator",
+      }),
+    ).toBe("orchestrator");
   });
 });
 

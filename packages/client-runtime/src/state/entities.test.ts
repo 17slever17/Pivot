@@ -229,6 +229,47 @@ describe("environment entity projections", () => {
     expect(merged?.messages).toBe(messages);
   });
 
+  it("keeps the hydrated detail agent mode when a legacy shell omits it", () => {
+    const detail = {
+      ...THREAD_SHELL,
+      environmentId: ENVIRONMENT_ID,
+      agentMode: "orchestrator" as const,
+      deletedAt: null,
+      messages: [],
+      proposedPlans: [],
+      activities: [],
+      checkpoints: [],
+    } satisfies OrchestrationThread & { readonly environmentId: EnvironmentId };
+
+    const merged = mergeEnvironmentThread(detail, {
+      ...THREAD_SHELL,
+      environmentId: ENVIRONMENT_ID,
+    });
+
+    expect(merged?.agentMode).toBe("orchestrator");
+  });
+
+  it("keeps an explicit shell agent mode authoritative over cached detail", () => {
+    const detail = {
+      ...THREAD_SHELL,
+      environmentId: ENVIRONMENT_ID,
+      agentMode: "orchestrator" as const,
+      deletedAt: null,
+      messages: [],
+      proposedPlans: [],
+      activities: [],
+      checkpoints: [],
+    } satisfies OrchestrationThread & { readonly environmentId: EnvironmentId };
+
+    const merged = mergeEnvironmentThread(detail, {
+      ...THREAD_SHELL,
+      environmentId: ENVIRONMENT_ID,
+      agentMode: "single",
+    });
+
+    expect(merged?.agentMode).toBe("single");
+  });
+
   it("preserves untouched project and thread identities across unrelated shell updates", () => {
     const harness = makeHarness();
     const projectRefsAtom = harness.projects.environmentProjectRefsAtom(ENVIRONMENT_ID);

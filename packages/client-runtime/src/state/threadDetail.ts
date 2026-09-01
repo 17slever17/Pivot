@@ -50,7 +50,11 @@ export function mergeEnvironmentThread(
     title: shell.title,
     modelSelection: shell.modelSelection,
     runtimeMode: shell.runtimeMode,
-    agentMode: shell.agentMode ?? "single",
+    // Older shell snapshots may not carry agentMode even though the detail
+    // projection does. Preserve the durable detail value during hydration;
+    // otherwise a reconnect silently turns an orchestrator thread into a
+    // single-mode thread until another shell event arrives.
+    agentMode: shell.agentMode ?? detail.agentMode ?? "single",
     interactionMode: shell.interactionMode,
     branch: shell.branch,
     worktreePath: shell.worktreePath,

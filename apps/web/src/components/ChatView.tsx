@@ -319,6 +319,7 @@ import {
   resolveThreadMetadataUpdateForNextTurn,
   resolveSendEnvMode,
   resolveAgentModeDraftAfterCommand,
+  resolveDisplayedAgentMode,
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
   canChangeThreadAgentMode,
@@ -1368,6 +1369,7 @@ function ChatViewContent(props: ChatViewProps) {
   const composerRef = useComposerHandleContext() ?? localComposerRef;
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [agentModeChangeInFlight, setAgentModeChangeInFlight] = useState(false);
+  const [pendingAgentMode, setPendingAgentMode] = useState<ThreadAgentMode | null>(null);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const optimisticUserMessages = usePendingThreadState(
     (state) =>
@@ -1573,8 +1575,24 @@ function ChatViewContent(props: ChatViewProps) {
   const interactionMode = settings.planModeEnabled
     ? (composerInteractionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE)
     : DEFAULT_INTERACTION_MODE;
-  const agentMode = composerAgentMode ?? activeThread?.agentMode ?? "single";
   const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
+  const serverHasProjectedUserMessage = Boolean(
+    activeServerThread?.messages.some((message) => message.role === "user"),
+  );
+  const isDraftPromotionPending =
+    !isLocalDraftThread &&
+    draftThread !== null &&
+    !serverHasProjectedUserMessage &&
+    (routeKind === "draft" || draftThread.promotedTo !== null);
+  const agentMode = resolveDisplayedAgentMode({
+    isLocalDraftThread,
+    composerAgentMode,
+    localDraftAgentMode: localDraftThread?.agentMode ?? null,
+    serverAgentMode: activeThread?.agentMode ?? null,
+    pendingAgentMode,
+    ...(isDraftPromotionPending ? { promotingDraftAgentMode: draftThread?.agentMode } : {}),
+    serverHasProjectedUserMessage,
+  });
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
   const activeThreadId = activeThread?.id ?? null;
   const activeThreadEnvironmentId = activeThread?.environmentId ?? null;
@@ -2239,7 +2257,18 @@ function ChatViewContent(props: ChatViewProps) {
   });
   useEffect(() => {
     setAgentModeChangeInFlight(false);
+    setPendingAgentMode(null);
   }, [activeThreadKey]);
+  useEffect(() => {
+    if (
+      pendingAgentMode === null ||
+      isLocalDraftThread ||
+      activeThread?.agentMode !== pendingAgentMode
+    ) {
+      return;
+    }
+    setPendingAgentMode(null);
+  }, [activeThread?.agentMode, isLocalDraftThread, pendingAgentMode]);
   const previousPhaseRef = useRef(phase);
   const followUpDrainInFlightRef = useRef(false);
   const followUpQueue = useFollowUpQueueStore(
@@ -3336,6 +3365,7 @@ function ChatViewContent(props: ChatViewProps) {
         return;
       }
 
+      setPendingAgentMode(mode);
       setAgentModeChangeInFlight(true);
       try {
         const result = await setThreadAgentMode({
@@ -3365,6 +3395,7 @@ function ChatViewContent(props: ChatViewProps) {
               commandSucceeded: false,
             }),
           );
+          setPendingAgentMode(null);
           if (!isAtomCommandInterrupted(result)) {
             toastManager.add(
               stackedThreadToast({
@@ -3390,6 +3421,7 @@ function ChatViewContent(props: ChatViewProps) {
       isLocalDraftThread,
       routeThreadRef,
       resolveAgentModeDraftAfterCommand,
+      setPendingAgentMode,
       scheduleComposerFocus,
       setComposerDraftAgentMode,
       setDraftThreadContext,

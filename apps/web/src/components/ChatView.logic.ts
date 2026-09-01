@@ -133,6 +133,45 @@ export function resolveAgentModeDraftAfterCommand(input: {
   return input.commandSucceeded ? input.requestedMode : null;
 }
 
+/**
+ * Resolve the mode shown by the composer without allowing a persisted
+ * server-thread draft to override the thread projection after hydration.
+ *
+ * Drafts own their mode until the first turn is materialized. Settled server
+ * threads use the projection, with a short-lived local command override for
+ * responsive controls. The promotion exception bridges the shell-only window
+ * between a draft's first send and its projected user message.
+ */
+export function resolveDisplayedAgentMode(input: {
+  isLocalDraftThread: boolean;
+  composerAgentMode: ThreadAgentMode | null;
+  localDraftAgentMode?: ThreadAgentMode | null;
+  serverAgentMode?: ThreadAgentMode | null;
+  pendingAgentMode?: ThreadAgentMode | null;
+  promotingDraftAgentMode?: ThreadAgentMode | null;
+  serverHasProjectedUserMessage?: boolean;
+}): ThreadAgentMode {
+  if (input.isLocalDraftThread) {
+    return (
+      input.composerAgentMode ?? input.localDraftAgentMode ?? input.serverAgentMode ?? "single"
+    );
+  }
+
+  if (input.pendingAgentMode !== null && input.pendingAgentMode !== undefined) {
+    return input.pendingAgentMode;
+  }
+
+  if (
+    input.promotingDraftAgentMode !== null &&
+    input.promotingDraftAgentMode !== undefined &&
+    input.serverHasProjectedUserMessage !== true
+  ) {
+    return input.promotingDraftAgentMode;
+  }
+
+  return input.serverAgentMode ?? "single";
+}
+
 export function buildLoadingThreadFromShell(shell: ThreadShell): Thread {
   return {
     ...shell,
