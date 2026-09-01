@@ -92,6 +92,7 @@ import { resolveMarkdownLinkPresentation } from "@t3tools/mobile-markdown-text/l
 import {
   deriveThreadFeedPresentation,
   type ThreadFeedEntry,
+  type ThreadFeedInterruption,
   type ThreadFeedLatestTurn,
 } from "../../lib/threadActivity";
 import type { ThreadContentPresentation } from "./threadContentPresentation";
@@ -152,6 +153,7 @@ export interface ThreadFeedProps {
   readonly contentPresentation: ThreadContentPresentation;
   readonly agentLabel: string;
   readonly latestTurn: ThreadFeedLatestTurn | null;
+  readonly lastInterruption?: ThreadFeedInterruption | null;
   readonly activeWorkStartedAt: string | null;
   readonly listRef: RefObject<LegendListRef | null>;
   readonly freeze: SharedValue<boolean>;
@@ -1767,6 +1769,7 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
         expandedTurnIds,
         expandedWorkGroupIds,
         props.activeWorkStartedAt,
+        props.lastInterruption,
       ),
     [
       expandedTurnIds,
@@ -1774,6 +1777,7 @@ export const ThreadFeed = memo(function ThreadFeed(props: ThreadFeedProps) {
       props.activeWorkStartedAt,
       props.feed,
       props.latestTurn,
+      props.lastInterruption,
     ],
   );
 

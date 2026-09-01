@@ -15,11 +15,13 @@ import {
   buildPendingUserInputAnswers,
   buildThreadFeed,
   deriveThreadFeedPresentation,
+  formatInterruptedTurnLabel,
   isPendingUserInputOptionSelected,
   setPendingUserInputCustomAnswer,
   togglePendingUserInputOptionSelection,
   type ThreadFeedActivity,
   type ThreadFeedEntry,
+  type ThreadFeedInterruption,
 } from "./threadActivity";
 
 const singleSelectQuestion = {
@@ -43,6 +45,48 @@ const multiSelectQuestion = {
   ],
   multiSelect: true,
 } as const;
+
+function interruption(kind: ThreadFeedInterruption["kind"]): ThreadFeedInterruption {
+  return {
+    kind,
+    actor:
+      kind === "user_stop"
+        ? "client"
+        : kind === "server_restart"
+          ? "server"
+          : kind === "provider_exit"
+            ? "provider"
+            : "unknown",
+    sourceEventId: EventId.make("event-interruption"),
+  };
+}
+
+describe("formatInterruptedTurnLabel", () => {
+  it("keeps the explicit user-stop wording", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("user_stop"))).toBe(
+      "You stopped after 47s",
+    );
+  });
+
+  it("explains a Pivot restart", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("server_restart"))).toBe(
+      "Сервер Pivot перезапустился; выполнявшаяся задача прервана",
+    );
+  });
+
+  it("explains an unexpected provider exit", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("provider_exit"))).toBe(
+      "Сессия провайдера завершилась неожиданно",
+    );
+  });
+
+  it("uses neutral copy when provenance is unknown or absent", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("unknown"))).toBe(
+      "Выполнение прервано после 47s",
+    );
+    expect(formatInterruptedTurnLabel(null, null)).toBe("Выполнение прервано");
+  });
+});
 
 describe("pending user input answers", () => {
   it("replaces single-select options and toggles multi-select options", () => {
@@ -538,6 +582,86 @@ describe("buildThreadFeed", () => {
       "assistant-commentary",
       "tool-completed",
       "assistant-final",
+    ]);
+  });
+
+  it("uses session provenance when the latest turn has no interruption detail", () => {
+    const threadId = ThreadId.make("thread-provider-exit");
+    const turnId = TurnId.make("turn-provider-exit");
+    const thread = makeThread({
+      id: threadId,
+      projectId: ProjectId.make("project-1"),
+      title: "Provider exit",
+      latestTurn: {
+        turnId,
+        state: "interrupted",
+        requestedAt: "2026-04-01T00:00:00.000Z",
+        startedAt: "2026-04-01T00:00:01.000Z",
+        completedAt: "2026-04-01T00:00:18.000Z",
+        assistantMessageId: MessageId.make("assistant-final"),
+      },
+      session: {
+        threadId,
+        status: "stopped",
+        providerName: "omp",
+        runtimeMode: "full-access",
+        activeTurnId: null,
+        lastError: null,
+        lastInterruption: interruption("provider_exit"),
+        updatedAt: "2026-04-01T00:00:18.000Z",
+      },
+      messages: [
+        {
+          id: MessageId.make("assistant-commentary"),
+          role: "assistant",
+          text: "I am checking.",
+          turnId,
+          streaming: false,
+          createdAt: "2026-04-01T00:00:02.000Z",
+          updatedAt: "2026-04-01T00:00:03.000Z",
+        },
+        {
+          id: MessageId.make("assistant-final"),
+          role: "assistant",
+          text: "Done.",
+          turnId,
+          streaming: false,
+          createdAt: "2026-04-01T00:00:17.000Z",
+          updatedAt: "2026-04-01T00:00:18.000Z",
+        },
+      ],
+      activities: [
+        makeActivity({
+          id: EventId.make("tool-completed-provider-exit"),
+          kind: "tool.completed",
+          tone: "tool",
+          summary: "Read files",
+          createdAt: "2026-04-01T00:00:05.000Z",
+          turnId,
+          payload: {
+            title: "Read files",
+            itemType: "file_read",
+            status: "completed",
+          },
+        }),
+      ],
+    });
+
+    const feed = buildThreadFeed(thread);
+    const collapsed = deriveThreadFeedPresentation(
+      feed,
+      thread.latestTurn,
+      new Set(),
+      new Set(),
+      null,
+      thread.session?.lastInterruption,
+    );
+    expect(collapsed).toEqual([
+      expect.objectContaining({
+        type: "turn-fold",
+        label: "Сессия провайдера завершилась неожиданно",
+      }),
+      expect.objectContaining({ id: "assistant-final" }),
     ]);
   });
 

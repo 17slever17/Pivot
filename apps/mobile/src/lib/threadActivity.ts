@@ -1,6 +1,7 @@
 import { ApprovalRequestId, isToolLifecycleItemType } from "@t3tools/contracts";
 import type {
   AdvisorNote,
+  OrchestrationInterruptionProvenance,
   OrchestrationLatestTurn,
   OrchestrationThread,
   OrchestrationThreadActivity,
@@ -139,8 +140,27 @@ export type ThreadFeedEntry =
 
 export type ThreadFeedLatestTurn = Pick<
   OrchestrationLatestTurn,
-  "turnId" | "state" | "startedAt" | "completedAt"
+  "turnId" | "state" | "startedAt" | "completedAt" | "interruption"
 >;
+
+export type ThreadFeedInterruption = OrchestrationInterruptionProvenance;
+
+export function formatInterruptedTurnLabel(
+  duration: string | null,
+  interruption: ThreadFeedInterruption | null | undefined,
+): string {
+  switch (interruption?.kind) {
+    case "user_stop":
+      return duration ? `You stopped after ${duration}` : "You stopped this response";
+    case "server_restart":
+      return "Сервер Pivot перезапустился; выполнявшаяся задача прервана";
+    case "provider_exit":
+      return "Сессия провайдера завершилась неожиданно";
+    case "unknown":
+    case undefined:
+      return duration ? `Выполнение прервано после ${duration}` : "Выполнение прервано";
+  }
+}
 
 function requestKindFromRequestType(requestType: unknown): PendingApproval["requestKind"] | null {
   switch (requestType) {
@@ -1235,6 +1255,7 @@ interface ThreadFeedTurnFold {
 function deriveThreadFeedTurnFolds(
   feed: ReadonlyArray<ThreadFeedEntry>,
   latestTurn: ThreadFeedLatestTurn | null,
+  lastInterruption: ThreadFeedInterruption | null | undefined,
 ): ReadonlyMap<string, ThreadFeedTurnFold> {
   const terminalAssistantMessageIdByTurn = new Map<TurnId, string>();
   for (const entry of feed) {
@@ -1318,9 +1339,7 @@ function deriveThreadFeedTurnFolds(
     const duration = elapsedMs === null ? null : formatDuration(elapsedMs);
     const interrupted = latestTurnMatches && latestTurn.state === "interrupted";
     const label = interrupted
-      ? duration
-        ? `You stopped after ${duration}`
-        : "You stopped this response"
+      ? formatInterruptedTurnLabel(duration, latestTurn?.interruption ?? lastInterruption)
       : duration
         ? `Worked for ${duration}`
         : "Worked";
@@ -1341,12 +1360,13 @@ export function deriveThreadFeedPresentation(
   expandedTurnIds: ReadonlySet<TurnId>,
   expandedWorkGroupIds: ReadonlySet<string> = new Set(),
   activeWorkStartedAt: string | null = null,
+  lastInterruption: ThreadFeedInterruption | null = null,
 ): ThreadFeedEntry[] {
   const sourceFeed = feed.filter(
     (entry) =>
       entry.type !== "turn-fold" && entry.type !== "work-toggle" && entry.type !== "working",
   );
-  const foldsByAnchorId = deriveThreadFeedTurnFolds(sourceFeed, latestTurn);
+  const foldsByAnchorId = deriveThreadFeedTurnFolds(sourceFeed, latestTurn, lastInterruption);
   const collapsedEntryIds = new Set<string>();
   for (const fold of foldsByAnchorId.values()) {
     if (!expandedTurnIds.has(fold.turnId)) {
