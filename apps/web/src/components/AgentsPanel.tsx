@@ -33,7 +33,7 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import { orchestrationEnvironment } from "~/state/orchestration";
@@ -569,6 +569,35 @@ export function createSubagentTranscriptSync({
   };
 }
 
+export const SUBAGENT_TRANSCRIPT_BOTTOM_THRESHOLD_PX = 24;
+
+export type SubagentTranscriptScrollMetrics = {
+  readonly scrollTop: number;
+  readonly scrollHeight: number;
+  readonly clientHeight: number;
+};
+
+/** Whether a transcript viewport is close enough to its end to keep following. */
+export function isSubagentTranscriptNearBottom(
+  metrics: SubagentTranscriptScrollMetrics,
+  threshold = SUBAGENT_TRANSCRIPT_BOTTOM_THRESHOLD_PX,
+): boolean {
+  return metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight <= Math.max(0, threshold);
+}
+
+/**
+ * Translate a viewport scroll event into the follow state used by the live
+ * transcript. The state is intentionally derived from the user's current
+ * position, so returning to the end re-enables following without another
+ * toggle or a scroll animation.
+ */
+export function resolveSubagentTranscriptFollowState(
+  metrics: SubagentTranscriptScrollMetrics,
+  threshold = SUBAGENT_TRANSCRIPT_BOTTOM_THRESHOLD_PX,
+): boolean {
+  return isSubagentTranscriptNearBottom(metrics, threshold);
+}
+
 /**
  * In-flight states all present as Working (one steady state, per the
  * monitoring-pill design: detail belongs in the activity sub-line, and a
@@ -813,6 +842,9 @@ function NestedSubagentTranscriptPane({
   const inFlightRef = useRef(false);
   const loadGenerationRef = useRef(0);
   const transcriptSyncRef = useRef<SubagentTranscriptSync | null>(null);
+  const transcriptScrollAreaRootRef = useRef<HTMLDivElement | null>(null);
+  const transcriptViewportRef = useRef<HTMLElement | null>(null);
+  const transcriptFollowRef = useRef(true);
   const transcriptLive =
     agent.status === "running" || agent.status === "pending" || agent.status === "waiting";
 
@@ -884,6 +916,7 @@ function NestedSubagentTranscriptPane({
   useEffect(() => {
     let cancelled = false;
     setInitialReady(false);
+    transcriptFollowRef.current = true;
     cursorRef.current = 0;
     sessionFileRef.current = null;
     setEntries([]);
@@ -924,6 +957,34 @@ function NestedSubagentTranscriptPane({
     // updatedAt is the fold's activity/status version, not a wall-clock tick.
     transcriptSyncRef.current?.wake();
   }, [agent.status, agent.updatedAt, initialReady, transcriptLive]);
+
+  useEffect(() => {
+    const viewport = transcriptScrollAreaRootRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!viewport) return;
+    transcriptViewportRef.current = viewport;
+    const handleScroll = () => {
+      transcriptFollowRef.current = resolveSubagentTranscriptFollowState({
+        scrollTop: viewport.scrollTop,
+        scrollHeight: viewport.scrollHeight,
+        clientHeight: viewport.clientHeight,
+      });
+    };
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+      if (transcriptViewportRef.current === viewport) transcriptViewportRef.current = null;
+    };
+  }, [agent.id]);
+
+  useLayoutEffect(() => {
+    if (!transcriptFollowRef.current) return;
+    const viewport = transcriptViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewport.scrollHeight;
+  }, [entries]);
 
   const live = transcriptLive;
 
@@ -997,24 +1058,26 @@ function NestedSubagentTranscriptPane({
           <X aria-hidden className="size-3" />
         </button>
       </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-2">
-          {loading && entries.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : error && entries.length === 0 ? (
-            <p className="text-xs text-destructive-foreground">{error}</p>
-          ) : entries.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No messages yet.</p>
-          ) : (
-            <>
-              {entries.map((entry, index) => (
-                <OmpTranscriptEntryView key={ompTranscriptEntryKey(entry, index)} entry={entry} />
-              ))}
-              {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}
-            </>
-          )}
-        </div>
-      </ScrollArea>
+      <div ref={transcriptScrollAreaRootRef} className="min-h-0 flex-1">
+        <ScrollArea className="size-full">
+          <div className="flex flex-col gap-2 p-2">
+            {loading && entries.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Loading…</p>
+            ) : error && entries.length === 0 ? (
+              <p className="text-xs text-destructive-foreground">{error}</p>
+            ) : entries.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No messages yet.</p>
+            ) : (
+              <>
+                {entries.map((entry, index) => (
+                  <OmpTranscriptEntryView key={ompTranscriptEntryKey(entry, index)} entry={entry} />
+                ))}
+                {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
       <div className="flex flex-col gap-1.5 border-t border-border/50 p-2">
         <p className="text-[.65rem] leading-4 text-muted-foreground">
           Child model and effort are selected at spawn; this OMP API cannot change them after

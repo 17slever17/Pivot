@@ -9,6 +9,9 @@ import {
   formatOmpTranscriptEntry,
   formatOmpTranscriptMessage,
   openAgentTranscriptTab,
+  isSubagentTranscriptNearBottom,
+  resolveSubagentTranscriptFollowState,
+  SUBAGENT_TRANSCRIPT_BOTTOM_THRESHOLD_PX,
   resolveParentActionOutcome,
   SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS,
 } from "./AgentsPanel";
@@ -330,5 +333,50 @@ describe("agent transcript synchronization", () => {
     live.dispose();
     vi.advanceTimersByTime(SUBAGENT_TRANSCRIPT_FALLBACK_INTERVAL_MS);
     expect(poll).not.toHaveBeenCalled();
+  });
+});
+
+describe("agent transcript sticky scroll", () => {
+  it("follows new entries when the viewport is at or near the bottom", () => {
+    expect(
+      isSubagentTranscriptNearBottom({
+        scrollTop: 400,
+        scrollHeight: 800,
+        clientHeight: 400,
+      }),
+    ).toBe(true);
+    expect(
+      resolveSubagentTranscriptFollowState({
+        scrollTop: 400 - SUBAGENT_TRANSCRIPT_BOTTOM_THRESHOLD_PX + 1,
+        scrollHeight: 800,
+        clientHeight: 400,
+      }),
+    ).toBe(true);
+  });
+
+  it("locks the viewport when the user scrolls up", () => {
+    expect(
+      resolveSubagentTranscriptFollowState({
+        scrollTop: 120,
+        scrollHeight: 800,
+        clientHeight: 400,
+      }),
+    ).toBe(false);
+  });
+
+  it("resumes following when the user returns to the bottom", () => {
+    const scrolledUp = resolveSubagentTranscriptFollowState({
+      scrollTop: 120,
+      scrollHeight: 800,
+      clientHeight: 400,
+    });
+    expect(scrolledUp).toBe(false);
+    expect(
+      resolveSubagentTranscriptFollowState({
+        scrollTop: 400,
+        scrollHeight: 800,
+        clientHeight: 400,
+      }),
+    ).toBe(true);
   });
 });
