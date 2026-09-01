@@ -1976,7 +1976,7 @@ export class OmpAdapter {
         session.interactionMode === "review"
           ? `${session.reviewRunText ?? ""}${session.heldBackRunText ?? session.openRunText ?? ""}`
           : (session.heldBackRunText ?? session.openRunText);
-      if (session.interactionMode === "review" && runText.length > 0) {
+      if (session.interactionMode === "review" && runText !== null && runText.length > 0) {
         session.heldBackRunText = runText;
         session.openRunText = null;
         session.reviewRunText = null;

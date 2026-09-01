@@ -1,5 +1,6 @@
 import {
   CheckpointRef,
+  CommandId,
   EventId,
   MessageId,
   ProjectId,
@@ -26,6 +27,7 @@ const asProjectId = (value: string): ProjectId => ProjectId.make(value);
 const asTurnId = (value: string): TurnId => TurnId.make(value);
 const asMessageId = (value: string): MessageId => MessageId.make(value);
 const asEventId = (value: string): EventId => EventId.make(value);
+const asCommandId = (value: string): CommandId => CommandId.make(value);
 const asCheckpointRef = (value: string): CheckpointRef => CheckpointRef.make(value);
 
 const projectionSnapshotLayer = it.layer(
@@ -325,7 +327,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               actor: "server",
               reason: "server restarted",
               sourceEventId: asEventId("event-1"),
-              commandId: "command-1",
+              commandId: asCommandId("command-1"),
             },
           },
           createdAt: "2026-02-24T00:00:02.000Z",
@@ -452,7 +454,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               actor: "server",
               reason: "server restarted",
               sourceEventId: asEventId("event-1"),
-              commandId: "command-1",
+              commandId: asCommandId("command-1"),
             },
           },
           createdAt: "2026-02-24T00:00:02.000Z",
