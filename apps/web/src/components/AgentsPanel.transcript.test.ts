@@ -89,6 +89,16 @@ describe("formatOmpTranscriptMessage", () => {
       }),
     ).toBe("ab");
   });
+
+  it("keeps assistant observations and reasoning readable as separate blocks", () => {
+    expect(
+      formatOmpTranscriptMessage({
+        role: "assistant",
+        text: "I found two files.",
+        reasoning: "Checking the dependency graph",
+      }),
+    ).toBe("I found two files.\n\nReasoning summary: Checking the dependency graph");
+  });
 });
 
 describe("formatOmpTranscriptEntry", () => {
@@ -110,6 +120,18 @@ describe("formatOmpTranscriptEntry", () => {
         message: {
           role: "assistant",
           content: [{ type: "thinking", thinking: "Checking the dependency graph" }],
+        },
+      }),
+    ).toBe("assistant: Reasoning summary: Checking the dependency graph");
+  });
+
+  it("does not duplicate reasoning content when OMP uses text for the summary", () => {
+    expect(
+      formatOmpTranscriptEntry({
+        type: "message",
+        message: {
+          role: "assistant",
+          content: [{ type: "reasoning", text: "Checking the dependency graph" }],
         },
       }),
     ).toBe("assistant: Reasoning summary: Checking the dependency graph");
@@ -177,6 +199,45 @@ describe("describeOmpTranscriptEntry", () => {
       detail: "file body",
       isError: true,
     });
+  });
+
+  it("keeps command and path visible in the compact tool summary", () => {
+    expect(
+      describeOmpTranscriptEntry({
+        type: "tool_call",
+        name: "exec",
+        arguments: { command: "bun test", path: "apps/web" },
+      }),
+    ).toMatchObject({
+      kind: "tool",
+      label: "Tool: exec",
+      summary: "Command: bun test · Path: apps/web",
+    });
+  });
+
+  it("treats standalone reasoning entries as readable assistant observations", () => {
+    expect(
+      describeOmpTranscriptEntry({
+        type: "reasoning",
+        text: "Checking the dependency graph",
+      }),
+    ).toEqual({
+      kind: "message",
+      role: "assistant",
+      text: "",
+      reasoning: "Checking the dependency graph",
+      tools: [],
+    });
+  });
+
+  it("keeps a compact command summary in the plain entry formatter", () => {
+    expect(
+      formatOmpTranscriptEntry({
+        type: "tool_call",
+        name: "exec",
+        arguments: { command: "bun test", path: "apps/web" },
+      }),
+    ).toContain("Tool: exec · Command: bun test · Path: apps/web");
   });
 
   it("summarizes session init without exposing the harness system prompt", () => {

@@ -299,7 +299,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("1 changed file");
   });
 
-  it("collapses the status disclosure by default when the assistant already has an answer", () => {
+  it("shows status observations as readable text when the assistant already has an answer", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...buildProps()}
@@ -325,12 +325,12 @@ describe("MessagesTimeline", () => {
 
     expect(markup).toContain("24 commits behind.");
     expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="false"');
-    expect(markup).not.toContain("Fetching latest upstream.");
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain("Fetching latest upstream.");
     expect(markup).not.toContain("(empty response)");
   });
 
-  it("collapses the status disclosure by default for status-only messages and skips empty-response", () => {
+  it("shows readable status-only observations and skips empty-response", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...buildProps()}
@@ -355,12 +355,12 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="false"');
-    expect(markup).not.toContain("No background jobs running.");
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain("No background jobs running.");
     expect(markup).not.toContain("(empty response)");
   });
 
-  it("keeps every status point hidden while the status disclosure is collapsed", () => {
+  it("shows every status point in the readable progress stream", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...buildProps()}
@@ -386,9 +386,9 @@ describe("MessagesTimeline", () => {
 
     expect(markup).toContain("Done.");
     expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="false"');
-    expect(markup).not.toContain("Fetching latest upstream.");
-    expect(markup).not.toContain("No background jobs running.");
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain("Fetching latest upstream.");
+    expect(markup).toContain("No background jobs running.");
   });
 
   it("treats only the strict list end as the live edge", async () => {

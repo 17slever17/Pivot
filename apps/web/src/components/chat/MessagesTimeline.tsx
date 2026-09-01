@@ -1121,24 +1121,11 @@ function StatusSection(props: {
   readonly skills: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
 }) {
   const points = splitStatusPoints(props.statusText);
-  const [expanded, setExpanded] = useState(false);
-  const [expandedPoints, setExpandedPoints] = useState<ReadonlySet<number>>(new Set());
+  const [expanded, setExpanded] = useState(true);
 
   if (points.length === 0) {
     return null;
   }
-
-  const togglePoint = (index: number) => {
-    setExpandedPoints((previous) => {
-      const next = new Set(previous);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -1156,58 +1143,18 @@ function StatusSection(props: {
         <span className="text-muted-foreground text-xs">Status</span>
       </button>
       {expanded ? (
-        <div className="flex flex-col">
-          {points.map((point, index) => (
-            <StatusPointRow
-              key={index}
-              point={point}
-              expanded={expandedPoints.has(index)}
-              isStreaming={props.isStreaming}
-              markdownCwd={props.markdownCwd}
-              threadRef={props.threadRef}
-              skills={props.skills}
-              onToggle={() => togglePoint(index)}
-            />
+        <div className="flex flex-col gap-1 pl-5 text-sm leading-relaxed text-foreground/85">
+          {points.map((point) => (
+            <div key={point} className="min-w-0">
+              <ChatMarkdown
+                text={point}
+                cwd={props.markdownCwd}
+                threadRef={props.threadRef ?? undefined}
+                isStreaming={props.isStreaming}
+                skills={props.skills}
+              />
+            </div>
           ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function StatusPointRow(props: {
-  readonly point: string;
-  readonly expanded: boolean;
-  readonly isStreaming: boolean;
-  readonly markdownCwd: string | undefined;
-  readonly threadRef: ScopedThreadRef | null;
-  readonly skills: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
-  readonly onToggle: () => void;
-}) {
-  return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        aria-expanded={props.expanded}
-        onClick={props.onToggle}
-        className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-0.5 py-0.5 text-left text-[12px] leading-5 transition-colors duration-150 hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-      >
-        {props.expanded ? (
-          <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground/65" />
-        ) : (
-          <ChevronRightIcon className="size-3 shrink-0 text-muted-foreground/65" />
-        )}
-        <span className="min-w-0 truncate text-muted-foreground">{props.point}</span>
-      </button>
-      {props.expanded ? (
-        <div className="pl-5">
-          <ChatMarkdown
-            text={props.point}
-            cwd={props.markdownCwd}
-            threadRef={props.threadRef ?? undefined}
-            isStreaming={props.isStreaming}
-            skills={props.skills}
-          />
         </div>
       ) : null}
     </div>
@@ -2411,6 +2358,7 @@ const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
     ? {
         role: "button" as const,
         tabIndex: 0 as const,
+        "aria-expanded": expanded,
         "aria-label": displayText,
         onClick: () => setExpanded(ctx.routeThreadKey, workEntry.id, !expanded),
         onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {

@@ -47,6 +47,8 @@ type OmpTranscriptRecord = Record<string, unknown>;
 export type OmpTranscriptTool = {
   readonly id: string | null;
   readonly label: string;
+  /** A compact command/path preview; full arguments stay behind disclosure. */
+  readonly summary?: string;
   readonly detail: string;
   readonly isError: boolean;
 };
@@ -63,6 +65,7 @@ export type OmpTranscriptView =
       readonly kind: "tool";
       readonly id: string | null;
       readonly label: string;
+      readonly summary?: string;
       readonly detail: string;
       readonly isError: boolean;
     }
@@ -111,6 +114,14 @@ function transcriptTextFromContent(content: unknown): string {
     .map((part) => {
       if (typeof part === "string") return part;
       if (!isOmpTranscriptRecord(part)) return "";
+      if (
+        part.type === "thinking" ||
+        part.type === "reasoning" ||
+        part.type === "reasoning_text" ||
+        part.type === "redactedThinking"
+      ) {
+        return "";
+      }
       if (typeof part.text === "string") return part.text;
       return "";
     })
@@ -124,11 +135,70 @@ function transcriptReasoningFromContent(content: unknown): string {
     .map((part) => {
       if (!isOmpTranscriptRecord(part)) return "";
       if (part.type === "thinking" && typeof part.thinking === "string") return part.thinking;
+      if (
+        (part.type === "reasoning" || part.type === "reasoning_text") &&
+        typeof part.text === "string"
+      ) {
+        return part.text;
+      }
+      if (
+        (part.type === "reasoning" || part.type === "reasoning_text") &&
+        typeof part.summary === "string"
+      ) {
+        return part.summary;
+      }
+      if (part.type === "thinking" && typeof part.summary === "string") {
+        return part.summary;
+      }
       if (part.type === "redactedThinking") return "Reasoning unavailable.";
       return "";
     })
     .filter((part) => part.length > 0)
     .join("\n\n");
+}
+
+function compactTranscriptToolValue(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length <= 180) return compact;
+  return compact.slice(0, 177) + "...";
+}
+
+function readTranscriptToolField(
+  sources: ReadonlyArray<unknown>,
+  keys: ReadonlyArray<string>,
+): string {
+  for (const source of sources) {
+    if (!isOmpTranscriptRecord(source)) continue;
+    for (const key of keys) {
+      const value = compactTranscriptToolValue(source[key]);
+      if (value.length > 0) return value;
+    }
+  }
+  return "";
+}
+
+function transcriptToolSummary(record: OmpTranscriptRecord, args: unknown, name: string): string {
+  const sources = [record, args, record.input, record.result, record.details];
+  const parts = [
+    ["Command", ["command", "cmd", "shellCommand"]],
+    ["Path", ["path", "filePath", "file", "filename"]],
+    ["Query", ["query"]],
+    ["Pattern", ["pattern"]],
+  ] as const;
+  const summary = parts
+    .map(([label, keys]) => {
+      const value = readTranscriptToolField(sources, keys);
+      return value.length > 0 ? label + ": " + value : "";
+    })
+    .filter((part) => part.length > 0);
+  if (summary.length > 0) return summary.join(" · ");
+
+  if (typeof args === "string" && /^(bash|sh|shell|exec|command|terminal)$/i.test(name)) {
+    const command = compactTranscriptToolValue(args);
+    if (command.length > 0) return "Command: " + command;
+  }
+  return "";
 }
 
 function transcriptToolFromRecord(record: OmpTranscriptRecord): OmpTranscriptTool {
@@ -140,6 +210,7 @@ function transcriptToolFromRecord(record: OmpTranscriptRecord): OmpTranscriptToo
   const args = record.arguments ?? record.args ?? record.input;
   const intent = typeof record.intent === "string" ? record.intent : "";
   const partialResult = record.partialResult ?? record.result;
+  const summary = transcriptToolSummary(record, args, name);
   const detailParts = [
     intent ? `Intent: ${intent}` : "",
     args === undefined ? "" : stringifyTranscriptValue(args),
@@ -155,6 +226,7 @@ function transcriptToolFromRecord(record: OmpTranscriptRecord): OmpTranscriptToo
           ? record.toolCallId
           : null,
     label: `Tool: ${name}`,
+    ...(summary.length > 0 ? { summary } : {}),
     detail: detailParts.filter((part) => part.length > 0).join("\n\n"),
     isError: record.isError === true,
   };
@@ -169,6 +241,8 @@ function transcriptToolResultFromRecord(record: OmpTranscriptRecord): OmpTranscr
   const content = transcriptTextFromContent(record.content);
   const detailSource =
     content || record.result || record.output || record.details || record.message || record.error;
+  const args = record.arguments ?? record.args ?? record.input;
+  const summary = transcriptToolSummary(record, args, name);
   return {
     id:
       typeof record.toolCallId === "string"
@@ -177,6 +251,7 @@ function transcriptToolResultFromRecord(record: OmpTranscriptRecord): OmpTranscr
           ? record.id
           : null,
     label: `${record.isError === true ? "Tool error" : "Tool result"}: ${name}`,
+    ...(summary.length > 0 ? { summary } : {}),
     detail: stringifyTranscriptValue(detailSource),
     isError: record.isError === true,
   };
@@ -207,11 +282,24 @@ function transcriptMessageView(message: unknown): OmpTranscriptView {
         )
         .map(transcriptToolFromRecord)
     : [];
+  const text =
+    transcriptTextFromContent(content) ||
+    (typeof message.text === "string" ? message.text : "") ||
+    (typeof message.output === "string" ? message.output : "");
+  const reasoning = [
+    transcriptReasoningFromContent(content),
+    typeof message.reasoning === "string" ? message.reasoning : "",
+    typeof message.reasoningSummary === "string" ? message.reasoningSummary : "",
+    typeof message.thinking === "string" ? message.thinking : "",
+  ]
+    .filter((part) => part.length > 0)
+    .filter((part, index, parts) => parts.indexOf(part) === index)
+    .join("\n\n");
   return {
     kind: "message",
     role: messageRole,
-    text: transcriptTextFromContent(content),
-    reasoning: transcriptReasoningFromContent(content),
+    text,
+    reasoning,
     tools,
   };
 }
@@ -252,6 +340,27 @@ export function describeOmpTranscriptEntry(entry: unknown): OmpTranscriptView {
   }
   const type = typeof entry.type === "string" ? entry.type : "";
   if (type === "message") return transcriptMessageView(entry.message);
+  if (type === "assistant_message" || type === "user_message") {
+    const message = isOmpTranscriptRecord(entry.message) ? entry.message : entry;
+    return transcriptMessageView({
+      ...message,
+      role: type === "user_message" ? "user" : "assistant",
+    });
+  }
+  if (type === "reasoning" || type === "thinking") {
+    const reasoning =
+      (typeof entry.text === "string" && entry.text) ||
+      (typeof entry.thinking === "string" && entry.thinking) ||
+      (typeof entry.summary === "string" && entry.summary) ||
+      "";
+    return {
+      kind: "message",
+      role: "assistant",
+      text: "",
+      reasoning,
+      tools: [],
+    };
+  }
   if (type === "session_init") return { kind: "session", summary: transcriptSessionSummary(entry) };
   if (
     type === "session" ||
@@ -330,7 +439,7 @@ export function formatOmpTranscriptMessage(message: unknown): string {
   const record = isOmpTranscriptRecord(message) ? message : null;
   const text = view.text || (typeof record?.text === "string" ? record.text : "");
   const parts = [text, view.reasoning ? `Reasoning summary: ${view.reasoning}` : ""];
-  return parts.filter((part) => part.length > 0).join("");
+  return parts.filter((part) => part.length > 0).join("\n\n");
 }
 
 /** Formats one OMP entry for callers that need a plain-text representation. */
@@ -342,12 +451,17 @@ export function formatOmpTranscriptEntry(entry: unknown): string {
         `${view.role}:`,
         view.text,
         view.reasoning ? `Reasoning summary: ${view.reasoning}` : "",
-        ...view.tools.map((tool) => `${tool.label}${tool.detail ? `\n${tool.detail}` : ""}`),
+        ...view.tools.map(
+          (tool) =>
+            tool.label +
+            (tool.summary ? " · " + tool.summary : "") +
+            (tool.detail ? "\n" + tool.detail : ""),
+        ),
       ]
         .filter((part) => part.length > 0)
         .join(" ");
     case "tool":
-      return `${view.label}${view.detail ? `\n${view.detail}` : ""}`;
+      return `${view.label}${view.summary ? ` · ${view.summary}` : ""}${view.detail ? `\n${view.detail}` : ""}`;
     case "compaction":
       return `Context compacted: ${view.summary}${view.detail ? `\n${view.detail}` : ""}`;
     case "session":
@@ -382,8 +496,11 @@ function OmpTranscriptToolDetails({ tool }: { readonly tool: OmpTranscriptTool }
         tool.isError && "border-destructive/50",
       )}
     >
-      <summary className="cursor-pointer select-none font-medium text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring">
-        {tool.label}
+      <summary className="flex min-w-0 cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-ring">
+        <span className="shrink-0 font-medium text-muted-foreground">{tool.label}</span>
+        {tool.summary ? (
+          <span className="min-w-0 truncate text-foreground/80"> · {tool.summary}</span>
+        ) : null}
       </summary>
       {tool.detail ? (
         <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[.7rem] leading-relaxed text-foreground/80">
@@ -406,25 +523,20 @@ function OmpTranscriptEntryView({ entry }: { readonly entry: unknown }) {
       return (
         <article
           className={cn(
-            "flex flex-col gap-1 rounded-md border px-2.5 py-2 text-xs",
+            "flex flex-col gap-1 rounded-md border px-2.5 py-2 text-sm",
             view.role === "user"
               ? "ml-4 border-border/40 bg-muted/30"
               : "mr-4 border-border/40 bg-background/50",
           )}
         >
-          <div className="text-[.65rem] font-medium text-muted-foreground">{roleLabel}</div>
+          <div className="text-xs font-medium text-muted-foreground">{roleLabel}</div>
           {view.text ? (
             <p className="whitespace-pre-wrap break-words leading-relaxed">{view.text}</p>
           ) : null}
           {view.reasoning ? (
-            <div className="rounded-sm border border-border/40 bg-muted/20 px-2 py-1.5">
-              <div className="mb-0.5 text-[.65rem] font-medium text-muted-foreground">
-                Reasoning
-              </div>
-              <p className="whitespace-pre-wrap break-words text-[.7rem] leading-relaxed text-muted-foreground">
-                {view.reasoning}
-              </p>
-            </div>
+            <p className="whitespace-pre-wrap break-words leading-relaxed text-foreground/85">
+              <span className="font-medium text-muted-foreground">Reasoning:</span> {view.reasoning}
+            </p>
           ) : null}
           {view.tools.map((tool) => (
             <OmpTranscriptToolDetails key={tool.id ?? `${tool.label}:${tool.detail}`} tool={tool} />
@@ -460,10 +572,10 @@ function OmpTranscriptEntryView({ entry }: { readonly entry: unknown }) {
       );
     case "status":
       return (
-        <div className="rounded-md border border-border/30 px-2 py-1 text-[.7rem] text-muted-foreground">
-          <span className="font-medium">{view.label}</span>
-          {view.detail ? ` · ${view.detail}` : null}
-        </div>
+        <p className="whitespace-pre-wrap break-words px-0.5 py-0.5 text-sm leading-relaxed text-foreground/85">
+          <span className="font-medium text-muted-foreground">{view.label}:</span>{" "}
+          {view.detail || "No details available."}
+        </p>
       );
     case "unknown":
       return (
