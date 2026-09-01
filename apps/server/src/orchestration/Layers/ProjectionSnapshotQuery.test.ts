@@ -226,7 +226,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           checkpoint_turn_count,
           checkpoint_ref,
           checkpoint_status,
-          checkpoint_files_json
+          checkpoint_files_json,
+          interruption_json
         )
         VALUES (
           'thread-1',
@@ -242,7 +243,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           1,
           'checkpoint-1',
           'ready',
-          '[{"path":"README.md","kind":"modified","additions":2,"deletions":1}]'
+          '[{"path":"README.md","kind":"modified","additions":2,"deletions":1}]',
+          '{"kind":"server_restart","actor":"server","reason":"server restarted","sourceEventId":"event-1","commandId":"command-1"}'
         )
       `;
 
@@ -317,6 +319,13 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             sourceProposedPlan: {
               threadId: ThreadId.make("thread-1"),
               planId: "plan-1",
+            },
+            interruption: {
+              kind: "server_restart",
+              actor: "server",
+              reason: "server restarted",
+              sourceEventId: asEventId("event-1"),
+              commandId: "command-1",
             },
           },
           createdAt: "2026-02-24T00:00:02.000Z",
@@ -437,6 +446,13 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             sourceProposedPlan: {
               threadId: ThreadId.make("thread-1"),
               planId: "plan-1",
+            },
+            interruption: {
+              kind: "server_restart",
+              actor: "server",
+              reason: "server restarted",
+              sourceEventId: asEventId("event-1"),
+              commandId: "command-1",
             },
           },
           createdAt: "2026-02-24T00:00:02.000Z",

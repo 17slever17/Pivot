@@ -118,7 +118,7 @@ const ProjectionLatestTurnDbRowSchema = Schema.Struct({
   assistantMessageId: Schema.NullOr(MessageId),
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
-  interruption: Schema.NullOr(OrchestrationInterruptionProvenance),
+  interruption: Schema.NullOr(Schema.fromJsonString(OrchestrationInterruptionProvenance)),
 });
 const ProjectionStateDbRowSchema = ProjectionState;
 const ProjectionCountsRowSchema = Schema.Struct({
