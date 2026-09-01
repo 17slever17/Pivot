@@ -534,9 +534,7 @@ function OmpTranscriptEntryView({ entry }: { readonly entry: unknown }) {
             <p className="whitespace-pre-wrap break-words leading-relaxed">{view.text}</p>
           ) : null}
           {view.reasoning ? (
-            <p className="whitespace-pre-wrap break-words leading-relaxed text-foreground/85">
-              <span className="font-medium text-muted-foreground">Reasoning:</span> {view.reasoning}
-            </p>
+            <p className="whitespace-pre-wrap break-words leading-relaxed">{view.reasoning}</p>
           ) : null}
           {view.tools.map((tool) => (
             <OmpTranscriptToolDetails key={tool.id ?? `${tool.label}:${tool.detail}`} tool={tool} />

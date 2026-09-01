@@ -324,9 +324,9 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("24 commits behind.");
-    expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("Fetching latest upstream.");
+    expect(markup).not.toContain(">Status</span>");
+    expect(markup).not.toContain('aria-expanded="true"');
     expect(markup).not.toContain("(empty response)");
   });
 
@@ -354,9 +354,9 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("No background jobs running.");
+    expect(markup).not.toContain(">Status</span>");
+    expect(markup).not.toContain('aria-expanded="true"');
     expect(markup).not.toContain("(empty response)");
   });
 
@@ -385,10 +385,10 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Done.");
-    expect(markup).toContain("Status");
-    expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("Fetching latest upstream.");
     expect(markup).toContain("No background jobs running.");
+    expect(markup).not.toContain(">Status</span>");
+    expect(markup).not.toContain('aria-expanded="true"');
   });
 
   it("treats only the strict list end as the live edge", async () => {
