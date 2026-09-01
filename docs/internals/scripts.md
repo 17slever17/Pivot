@@ -30,9 +30,10 @@ authenticated.
 - `vp run dev --browser`: Auto-opens a browser. Off by default. The dev runner writes
   `T3CODE_NO_BROWSER` itself from this flag, so setting `T3CODE_NO_BROWSER=0` in your environment has
   no effect; use `--browser`.
-- `vp run dev:server`: Starts just the server. It runs on Node (`node --watch --watch-path=src
-  src/bin.ts`), watching only server sources so dependency-manager file churn cannot restart an
-  active provider session. Without Bun present it selects `NodePtyAdapter` and `NodeHttpServer`.
+- `vp run dev:server`: Starts just the server. It runs on Node (`node src/bin.ts`) without an
+  automatic file watcher, so filesystem noise cannot restart an active provider session. Restart
+  it manually after source changes. Without Bun present it selects `NodePtyAdapter` and
+  `NodeHttpServer`.
 - `vp run dev:web`: Starts just the Vite dev server for the web app.
 - `vp run dev:desktop`: Starts the Electron shell against the dev server.
 - `vp run dev:marketing`: Starts the Astro marketing site.
