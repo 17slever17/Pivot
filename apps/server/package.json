@@ -19,7 +19,7 @@
     "provenance": true
   },
   "scripts": {
-    "dev": "node --watch src/bin.ts",
+    "dev": "node --watch --watch-path=src --watch-path=../../packages/contracts/src --watch-path=../../packages/shared/src src/bin.ts",
     "build:bundle": "vp pack && vp pack src/service-launcher.ts --out-dir dist --no-clean",
     "start": "node dist/bin.mjs",
     "typecheck": "tsgo --noEmit",
