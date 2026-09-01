@@ -8,7 +8,12 @@ import {
   type WorkLogEntry,
 } from "../../session-logic";
 import { type ChatMessage, type ProposedPlan, type TurnDiffSummary } from "../../types";
-import { type MessageId, type OrchestrationLatestTurn, type TurnId } from "@t3tools/contracts";
+import {
+  type MessageId,
+  type OrchestrationInterruptionProvenance,
+  type OrchestrationLatestTurn,
+  type TurnId,
+} from "@t3tools/contracts";
 
 export const MAX_VISIBLE_WORK_LOG_ENTRIES = 1;
 export const TIMELINE_MINIMAP_ITEM_SPACING = 8;
@@ -157,8 +162,27 @@ export interface TimelineDurationMessage {
 
 export type TimelineLatestTurn = Pick<
   OrchestrationLatestTurn,
-  "turnId" | "state" | "startedAt" | "completedAt"
+  "turnId" | "state" | "startedAt" | "completedAt" | "interruption"
 >;
+
+export type TimelineInterruption = OrchestrationInterruptionProvenance;
+
+export function formatInterruptedTurnLabel(
+  duration: string | null,
+  interruption: TimelineInterruption | null | undefined,
+): string {
+  switch (interruption?.kind) {
+    case "user_stop":
+      return duration ? `You stopped after ${duration}` : "You stopped this response";
+    case "server_restart":
+      return "Сервер Pivot перезапустился; выполнявшаяся задача прервана";
+    case "provider_exit":
+      return "Сессия провайдера завершилась неожиданно";
+    case "unknown":
+    case undefined:
+      return duration ? `Выполнение прервано после ${duration}` : "Выполнение прервано";
+  }
+}
 
 export type MessagesTimelineRow =
   | {
@@ -319,6 +343,7 @@ function deriveTurnFolds(input: {
   timelineEntries: ReadonlyArray<TimelineEntry>;
   terminalAssistantMessageIds: ReadonlySet<string>;
   latestTurn: TimelineLatestTurn | null;
+  lastInterruption: TimelineInterruption | null | undefined;
   unsettledTurnId: TurnId | null;
 }): ReadonlyMap<string, TurnFold> {
   interface TurnGroup {
@@ -424,9 +449,10 @@ function deriveTurnFolds(input: {
           );
     const duration = elapsedMs !== null ? formatDuration(elapsedMs) : null;
     const label = isLatestInterruptedTurn
-      ? duration
-        ? `You stopped after ${duration}`
-        : "You stopped this response"
+      ? formatInterruptedTurnLabel(
+          duration,
+          input.latestTurn?.interruption ?? input.lastInterruption,
+        )
       : duration
         ? `Worked for ${duration}`
         : "Worked";
@@ -445,6 +471,7 @@ function deriveTurnFolds(input: {
 export function deriveMessagesTimelineRows(input: {
   timelineEntries: ReadonlyArray<TimelineEntry>;
   latestTurn?: TimelineLatestTurn | null;
+  lastInterruption?: TimelineInterruption | null;
   runningTurnId?: TurnId | null;
   expandedTurnIds?: ReadonlySet<TurnId>;
   expandedWorkGroupIds?: ReadonlySet<string>;
@@ -466,6 +493,7 @@ export function deriveMessagesTimelineRows(input: {
     timelineEntries: input.timelineEntries,
     terminalAssistantMessageIds,
     latestTurn: input.latestTurn ?? null,
+    lastInterruption: input.lastInterruption,
     unsettledTurnId,
   });
   const collapsedEntryIds = new Set<string>();

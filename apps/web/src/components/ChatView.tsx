@@ -6833,6 +6833,7 @@ function ChatViewContent(props: ChatViewProps) {
                 listRef={legendListRef}
                 timelineEntries={timelineEntries}
                 latestTurn={activeLatestTurn}
+                lastInterruption={activeThread.session?.lastInterruption ?? null}
                 runningTurnId={
                   activeThread.session?.status === "running"
                     ? activeThread.session.activeTurnId

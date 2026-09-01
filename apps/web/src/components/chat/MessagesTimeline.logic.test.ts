@@ -3,9 +3,53 @@ import {
   computeStableMessagesTimelineRows,
   computeMessageDurationStart,
   deriveMessagesTimelineRows,
+  formatInterruptedTurnLabel,
   normalizeCompactToolLabel,
   resolveAssistantMessageCopyState,
+  type TimelineInterruption,
 } from "./MessagesTimeline.logic";
+
+function interruption(kind: TimelineInterruption["kind"]): TimelineInterruption {
+  return {
+    kind,
+    actor:
+      kind === "user_stop"
+        ? "client"
+        : kind === "server_restart"
+          ? "server"
+          : kind === "provider_exit"
+            ? "provider"
+            : "unknown",
+    sourceEventId: "event-interruption" as never,
+  };
+}
+
+describe("formatInterruptedTurnLabel", () => {
+  it("keeps the explicit user-stop wording", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("user_stop"))).toBe(
+      "You stopped after 47s",
+    );
+  });
+
+  it("explains a Pivot restart", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("server_restart"))).toBe(
+      "Сервер Pivot перезапустился; выполнявшаяся задача прервана",
+    );
+  });
+
+  it("explains an unexpected provider exit", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("provider_exit"))).toBe(
+      "Сессия провайдера завершилась неожиданно",
+    );
+  });
+
+  it("uses neutral copy when provenance is unknown or absent", () => {
+    expect(formatInterruptedTurnLabel("47s", interruption("unknown"))).toBe(
+      "Выполнение прервано после 47s",
+    );
+    expect(formatInterruptedTurnLabel(null, null)).toBe("Выполнение прервано");
+  });
+});
 
 describe("computeMessageDurationStart", () => {
   it("returns message createdAt when there is no preceding user message", () => {
@@ -638,7 +682,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(foldRow?.label).toBe("Worked for 12s");
   });
 
-  it("uses latest-turn timings and the stopped label for an interrupted latest turn", () => {
+  it("uses latest-turn timings and the explicit stop label for a user interruption", () => {
     const rows = deriveMessagesTimelineRows({
       timelineEntries: [
         {
@@ -659,6 +703,7 @@ describe("deriveMessagesTimelineRows", () => {
         state: "interrupted",
         startedAt: "2026-01-01T00:00:00Z",
         completedAt: "2026-01-01T00:00:47Z",
+        interruption: interruption("user_stop"),
       },
       isWorking: false,
       activeTurnStartedAt: null,
@@ -672,6 +717,43 @@ describe("deriveMessagesTimelineRows", () => {
         turnId: "turn-1",
         label: "You stopped after 47s",
         expanded: false,
+      }),
+    ]);
+  });
+
+  it("uses session provenance when the latest turn has no interruption detail", () => {
+    const rows = deriveMessagesTimelineRows({
+      timelineEntries: [
+        {
+          id: "work-entry-provider-exit",
+          kind: "work",
+          createdAt: "2026-01-01T00:00:05Z",
+          entry: {
+            id: "work-provider-exit",
+            createdAt: "2026-01-01T00:00:05Z",
+            turnId: "turn-provider-exit" as never,
+            label: "Provider work",
+            tone: "tool" as const,
+          },
+        },
+      ],
+      latestTurn: {
+        turnId: "turn-provider-exit" as never,
+        state: "interrupted",
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T00:00:47Z",
+      },
+      lastInterruption: interruption("provider_exit"),
+      isWorking: false,
+      activeTurnStartedAt: null,
+      turnDiffSummaryByAssistantMessageId: new Map(),
+      revertTurnCountByUserMessageId: new Map(),
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        kind: "turn-fold",
+        label: "Сессия провайдера завершилась неожиданно",
       }),
     ]);
   });

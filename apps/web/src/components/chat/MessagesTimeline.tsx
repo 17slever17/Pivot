@@ -86,6 +86,7 @@ import {
   resolveTimelineMinimapTopPercent,
   type StableMessagesTimelineRowsState,
   type MessagesTimelineRow,
+  type TimelineInterruption,
   TIMELINE_MINIMAP_MIN_ITEMS,
   type TimelineLatestTurn,
 } from "./MessagesTimeline.logic";
@@ -220,6 +221,7 @@ interface MessagesTimelineProps {
   listRef: React.RefObject<LegendListRef | null>;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
   latestTurn: TimelineLatestTurn | null;
+  lastInterruption?: TimelineInterruption | null;
   runningTurnId: TurnId | null;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   routeThreadKey: string;
@@ -266,6 +268,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   listRef,
   timelineEntries,
   latestTurn,
+  lastInterruption = null,
   runningTurnId,
   turnDiffSummaryByAssistantMessageId,
   routeThreadKey,
@@ -407,6 +410,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       deriveMessagesTimelineRows({
         timelineEntries,
         latestTurn,
+        lastInterruption,
         runningTurnId,
         expandedTurnIds,
         expandedWorkGroupIds,
@@ -418,6 +422,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     [
       timelineEntries,
       latestTurn,
+      lastInterruption,
       runningTurnId,
       expandedTurnIds,
       expandedWorkGroupIds,
