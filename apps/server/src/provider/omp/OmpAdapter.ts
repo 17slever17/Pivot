@@ -1111,7 +1111,7 @@ export class OmpAdapter {
     if (frame.type === "agent_end" && frame.isTerminal !== false) {
       const agentErrorMessage = readOmpAgentEndError(frame, session.lastAssistantOutcome);
       session.lastAssistantOutcome = undefined;
-      return this.#emitTurnCompleted(session, agentErrorMessage);
+      return this.#emitTurnCompleted(session, agentErrorMessage, frame.messages);
     }
     if (frame.type === "prompt_result" && frame.agentInvoked === false) {
       session.lastAssistantOutcome = undefined;
@@ -1701,7 +1701,12 @@ export class OmpAdapter {
       return Effect.void;
     }
     session.lastAssistantOutcome = outcome;
-    session.heldBackRunText = session.openRunText;
+    // `message_update` deltas are useful for low-latency rendering, but they
+    // are not authoritative: OMP's agent loop may normalize or recover the
+    // completed response before emitting `message_end`. Keep the final
+    // assistant message as the source of truth for persistence and demotion,
+    // falling back to the streamed text for older/partial frames.
+    session.heldBackRunText = readOmpAssistantText(message) ?? session.openRunText;
     session.openRunText = null;
     return Effect.void;
   }
@@ -1950,10 +1955,19 @@ export class OmpAdapter {
     });
   }
 
-  #emitTurnCompleted(session: LiveAdapterSession, agentErrorMessage?: string): Effect.Effect<void> {
+  #emitTurnCompleted(
+    session: LiveAdapterSession,
+    agentErrorMessage?: string,
+    terminalMessages?: unknown,
+  ): Effect.Effect<void> {
     return Effect.gen({ self: this }, function* () {
       // Capture the final assistant text before the flush nulls it; a review
       // turn's findings are decoded from it.
+      const terminalText = readLatestFullAssistantText(terminalMessages);
+      if (terminalText !== undefined) {
+        session.heldBackRunText = terminalText;
+        session.openRunText = null;
+      }
       const runText = session.heldBackRunText ?? session.openRunText;
       // Plan-mode turns produce the plan as their final text. Surface it as a
       // first-class proposed plan so the timeline renders the plan card —
@@ -2761,6 +2775,15 @@ function readOmpMessageText(value: unknown): string | undefined {
   return text.length > 0 ? truncateSubagentActivity(text) : undefined;
 }
 
+/** Read the complete final assistant prose without the activity summary cap. */
+function readOmpAssistantText(value: unknown): string | undefined {
+  if (!isRecord(value) || value.role !== "assistant") {
+    return undefined;
+  }
+  const text = formatOmpToolOutputText(value);
+  return text.length > 0 ? text : undefined;
+}
+
 function readLatestAssistantText(value: unknown): string | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -2768,6 +2791,20 @@ function readLatestAssistantText(value: unknown): string | undefined {
   let latest: string | undefined;
   for (const message of value) {
     const text = readOmpMessageText(message);
+    if (text !== undefined) {
+      latest = text;
+    }
+  }
+  return latest;
+}
+
+function readLatestFullAssistantText(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  let latest: string | undefined;
+  for (const message of value) {
+    const text = readOmpAssistantText(message);
     if (text !== undefined) {
       latest = text;
     }

@@ -706,6 +706,125 @@ describe("OmpAdapter", () => {
       }),
   );
 
+  it.effect("uses the canonical message_end text instead of corrupt streamed deltas", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
+
+      // OMP can repair/normalize the completed message after streaming has
+      // already exposed malformed deltas. The message_end snapshot is the
+      // canonical text used by its persisted session JSONL.
+      yield* fake.offer(THREAD_ID, {
+        type: "message_start",
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_update",
+        assistantMessageEvent: {
+          type: "text_delta",
+          delta: "о 14 этап### Код и интеграциякуlip добав",
+        },
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "stop",
+          content: [{ type: "text", text: "Готово. Все 14 этапов завершены." }],
+        },
+      });
+
+      // A second prose run makes the first one follow the demotion path and
+      // verifies that both demoted and final text use canonical snapshots.
+      yield* fake.offer(THREAD_ID, {
+        type: "message_start",
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "сломанный финальный дельта" },
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "stop",
+          content: [{ type: "text", text: "Канонический финальный ответ." }],
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [],
+        isTerminal: true,
+      });
+
+      const events = yield* Fiber.join(eventsFiber);
+      const assistantDeltas = events
+        .filter(
+          (event) =>
+            event.type === "content.delta" && event.payload.streamKind === "assistant_text",
+        )
+        .map((event) => (event as { payload: { delta: string } }).payload.delta);
+      const reasoningItems = events.filter(
+        (event) => event.type === "item.completed" && event.payload.itemType === "reasoning",
+      );
+      NodeAssert.deepEqual(assistantDeltas, ["Канонический финальный ответ."]);
+      NodeAssert.equal(reasoningItems.length, 1);
+      NodeAssert.equal(
+        (reasoningItems[0] as { payload: { detail?: string } }).payload.detail,
+        "Готово. Все 14 этапов завершены.",
+      );
+    }),
+  );
+
+  it.effect("uses the canonical agent_end message when message_end is unavailable", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID);
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({ threadId: THREAD_ID, input: "hi" });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_start",
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: "искажённая дельта" },
+        message: { role: "assistant", content: [] },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [
+          {
+            role: "assistant",
+            stopReason: "stop",
+            content: [{ type: "text", text: "Канонический ответ из terminal snapshot." }],
+          },
+        ],
+        isTerminal: true,
+      });
+
+      const events = yield* Fiber.join(eventsFiber);
+      const assistantDeltas = events
+        .filter(
+          (event) =>
+            event.type === "content.delta" && event.payload.streamKind === "assistant_text",
+        )
+        .map((event) => (event as { payload: { delta: string } }).payload.delta);
+      NodeAssert.deepEqual(assistantDeltas, ["Канонический ответ из terminal snapshot."]);
+    }),
+  );
+
   it.effect("surfaces the final text of a plan-mode turn as a proposed plan", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();
