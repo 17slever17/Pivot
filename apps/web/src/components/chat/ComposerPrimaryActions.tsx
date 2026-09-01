@@ -182,9 +182,9 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             {...pointerFocusProps}
             onClick={onSteer}
             disabled={isSendBusy || isConnecting || isEnvironmentUnavailable}
-            aria-label="Steer current turn"
+            aria-label="Уточнить текущую задачу"
           >
-            Steer now
+            Уточнить сейчас
           </Button>
         ) : null}
         {hasSendableContent && !isStopping ? (

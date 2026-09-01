@@ -5618,7 +5618,9 @@ function ChatViewContent(props: ChatViewProps) {
           const error = squashAtomCommandFailure(result);
           setThreadError(
             threadIdForSend,
-            error instanceof Error ? error.message : "Failed to steer the current turn.",
+            error instanceof Error
+              ? error.message
+              : "Не удалось отправить уточнение в текущую задачу.",
           );
         }
       }
@@ -5635,7 +5637,7 @@ function ChatViewContent(props: ChatViewProps) {
       }
       setThreadError(
         threadIdForSend,
-        error instanceof Error ? error.message : "Failed to steer the current turn.",
+        error instanceof Error ? error.message : "Не удалось отправить уточнение в текущую задачу.",
       );
     } finally {
       sendInFlightRef.current = false;

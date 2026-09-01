@@ -913,8 +913,10 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                 )}
                 {canSteer ? (
                   <ControlPill
-                    accessibilityLabel={isSteering ? "Steering current turn" : "Steer current turn"}
-                    label={isSteering ? "Steering…" : "Steer"}
+                    accessibilityLabel={
+                      isSteering ? "Уточнение текущей задачи" : "Уточнить текущую задачу"
+                    }
+                    label={isSteering ? "Уточнение…" : "Уточнить"}
                     disabled={isSteering}
                     onPress={() => void handleSteer()}
                   />

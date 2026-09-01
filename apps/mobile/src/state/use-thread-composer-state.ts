@@ -183,7 +183,7 @@ export function useThreadComposerState() {
         if (getComposerDraftSnapshot(threadKey).text.trim().length === 0) {
           setComposerDraftText(threadKey, text);
         }
-        setPendingConnectionError("Failed to steer the current turn.");
+        setPendingConnectionError("Не удалось отправить уточнение в текущую задачу.");
         return null;
       }
 
@@ -194,7 +194,7 @@ export function useThreadComposerState() {
         setComposerDraftText(threadKey, text);
       }
       setPendingConnectionError(
-        error instanceof Error ? error.message : "Failed to steer the current turn.",
+        error instanceof Error ? error.message : "Не удалось отправить уточнение в текущую задачу.",
       );
       return null;
     }

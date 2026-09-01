@@ -213,13 +213,13 @@ describe("ComposerPrimaryActions", () => {
 
   it("offers an explicit immediate steer beside Queue for an active OMP turn", () => {
     const markup = renderStandaloneStop(true, true);
-    expect(markup).toContain('aria-label="Steer current turn"');
-    expect(markup).toContain("Steer now");
+    expect(markup).toContain('aria-label="Уточнить текущую задачу"');
+    expect(markup).toContain("Уточнить сейчас");
     expect(markup).toContain('aria-label="Queue follow-up message"');
   });
 
   it("does not offer steer when the active provider cannot steer", () => {
-    expect(renderStandaloneStop(true, false)).not.toContain('aria-label="Steer current turn"');
+    expect(renderStandaloneStop(true, false)).not.toContain('aria-label="Уточнить текущую задачу"');
   });
 
   it("renders stage artwork inside the send button when artwork identification is active", () => {
