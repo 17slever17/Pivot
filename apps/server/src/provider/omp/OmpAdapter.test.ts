@@ -3536,6 +3536,103 @@ describe("OmpAdapter review mode", () => {
     }),
   );
 
+  it.effect("keeps canonical findings across multiple assistant message_end segments", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID, {
+        resolveRoleModel: () => Effect.succeed(undefined),
+      });
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({
+        threadId: THREAD_ID,
+        input: "review it",
+        interactionMode: "review",
+      });
+      yield* feedAssistantText(fake, findingsJson);
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "stop",
+          content: [{ type: "text", text: findingsJson }],
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_start",
+        message: { role: "assistant" },
+      });
+      yield* feedAssistantText(fake, "broken closing delta");
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "stop",
+          content: [{ type: "text", text: "Review complete." }],
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+
+      NodeAssert.equal(events.filter((event) => event.type === "review.finding").length, 1);
+      const completed = events.find((event) => event.type === "turn.completed");
+      NodeAssert.equal(completed?.payload.state, "completed");
+    }),
+  );
+
+  it.effect("preserves canonical review findings before the terminal agent snapshot", () =>
+    Effect.gen(function* () {
+      const fake = new FakeOmpRpc();
+      const adapter = new OmpAdapter(fake, testRandomUUID, {
+        resolveRoleModel: () => Effect.succeed(undefined),
+      });
+      const eventsFiber = yield* collectUntilTurnCompleted(adapter.streamEvents).pipe(
+        Effect.forkChild,
+      );
+      yield* adapter.startSession(startInput);
+      yield* adapter.sendTurn({
+        threadId: THREAD_ID,
+        input: "review it",
+        interactionMode: "review",
+      });
+      yield* feedAssistantText(fake, findingsJson);
+      yield* fake.offer(THREAD_ID, {
+        type: "message_end",
+        message: {
+          role: "assistant",
+          stopReason: "stop",
+          content: [{ type: "text", text: findingsJson }],
+        },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "message_start",
+        message: { role: "assistant" },
+      });
+      yield* fake.offer(THREAD_ID, {
+        type: "agent_end",
+        messages: [
+          {
+            role: "assistant",
+            stopReason: "stop",
+            content: [{ type: "text", text: "Review complete." }],
+          },
+        ],
+        isTerminal: true,
+      });
+      const events = yield* Fiber.join(eventsFiber);
+
+      NodeAssert.equal(events.filter((event) => event.type === "review.finding").length, 1);
+      const completed = events.find((event) => event.type === "turn.completed");
+      NodeAssert.equal(completed?.payload.state, "completed");
+    }),
+  );
+
   it.effect("defaults side and severity when a finding omits them", () =>
     Effect.gen(function* () {
       const fake = new FakeOmpRpc();

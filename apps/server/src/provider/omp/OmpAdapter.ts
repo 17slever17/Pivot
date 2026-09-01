@@ -228,6 +228,8 @@ interface LiveAdapterSession {
   openRunText: string | null;
   /** Text of the most recently closed run, parked as candidate-final. */
   heldBackRunText: string | null;
+  /** Canonical text from earlier review runs retained for terminal parsing. */
+  reviewRunText: string | null;
   /** Latest assistant outcome for compacted terminal agent_end frames. */
   lastAssistantOutcome: OmpAssistantOutcome | undefined;
   interactionMode: ProviderTurnInteractionMode;
@@ -560,6 +562,7 @@ export class OmpAdapter {
         lastTokenUsageEmitAtMs: -TOKEN_USAGE_EMIT_MIN_INTERVAL_MS,
         openRunText: null,
         heldBackRunText: null,
+        reviewRunText: null,
         lastAssistantOutcome: undefined,
         interactionMode: "default",
         prePlanModelSlug: undefined,
@@ -606,6 +609,7 @@ export class OmpAdapter {
       session.stopRequested = false;
       session.openRunText = null;
       session.heldBackRunText = null;
+      session.reviewRunText = null;
       session.lastAssistantOutcome = undefined;
       yield* this.#applyInteractionMode(session, input.interactionMode);
       if (session.interactionMode !== "plan") {
@@ -1897,10 +1901,10 @@ export class OmpAdapter {
     if (session.interactionMode === "review") {
       // Review turns decode the findings block from the turn's assistant text,
       // and the agent may emit the block and then keep working (trailing tool
-      // calls, a closing prose run). Park the closed run into the open buffer
+      // calls, a closing prose run). Park the closed run into the review buffer
       // instead of demoting it to status_text so the terminal extraction still
       // sees the block — the last fence in the accumulated text wins.
-      session.openRunText = `${session.openRunText ?? ""}${text}`;
+      session.reviewRunText = `${session.reviewRunText ?? ""}${text}`;
       return Effect.void;
     }
     // A completed prose run superseded by a later message (a rule interrupt,
@@ -1968,7 +1972,15 @@ export class OmpAdapter {
         session.heldBackRunText = terminalText;
         session.openRunText = null;
       }
-      const runText = session.heldBackRunText ?? session.openRunText;
+      const runText =
+        session.interactionMode === "review"
+          ? `${session.reviewRunText ?? ""}${session.heldBackRunText ?? session.openRunText ?? ""}`
+          : (session.heldBackRunText ?? session.openRunText);
+      if (session.interactionMode === "review" && runText.length > 0) {
+        session.heldBackRunText = runText;
+        session.openRunText = null;
+        session.reviewRunText = null;
+      }
       // Plan-mode turns produce the plan as their final text. Surface it as a
       // first-class proposed plan so the timeline renders the plan card —
       // workflow-agnostic: any provider's plan mode lands here.
