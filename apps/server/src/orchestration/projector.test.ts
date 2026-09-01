@@ -345,13 +345,13 @@ describe("orchestration projector", () => {
     expect(settledThread?.latestTurn?.completedAt).toBe(settledAt);
   });
 
-  it("retains server-restart interruption provenance on the latest turn", async () => {
-    const createdAt = "2026-02-23T08:00:00.000Z";
-    const startedAt = "2026-02-23T08:00:05.000Z";
-    const stoppedAt = "2026-02-23T08:01:00.000Z";
-    const model = createEmptyReadModel(createdAt);
-    const afterCreate = await Effect.runPromise(
-      projectEvent(
+  effectIt.effect("retains server-restart interruption provenance on the latest turn", () =>
+    Effect.gen(function* () {
+      const createdAt = "2026-02-23T08:00:00.000Z";
+      const startedAt = "2026-02-23T08:00:05.000Z";
+      const stoppedAt = "2026-02-23T08:01:00.000Z";
+      const model = createEmptyReadModel(createdAt);
+      const afterCreate = yield* projectEvent(
         model,
         makeEvent({
           sequence: 1,
@@ -375,10 +375,8 @@ describe("orchestration projector", () => {
             updatedAt: createdAt,
           },
         }),
-      ),
-    );
-    const afterRunning = await Effect.runPromise(
-      projectEvent(
+      );
+      const afterRunning = yield* projectEvent(
         afterCreate,
         makeEvent({
           sequence: 2,
@@ -400,10 +398,8 @@ describe("orchestration projector", () => {
             },
           },
         }),
-      ),
-    );
-    const afterStopped = await Effect.runPromise(
-      projectEvent(
+      );
+      const afterStopped = yield* projectEvent(
         afterRunning,
         makeEvent({
           sequence: 3,
@@ -432,20 +428,20 @@ describe("orchestration projector", () => {
             },
           },
         }),
-      ),
-    );
+      );
 
-    const thread = afterStopped.threads[0];
-    expect(thread?.latestTurn?.state).toBe("interrupted");
-    expect(thread?.latestTurn?.interruption).toEqual({
-      kind: "server_restart",
-      actor: "server",
-      reason: "server restarted; provider session did not survive",
-      sourceEventId: "boot-reconcile:thread-1:unknown",
-      commandId: "provider:boot-reconcile",
-    });
-    expect(thread?.session?.lastInterruption?.kind).toBe("server_restart");
-  });
+      const thread = afterStopped.threads[0];
+      expect(thread?.latestTurn?.state).toBe("interrupted");
+      expect(thread?.latestTurn?.interruption).toEqual({
+        kind: "server_restart",
+        actor: "server",
+        reason: "server restarted; provider session did not survive",
+        sourceEventId: "boot-reconcile:thread-1:unknown",
+        commandId: "provider:boot-reconcile",
+      });
+      expect(thread?.session?.lastInterruption?.kind).toBe("server_restart");
+    }),
+  );
 
   it("updates canonical thread runtime mode from thread.runtime-mode-set", async () => {
     const createdAt = "2026-02-23T08:00:00.000Z";
