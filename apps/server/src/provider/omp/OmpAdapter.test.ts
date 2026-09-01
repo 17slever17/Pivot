@@ -154,6 +154,15 @@ describe("OmpAdapter", () => {
           readOnly: false,
           canSpawn: false,
         });
+        yield* store.upsert({
+          name: "verifier",
+          description: "A read-only verifier",
+          model: "openai-codex/gpt-5.6-luna",
+          effort: "max",
+          systemPrompt: "Review the implementation without editing files.",
+          readOnly: true,
+          canSpawn: false,
+        });
         const fake = new AgentModeObservingFakeOmpRpc();
         const adapter = new OmpAdapter(fake, testRandomUUID, { agentProfileStore: store });
 
@@ -168,6 +177,16 @@ describe("OmpAdapter", () => {
           fake.ensureSessionInput?.extraArgs?.includes("PI_CODING_AGENT_DIR"),
           false,
         );
+        const workerDefinition = yield* fs.readFileString(
+          path.join(stateDir, "omp-agent-modes", "agents", "worker.md"),
+        );
+        const verifierDefinition = yield* fs.readFileString(
+          path.join(stateDir, "omp-agent-modes", "agents", "verifier.md"),
+        );
+        NodeAssert.match(workerDefinition, /model: 'openai-codex\/gpt-5\.6-luna'/);
+        NodeAssert.match(workerDefinition, /thinking-level: 'xhigh'/);
+        NodeAssert.match(verifierDefinition, /model: 'openai-codex\/gpt-5\.6-luna'/);
+        NodeAssert.match(verifierDefinition, /thinking-level: 'max'/);
       }).pipe(Effect.provide(NodeServices.layer)),
   );
 

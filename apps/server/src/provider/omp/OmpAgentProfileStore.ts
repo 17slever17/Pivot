@@ -34,6 +34,8 @@ const DEFAULT_ORCHESTRATOR_PROMPT = `You are the root orchestration agent for Pi
  */
 const OMP_HUB_REUSE_INSTRUCTIONS = `## OMP Hub child reuse
 - When orchestration is enabled, spawn worker and verifier children as keep-alive/reusable sessions when follow-up work is likely.
+- For implementation work, call the OMP task tool with the exact agent: 'worker' profile; for read-only verification, use the exact agent: 'verifier' profile.
+- Always provide the role explicitly. Never omit the agent field and never substitute a bundled/default profile such as task or sonic, because that loses the configured model and reasoning effort.
 - After a child completes, prefer \`hub op=send\` to its known exact child ID to continue that context instead of spawning a replacement.
 - Do not abort or kill a reusable child without a concrete reason; preserve it for later assignments.
 - Tell the user that the same child's context remains in its OMP JSONL session and can be continued.

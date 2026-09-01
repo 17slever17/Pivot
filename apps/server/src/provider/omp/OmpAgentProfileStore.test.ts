@@ -128,6 +128,10 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       const effectiveOrchestratorPrompt = yield* fs.readFileString(orchestratorPath);
       expect(effectiveOrchestratorPrompt).toContain(`${updated.orchestratorPrompt}\n`);
       expect(effectiveOrchestratorPrompt).toContain("## OMP Hub child reuse");
+      expect(effectiveOrchestratorPrompt).toContain("agent: 'worker'");
+      expect(effectiveOrchestratorPrompt).toContain("agent: 'verifier'");
+      expect(effectiveOrchestratorPrompt).toContain("Never omit the agent field");
+      expect(effectiveOrchestratorPrompt).toContain("never substitute a bundled/default profile");
       expect(effectiveOrchestratorPrompt).toContain("hub op=send");
       expect(yield* fs.readFileString(singlePath)).not.toContain("OMP Hub child reuse");
 
