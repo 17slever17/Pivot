@@ -47,7 +47,10 @@ import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
 import * as ThreadBackgroundLiveness from "../ThreadBackgroundLiveness.ts";
 import * as ThreadPlanProgress from "../ThreadPlanProgress.ts";
-import { ProviderRuntimeIngestionLive } from "./ProviderRuntimeIngestion.ts";
+import {
+  ProviderRuntimeIngestionLive,
+  interruptionProvenanceForRuntimeEvent,
+} from "./ProviderRuntimeIngestion.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
@@ -178,6 +181,43 @@ function createProviderServiceHarness() {
     reconcileStaleSessionCalls: () => reconcileStaleSessionCalls,
   };
 }
+
+describe("interruption provenance", () => {
+  it("classifies boot reconciliation, user abort, and provider exits", () => {
+    const base = {
+      eventId: asEventId("provider-event"),
+      provider: ProviderDriverKind.make("omp"),
+      threadId: asThreadId("thread-1"),
+      createdAt: "2026-02-23T08:00:00.000Z",
+    };
+
+    expect(
+      interruptionProvenanceForRuntimeEvent({
+        ...base,
+        eventId: asEventId("boot-reconcile:thread-1:unknown"),
+        type: "session.exited",
+        payload: {
+          reason: "server restarted; provider session did not survive",
+          exitKind: "error",
+        },
+      }),
+    ).toMatchObject({ kind: "server_restart", actor: "server" });
+    expect(
+      interruptionProvenanceForRuntimeEvent({
+        ...base,
+        type: "turn.aborted",
+        payload: { reason: "user_abort" },
+      }),
+    ).toMatchObject({ kind: "user_stop", actor: "client" });
+    expect(
+      interruptionProvenanceForRuntimeEvent({
+        ...base,
+        type: "session.exited",
+        payload: { reason: "provider process exited", exitKind: "error" },
+      }),
+    ).toMatchObject({ kind: "provider_exit", actor: "provider" });
+  });
+});
 
 type ProviderRuntimeTestReadModel = OrchestrationReadModel;
 type ProviderRuntimeTestThread = ProviderRuntimeTestReadModel["threads"][number];

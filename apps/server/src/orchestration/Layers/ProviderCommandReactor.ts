@@ -1466,6 +1466,13 @@ const make = Effect.gen(function* () {
         runtimeMode: thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: null,
         lastError: thread.session?.lastError ?? null,
+        lastInterruption: {
+          kind: "user_stop",
+          actor: "client",
+          reason: "user requested stop",
+          sourceEventId: event.eventId,
+          ...(event.commandId !== null ? { commandId: event.commandId } : {}),
+        },
         updatedAt: now,
       },
       createdAt: now,

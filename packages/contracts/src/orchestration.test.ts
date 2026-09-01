@@ -12,6 +12,7 @@ import {
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetTurnDiffInput,
   OrchestrationLatestTurn,
+  OrchestrationInterruptionProvenance,
   ProjectCreatedPayload,
   ProjectMetaUpdatedPayload,
   OrchestrationProposedPlan,
@@ -40,6 +41,9 @@ const decodeThreadTurnStartRequestedPayload = Schema.decodeUnknownEffect(
   ThreadTurnStartRequestedPayload,
 );
 const decodeOrchestrationLatestTurn = Schema.decodeUnknownEffect(OrchestrationLatestTurn);
+const decodeOrchestrationInterruptionProvenance = Schema.decodeUnknownEffect(
+  OrchestrationInterruptionProvenance,
+);
 const decodeOrchestrationProposedPlan = Schema.decodeUnknownEffect(OrchestrationProposedPlan);
 const decodeOrchestrationSession = Schema.decodeUnknownEffect(OrchestrationSession);
 const decodeOrchestrationThread = Schema.decodeUnknownEffect(OrchestrationThread);
@@ -815,6 +819,28 @@ it.effect("decodes latest turn source proposed plan metadata when present", () =
       threadId: "thread-1",
       planId: "plan-1",
     });
+  }),
+);
+
+it.effect("decodes interruption provenance for user and restart causes", () =>
+  Effect.gen(function* () {
+    const userStop = yield* decodeOrchestrationInterruptionProvenance({
+      kind: "user_stop",
+      actor: "client",
+      reason: "user requested stop",
+      sourceEventId: "provider-event-1",
+      commandId: "provider-command-1",
+    });
+    const restart = yield* decodeOrchestrationInterruptionProvenance({
+      kind: "server_restart",
+      actor: "server",
+      reason: "server restarted; provider session did not survive",
+      sourceEventId: "boot-reconcile:thread-1:unknown",
+    });
+    assert.strictEqual(userStop.kind, "user_stop");
+    assert.strictEqual(userStop.actor, "client");
+    assert.strictEqual(restart.kind, "server_restart");
+    assert.strictEqual(restart.actor, "server");
   }),
 );
 

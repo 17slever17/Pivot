@@ -299,6 +299,21 @@ export const OrchestrationSessionStatus = Schema.Literals([
 ]);
 export type OrchestrationSessionStatus = typeof OrchestrationSessionStatus.Type;
 
+/**
+ * Durable explanation for why the most recent provider work was interrupted.
+ * This is intentionally separate from the coarse `interrupted` lifecycle
+ * state so clients can distinguish a user stop from host/provider failure.
+ */
+export const OrchestrationInterruptionProvenance = Schema.Struct({
+  kind: Schema.Literals(["user_stop", "server_restart", "provider_exit", "unknown"]),
+  actor: Schema.Literals(["client", "server", "provider", "unknown"]),
+  reason: Schema.optional(TrimmedNonEmptyString),
+  sourceEventId: EventId,
+  commandId: Schema.optional(CommandId),
+});
+export type OrchestrationInterruptionProvenance =
+  typeof OrchestrationInterruptionProvenance.Type;
+
 export const OrchestrationSession = Schema.Struct({
   threadId: ThreadId,
   status: OrchestrationSessionStatus,
@@ -307,6 +322,8 @@ export const OrchestrationSession = Schema.Struct({
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(Effect.succeed(DEFAULT_RUNTIME_MODE))),
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(TrimmedNonEmptyString),
+  /** Provenance of the most recent terminal interruption, if any. */
+  lastInterruption: Schema.optional(Schema.NullOr(OrchestrationInterruptionProvenance)),
   updatedAt: IsoDateTime,
 });
 export type OrchestrationSession = typeof OrchestrationSession.Type;
@@ -368,6 +385,7 @@ export const OrchestrationLatestTurn = Schema.Struct({
   startedAt: Schema.NullOr(IsoDateTime),
   completedAt: Schema.NullOr(IsoDateTime),
   assistantMessageId: Schema.NullOr(MessageId),
+  interruption: Schema.optional(Schema.NullOr(OrchestrationInterruptionProvenance)),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
 });
 export type OrchestrationLatestTurn = typeof OrchestrationLatestTurn.Type;

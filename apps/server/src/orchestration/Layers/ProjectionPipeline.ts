@@ -1171,6 +1171,7 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
         runtimeMode: event.payload.session.runtimeMode,
         activeTurnId: event.payload.session.activeTurnId,
         lastError: event.payload.session.lastError,
+        lastInterruption: event.payload.session.lastInterruption ?? null,
         updatedAt: event.payload.session.updatedAt,
       });
     });
@@ -1225,6 +1226,9 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
                       // placeholder checkpoint timestamp — the session leaving
                       // "running" is the authoritative turn end.
                       completedAt: event.payload.session.updatedAt,
+                      ...(event.payload.session.lastInterruption !== undefined
+                        ? { interruption: event.payload.session.lastInterruption }
+                        : {}),
                     }),
               { concurrency: 1 },
             );
@@ -1398,6 +1402,13 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             yield* projectionTurnRepository.upsertByTurnId({
               ...existingTurn.value,
               state: "interrupted",
+              interruption: {
+                kind: "user_stop",
+                actor: "client",
+                reason: "user requested stop",
+                sourceEventId: event.eventId,
+                ...(event.commandId !== null ? { commandId: event.commandId } : {}),
+              },
               completedAt: existingTurn.value.completedAt ?? event.payload.createdAt,
               startedAt: existingTurn.value.startedAt ?? event.payload.createdAt,
               requestedAt: existingTurn.value.requestedAt ?? event.payload.createdAt,
@@ -1412,6 +1423,13 @@ const makeOrchestrationProjectionPipeline = Effect.fn("makeOrchestrationProjecti
             sourceProposedPlanId: null,
             assistantMessageId: null,
             state: "interrupted",
+            interruption: {
+              kind: "user_stop",
+              actor: "client",
+              reason: "user requested stop",
+              sourceEventId: event.eventId,
+              ...(event.commandId !== null ? { commandId: event.commandId } : {}),
+            },
             requestedAt: event.payload.createdAt,
             startedAt: event.payload.createdAt,
             completedAt: event.payload.createdAt,

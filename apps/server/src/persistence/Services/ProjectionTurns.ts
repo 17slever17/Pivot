@@ -14,6 +14,7 @@ import {
   OrchestrationProposedPlanId,
   OrchestrationCheckpointFile,
   OrchestrationCheckpointStatus,
+  OrchestrationInterruptionProvenance,
   ThreadId,
   TurnId,
 } from "@t3tools/contracts";
@@ -40,6 +41,7 @@ export const ProjectionTurn = Schema.Struct({
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
   assistantMessageId: Schema.NullOr(MessageId),
+  interruption: Schema.optional(Schema.NullOr(OrchestrationInterruptionProvenance)),
   state: ProjectionTurnState,
   requestedAt: IsoDateTime,
   startedAt: Schema.NullOr(IsoDateTime),
@@ -58,6 +60,7 @@ export const ProjectionTurnById = Schema.Struct({
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
   assistantMessageId: Schema.NullOr(MessageId),
+  interruption: Schema.optional(Schema.NullOr(OrchestrationInterruptionProvenance)),
   state: ProjectionTurnState,
   requestedAt: IsoDateTime,
   startedAt: Schema.NullOr(IsoDateTime),

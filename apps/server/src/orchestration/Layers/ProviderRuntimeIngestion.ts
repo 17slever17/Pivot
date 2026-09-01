@@ -15,6 +15,7 @@ import {
   TurnId,
   REVIEW_SESSION_THREAD_ID_PREFIX,
   type OrchestrationCheckpointSummary,
+  type OrchestrationInterruptionProvenance,
   type OrchestrationProposedPlan,
   type OrchestrationThread,
   type OrchestrationThreadActivity,
@@ -117,6 +118,44 @@ type RuntimeIngestionInput =
 
 function toTurnId(value: TurnId | string | undefined): TurnId | undefined {
   return value === undefined ? undefined : TurnId.make(String(value));
+}
+
+export function interruptionProvenanceForRuntimeEvent(
+  event: ProviderRuntimeEvent,
+): Omit<OrchestrationInterruptionProvenance, "commandId"> | undefined {
+  switch (event.type) {
+    case "session.exited": {
+      const reason = event.payload.reason;
+      const isServerRestart =
+        event.eventId.includes("boot-reconcile") || reason?.toLowerCase().includes("server restart");
+      return {
+        kind: isServerRestart ? "server_restart" : "provider_exit",
+        actor: isServerRestart ? "server" : "provider",
+        ...(reason !== undefined ? { reason } : {}),
+        sourceEventId: event.eventId,
+      };
+    }
+    case "turn.aborted": {
+      const isUserStop = event.payload.reason === "user_abort";
+      return {
+        kind: isUserStop ? "user_stop" : "provider_exit",
+        actor: isUserStop ? "client" : "provider",
+        reason: event.payload.reason,
+        sourceEventId: event.eventId,
+      };
+    }
+    case "session.state.changed":
+      return event.payload.state === "error"
+        ? {
+            kind: "unknown",
+            actor: "provider",
+            ...(event.payload.reason !== undefined ? { reason: event.payload.reason } : {}),
+            sourceEventId: event.eventId,
+          }
+        : undefined;
+    default:
+      return undefined;
+  }
 }
 
 function toApprovalRequestId(value: string | undefined): ApprovalRequestId | undefined {
@@ -1720,9 +1759,11 @@ const make = Effect.gen(function* () {
             );
           }
 
+          const sessionCommandId = yield* providerCommandId(event, "thread-session-set");
+          const interruption = interruptionProvenanceForRuntimeEvent(event);
           yield* orchestrationEngine.dispatch({
             type: "thread.session.set",
-            commandId: yield* providerCommandId(event, "thread-session-set"),
+            commandId: sessionCommandId,
             threadId: thread.id,
             session: {
               threadId: thread.id,
@@ -1734,6 +1775,10 @@ const make = Effect.gen(function* () {
               runtimeMode: thread.session?.runtimeMode ?? "full-access",
               activeTurnId: nextActiveTurnId,
               lastError,
+              lastInterruption:
+                interruption === undefined
+                  ? null
+                  : { ...interruption, commandId: sessionCommandId },
               updatedAt: now,
             },
             createdAt: now,

@@ -44,6 +44,7 @@ import {
   ThreadRevertedPayload,
   ThreadSessionSetPayload,
   ThreadTurnDiffCompletedPayload,
+  ThreadTurnInterruptRequestedPayload,
 } from "./Schemas.ts";
 
 type ThreadPatch = Partial<Omit<OrchestrationThread, "id" | "projectId">>;
@@ -629,8 +630,46 @@ export function projectEvent(
                       // placeholder checkpoint timestamp — the session leaving
                       // "running" is the authoritative turn end.
                       completedAt: session.updatedAt,
-                    }
+                      ...(session.lastInterruption !== undefined
+                        ? { interruption: session.lastInterruption }
+                        : {}),
+                  }
                   : thread.latestTurn,
+            updatedAt: event.occurredAt,
+          }),
+        };
+      });
+
+    case "thread.turn-interrupt-requested":
+      return Effect.gen(function* () {
+        const payload = yield* decodeForEvent(
+          ThreadTurnInterruptRequestedPayload,
+          event.payload,
+          event.type,
+          "payload",
+        );
+        if (payload.turnId === undefined) {
+          return nextBase;
+        }
+        const thread = nextBase.threads.find((entry) => entry.id === payload.threadId);
+        if (!thread || thread.latestTurn?.turnId !== payload.turnId) {
+          return nextBase;
+        }
+        return {
+          ...nextBase,
+          threads: updateThread(nextBase.threads, payload.threadId, {
+            latestTurn: {
+              ...thread.latestTurn,
+              state: "interrupted",
+              completedAt: thread.latestTurn.completedAt ?? payload.createdAt,
+              interruption: {
+                kind: "user_stop",
+                actor: "client",
+                reason: "user requested stop",
+                sourceEventId: event.eventId,
+                ...(event.commandId !== null ? { commandId: event.commandId } : {}),
+              },
+            },
             updatedAt: event.occurredAt,
           }),
         };

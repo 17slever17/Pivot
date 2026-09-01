@@ -16,6 +16,7 @@ import {
   TurnId,
   type OrchestrationCheckpointSummary,
   type OrchestrationLatestTurn,
+  OrchestrationInterruptionProvenance,
   type OrchestrationMessage,
   type OrchestrationProjectShell,
   type OrchestrationProposedPlan,
@@ -95,7 +96,13 @@ const ProjectionThreadActivityDbRowSchema = ProjectionThreadActivity.mapFields(
     sequence: Schema.NullOr(NonNegativeInt),
   }),
 );
-const ProjectionThreadSessionDbRowSchema = ProjectionThreadSession;
+const ProjectionThreadSessionDbRowSchema = ProjectionThreadSession.mapFields(
+  Struct.assign({
+    lastInterruption: Schema.optional(
+      Schema.NullOr(Schema.fromJsonString(OrchestrationInterruptionProvenance)),
+    ),
+  }),
+);
 const ProjectionCheckpointDbRowSchema = ProjectionCheckpoint.mapFields(
   Struct.assign({
     files: Schema.fromJsonString(Schema.Array(OrchestrationCheckpointFile)),
@@ -111,6 +118,7 @@ const ProjectionLatestTurnDbRowSchema = Schema.Struct({
   assistantMessageId: Schema.NullOr(MessageId),
   sourceProposedPlanThreadId: Schema.NullOr(ThreadId),
   sourceProposedPlanId: Schema.NullOr(OrchestrationProposedPlanId),
+  interruption: Schema.NullOr(OrchestrationInterruptionProvenance),
 });
 const ProjectionStateDbRowSchema = ProjectionState;
 const ProjectionCountsRowSchema = Schema.Struct({
@@ -273,6 +281,7 @@ function mapLatestTurn(
     startedAt: row.startedAt,
     completedAt: row.completedAt,
     assistantMessageId: row.assistantMessageId,
+    ...(row.interruption !== null ? { interruption: row.interruption } : {}),
     ...(row.sourceProposedPlanThreadId !== null && row.sourceProposedPlanId !== null
       ? {
           sourceProposedPlan: {
@@ -304,6 +313,9 @@ function mapSessionRow(
     runtimeMode: row.runtimeMode,
     activeTurnId: row.activeTurnId,
     lastError: row.lastError,
+    ...(row.lastInterruption !== undefined && row.lastInterruption !== null
+      ? { lastInterruption: row.lastInterruption }
+      : {}),
     updatedAt: row.updatedAt,
   };
 }
@@ -600,6 +612,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",
+          last_interruption_json AS "lastInterruption",
           updated_at AS "updatedAt"
         FROM projection_thread_sessions
         ORDER BY thread_id ASC
@@ -621,6 +634,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           sessions.runtime_mode AS "runtimeMode",
           sessions.active_turn_id AS "activeTurnId",
           sessions.last_error AS "lastError",
+          sessions.last_interruption_json AS "lastInterruption",
           sessions.updated_at AS "updatedAt"
         FROM projection_thread_sessions sessions
         INNER JOIN projection_threads threads
@@ -646,6 +660,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           sessions.runtime_mode AS "runtimeMode",
           sessions.active_turn_id AS "activeTurnId",
           sessions.last_error AS "lastError",
+          sessions.last_interruption_json AS "lastInterruption",
           sessions.updated_at AS "updatedAt"
         FROM projection_thread_sessions sessions
         INNER JOIN projection_threads threads
@@ -690,7 +705,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.completed_at AS "completedAt",
           turns.assistant_message_id AS "assistantMessageId",
           turns.source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
-          turns.source_proposed_plan_id AS "sourceProposedPlanId"
+          turns.source_proposed_plan_id AS "sourceProposedPlanId",
+          turns.interruption_json AS "interruption"
         FROM projection_threads threads
         JOIN projection_turns turns
           ON turns.thread_id = threads.thread_id
@@ -714,7 +730,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.completed_at AS "completedAt",
           turns.assistant_message_id AS "assistantMessageId",
           turns.source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
-          turns.source_proposed_plan_id AS "sourceProposedPlanId"
+          turns.source_proposed_plan_id AS "sourceProposedPlanId",
+          turns.interruption_json AS "interruption"
         FROM projection_threads threads
         JOIN projection_turns turns
           ON turns.thread_id = threads.thread_id
@@ -740,7 +757,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.completed_at AS "completedAt",
           turns.assistant_message_id AS "assistantMessageId",
           turns.source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
-          turns.source_proposed_plan_id AS "sourceProposedPlanId"
+          turns.source_proposed_plan_id AS "sourceProposedPlanId",
+          turns.interruption_json AS "interruption"
         FROM projection_threads threads
         JOIN projection_turns turns
           ON turns.thread_id = threads.thread_id
@@ -1060,6 +1078,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",
+          last_interruption_json AS "lastInterruption",
           updated_at AS "updatedAt"
         FROM projection_thread_sessions
         WHERE thread_id = ${threadId}
@@ -1081,7 +1100,8 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.completed_at AS "completedAt",
           turns.assistant_message_id AS "assistantMessageId",
           turns.source_proposed_plan_thread_id AS "sourceProposedPlanThreadId",
-          turns.source_proposed_plan_id AS "sourceProposedPlanId"
+          turns.source_proposed_plan_id AS "sourceProposedPlanId",
+          turns.interruption_json AS "interruption"
         FROM projection_threads threads
         JOIN projection_turns turns
           ON turns.thread_id = threads.thread_id
@@ -1546,6 +1566,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   startedAt: row.startedAt,
                   completedAt: row.completedAt,
                   assistantMessageId: row.assistantMessageId,
+                  ...(row.interruption !== null ? { interruption: row.interruption } : {}),
                   ...(row.sourceProposedPlanThreadId !== null && row.sourceProposedPlanId !== null
                     ? {
                         sourceProposedPlan: {
@@ -1569,6 +1590,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   runtimeMode: row.runtimeMode,
                   activeTurnId: row.activeTurnId,
                   lastError: row.lastError,
+                  ...(row.lastInterruption !== undefined && row.lastInterruption !== null
+                    ? { lastInterruption: row.lastInterruption }
+                    : {}),
                   updatedAt: row.updatedAt,
                 });
               }
