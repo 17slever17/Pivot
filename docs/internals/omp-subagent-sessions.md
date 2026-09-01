@@ -16,11 +16,22 @@ There are deliberate limits. A hard abort/kill leaves a child non-reusable,
 and isolated or one-shot children are not reusable by design. The Agents panel
 does not claim to steer or stop a child when OMP only exposes controls for the
 parent session. A live OMP root process can revive a parked child through its
-native Hub. After a Pivot/OMP restart, the persisted root binding retains the
-OMP session file; the first transcript or child-message operation lazily
-relaunches OMP and issues `switch_session` for that exact root file. OMP then
-rebuilds its parked child roster from the root JSONL, so the existing child id
-can be queried or messaged without guessing a child path. UI activity rows
-remain the durable roster source, while the child transcript is fetched from
-OMP on demand. This restores a process and its persisted session; it does not
-promise that an active in-flight process survived a server restart.
+native Hub.
+
+OMP's native Hub roster and the `rpc-ui` child registry are different pieces of
+state. `switch_session` clears the in-memory RPC child registry, and
+`get_subagent_messages` cannot address an old child by ID until that registry
+has live lifecycle data again. Pivot therefore persists a narrow, server-owned
+mapping from `(threadId, subagentId)` to the exact child `sessionFile` emitted by
+OMP while the registry is live. After a Pivot/OMP restart, transcript reads try
+native RPC first and, when OMP reports an unknown child, validate the persisted
+root/child relationship and read the child JSONL with OMP-compatible byte
+cursors. This fallback restores the full transcript for the UI; it does not
+make `send`, steer, stop, or native child continuation available after restart.
+The child path is never accepted from the web client and is not discovered by
+guessing arbitrary files.
+
+UI activity rows remain the durable roster source. The fallback restores a
+process and its persisted transcript, but it does not promise that an active
+in-flight process survived a server restart or that the same child can be
+continued without OMP's native registry.

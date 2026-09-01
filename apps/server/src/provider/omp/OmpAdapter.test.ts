@@ -41,6 +41,10 @@ import { FakeOmpRpc } from "./FakeOmpRpc.ts";
 import { OmpAdapter } from "./OmpAdapter.ts";
 import { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
 import { OmpSpawnError } from "./OmpRpcRuntime.ts";
+import {
+  OmpSubagentTranscriptStore,
+  validateOmpSubagentSessionFile,
+} from "./OmpSubagentTranscriptStore.ts";
 
 let nextTestUuid = 0;
 const testRandomUUID = Effect.sync(() => {
@@ -2483,38 +2487,172 @@ describe("OmpAdapter", () => {
     }),
   );
 
-  it.effect("routes a child transcript through the persisted root session", () =>
+  it.effect("persists and pages a trusted child transcript across store reload", () =>
     Effect.gen(function* () {
-      const fake = new FakeOmpRpc();
-      fake.subagentMessages = {
-        sessionFile: "/tmp/subagent-after-restart.jsonl",
-        fromByte: 42,
-        nextByte: 84,
-        reset: false,
-        entries: [{ type: "message", message: { role: "assistant", content: "continued" } }],
-        messages: [{ role: "assistant", content: "continued" }],
-      };
-      const adapter = new OmpAdapter(fake, testRandomUUID);
-      yield* adapter.startSession({ ...startInput, resumeCursor: "/tmp/root-after-restart.jsonl" });
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-subagent-transcript-" });
+      const rootSessionFile = path.join(stateDir, "root.jsonl");
+      const childDirectory = path.join(stateDir, "root");
+      const childSessionFile = path.join(childDirectory, "worker-42.jsonl");
+      const storeFile = path.join(stateDir, "mappings.json");
+      yield* fs.makeDirectory(childDirectory, { recursive: true });
+      yield* fs.writeFileString(rootSessionFile, '{"type":"session","id":"root"}\n');
+      const child =
+        [
+          '{"type":"session_title","v":1,"title":"worker","updatedAt":"now","pad":""}',
+          '{"type":"session","id":"child","cwd":"/proj"}',
+          '{"type":"session_init","task":"work"}',
+          '{"type":"message","message":{"role":"assistant","content":"continued"}}',
+          '{"type":"tool_call","name":"read"}',
+          '{"type":"message","message":{"role":"assistant","content":"done"}}',
+        ].join("\n") + "\npartial";
+      yield* fs.writeFileString(childSessionFile, child);
 
-      const sentBefore = fake.sent.length;
-      const page = yield* adapter.fetchSubagentTranscript(THREAD_ID, "worker-42", 42);
-
+      const store = new OmpSubagentTranscriptStore(fs, path, storeFile);
       NodeAssert.equal(
-        fake.ensureSessionInputs.at(-1)?.resumeCursor,
-        "/tmp/root-after-restart.jsonl",
+        yield* store.remember({
+          threadId: THREAD_ID,
+          subagentId: "worker-42",
+          rootSessionFile,
+          sessionFile: childSessionFile,
+        }),
+        true,
       );
+      const reloadedStore = new OmpSubagentTranscriptStore(fs, path, storeFile);
+      const page = yield* reloadedStore.readPage({
+        threadId: THREAD_ID,
+        subagentId: "worker-42",
+        rootSessionFile,
+      });
+      NodeAssert.ok(page);
+      NodeAssert.equal(page?.sessionFile, childSessionFile);
+      NodeAssert.equal(page?.entries.length, 5);
+      NodeAssert.equal(page?.messages.length, 2);
+      NodeAssert.equal(
+        page?.nextByte,
+        new TextEncoder().encode(child.slice(0, child.lastIndexOf("\n") + 1)).byteLength,
+      );
+      const reset = yield* reloadedStore.readPage({
+        threadId: THREAD_ID,
+        subagentId: "worker-42",
+        rootSessionFile,
+        fromByte: 999_999,
+      });
+      NodeAssert.equal(reset?.reset, true);
+      NodeAssert.equal(reset?.fromByte, 0);
+      NodeAssert.equal(
+        validateOmpSubagentSessionFile(
+          path,
+          rootSessionFile,
+          "worker-42",
+          path.join(stateDir, "other.jsonl"),
+        ),
+        undefined,
+      );
+      NodeAssert.equal(
+        yield* store.remember({
+          threadId: THREAD_ID,
+          subagentId: "../outside",
+          rootSessionFile,
+          sessionFile: childSessionFile,
+        }),
+        false,
+      );
+      yield* fs.writeFileString(childSessionFile, "not json\n");
+      const malformedStore = new OmpSubagentTranscriptStore(fs, path, storeFile);
+      NodeAssert.equal(
+        yield* malformedStore.remember({
+          threadId: THREAD_ID,
+          subagentId: "worker-42",
+          rootSessionFile,
+          sessionFile: childSessionFile,
+        }),
+        true,
+      );
+      NodeAssert.equal(
+        yield* malformedStore.readPage({
+          threadId: THREAD_ID,
+          subagentId: "worker-42",
+          rootSessionFile,
+        }),
+        undefined,
+      );
+    }).pipe(Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("falls back to the trusted child JSONL after rpc registry recovery fails", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const stateDir = yield* fs.makeTempDirectoryScoped({ prefix: "pivot-subagent-restart-" });
+      const rootSessionFile = path.join(stateDir, "root.jsonl");
+      const childDirectory = path.join(stateDir, "root");
+      const childSessionFile = path.join(childDirectory, "worker-42.jsonl");
+      const storeFile = path.join(stateDir, "mappings.json");
+      yield* fs.makeDirectory(childDirectory, { recursive: true });
+      yield* fs.writeFileString(rootSessionFile, '{"type":"session","id":"root"}\n');
+      yield* fs.writeFileString(
+        childSessionFile,
+        '{"type":"session","id":"child","cwd":"/proj"}\n{"type":"message","message":{"role":"assistant","content":"after restart"}}\n',
+      );
+
+      const fake = new FakeOmpRpc();
+      fake.sessionFile = rootSessionFile;
+      fake.clearSubagentRegistryOnResume = true;
+      const adapter = new OmpAdapter(fake, testRandomUUID, {
+        subagentTranscriptStore: new OmpSubagentTranscriptStore(fs, path, storeFile),
+      });
+      const lifecycleFiber = yield* adapter.streamEvents.pipe(
+        Stream.take(1),
+        Stream.runCollect,
+        Effect.forkChild,
+      );
+      yield* adapter.startSession({ ...startInput, resumeCursor: rootSessionFile });
+      yield* fake.offer(THREAD_ID, {
+        type: "subagent_lifecycle",
+        payload: {
+          id: "worker-42",
+          status: "started",
+          sessionFile: childSessionFile,
+        },
+      });
+      const lifecycle = yield* Fiber.join(lifecycleFiber);
+      NodeAssert.equal(Array.from(lifecycle)[0]?.type, "task.started");
+      const sentBefore = fake.sent.length;
+      const page = yield* adapter.fetchSubagentTranscript(THREAD_ID, "worker-42", 0);
+      NodeAssert.equal(page.sessionFile, childSessionFile);
+      NodeAssert.equal(page.messages.length, 1);
       NodeAssert.deepEqual(
         fake.sent.slice(sentBefore).map((command) => ({
           type: command.type,
           subagentId: command.subagentId,
           fromByte: command.fromByte,
+          sessionFile: command.sessionFile,
         })),
-        [{ type: "get_subagent_messages", subagentId: "worker-42", fromByte: 42 }],
+        [
+          {
+            type: "get_subagent_messages",
+            subagentId: "worker-42",
+            fromByte: 0,
+            sessionFile: undefined,
+          },
+        ],
       );
-      NodeAssert.equal(page.sessionFile, "/tmp/subagent-after-restart.jsonl");
-      NodeAssert.equal(page.entries.length, 1);
-    }),
+      yield* adapter.stopSession(THREAD_ID);
+
+      const reloadedFake = new FakeOmpRpc();
+      reloadedFake.sessionFile = rootSessionFile;
+      reloadedFake.clearSubagentRegistryOnResume = true;
+      const reloadedAdapter = new OmpAdapter(reloadedFake, testRandomUUID, {
+        subagentTranscriptStore: new OmpSubagentTranscriptStore(fs, path, storeFile),
+      });
+      yield* reloadedAdapter.startSession({ ...startInput, resumeCursor: rootSessionFile });
+      const reloadedPage = yield* reloadedAdapter.fetchSubagentTranscript(THREAD_ID, "worker-42");
+      NodeAssert.equal(reloadedPage.messages.length, 1);
+      NodeAssert.equal(reloadedPage.sessionFile, childSessionFile);
+      yield* reloadedAdapter.stopSession(THREAD_ID);
+    }).pipe(Effect.provide(NodeServices.layer)),
   );
 
   it.effect("steerSession sends steer", () =>

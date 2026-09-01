@@ -54,6 +54,9 @@ export class FakeOmpRpc {
       }
     | undefined = undefined;
   /** Inputs seen by the fake, including the persisted root resume cursor. */
+  /** Simulate rpc-ui clearing its in-memory child registry on switch_session. */
+  clearSubagentRegistryOnResume = false;
+  subagentRegistryAvailable = true;
   readonly ensureSessionInputs: Array<{
     readonly sessionKey: string;
     readonly cwd: string;
@@ -75,6 +78,9 @@ export class FakeOmpRpc {
   }): Effect.Effect<{ sessionKey: string; sessionFile: string }, OmpSpawnError> {
     return Effect.gen({ self: this }, function* () {
       this.ensureSessionInputs.push(input);
+      if (input.resumeCursor !== null && this.clearSubagentRegistryOnResume) {
+        this.subagentRegistryAvailable = false;
+      }
       if (!this.frames.has(input.sessionKey)) {
         this.frames.set(input.sessionKey, yield* Queue.unbounded<object>());
       }
@@ -157,6 +163,14 @@ export class FakeOmpRpc {
         : Deferred.await(this.getStateGate).pipe(Effect.as(response));
     }
     if (command.type === "get_subagent_messages") {
+      if (!this.subagentRegistryAvailable) {
+        return Effect.fail(
+          new OmpSpawnError({
+            operation: "get_subagent_messages",
+            detail: "Unknown subagent or session file unavailable: registry was cleared",
+          }),
+        );
+      }
       return Effect.succeed({
         type: "response",
         success: true,

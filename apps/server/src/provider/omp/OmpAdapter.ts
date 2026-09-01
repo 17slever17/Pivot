@@ -84,6 +84,7 @@ import type {
 import type { OmpCapabilitiesService } from "./OmpCapabilitiesService.ts";
 import { OmpSpawnError, type OmpRpcRuntime } from "./OmpRpcRuntime.ts";
 import { OmpAgentProfileStore } from "./OmpAgentProfileStore.ts";
+import { OmpSubagentTranscriptStore } from "./OmpSubagentTranscriptStore.ts";
 import { OmpPreviewMcpInjector } from "../../mcp/OmpPreviewMcpInjector.ts";
 import { readMcpProviderSession } from "../../mcp/McpProviderSession.ts";
 import {
@@ -175,6 +176,19 @@ function mapOmpSpawnError(threadId: ThreadId, cause: OmpSpawnError): ProviderAda
   });
 }
 
+function isUnknownSubagentTranscriptCause(
+  cause: Cause.Cause<ProviderAdapterProcessError>,
+): boolean {
+  const error = Cause.squash(cause);
+  if (!isProviderAdapterProcessError(error) || !isOmpSpawnError(error.cause)) {
+    return false;
+  }
+  return (
+    error.cause.operation === "get_subagent_messages" &&
+    /Unknown subagent(?: or session file unavailable| session file)/u.test(error.cause.detail)
+  );
+}
+
 export interface OmpOpenUrlRequest {
   readonly url: string;
   readonly launchUrl?: string;
@@ -257,6 +271,7 @@ export interface OmpAdapterOptions {
   readonly previewMcpInjector?: OmpPreviewMcpInjector;
   readonly agentDir?: string;
   readonly agentProfileStore?: OmpAgentProfileStore;
+  readonly subagentTranscriptStore?: OmpSubagentTranscriptStore;
 }
 
 export type OmpSubagentSubscriptionLevel = "off" | "progress" | "events";
@@ -292,6 +307,7 @@ export class OmpAdapter {
   readonly #previewMcpInjector: OmpPreviewMcpInjector | undefined;
   readonly #agentDir: string | undefined;
   readonly #agentProfileStore: OmpAgentProfileStore | undefined;
+  readonly #subagentTranscriptStore: OmpSubagentTranscriptStore | undefined;
   readonly #reviewBlockDecoder = new ReviewBlockDecoder();
   readonly #toolPresentation = new OmpToolPresentation();
   readonly #catalogDecoder = new OmpCatalogDecoder();
@@ -308,6 +324,7 @@ export class OmpAdapter {
     this.#previewMcpInjector = options.previewMcpInjector;
     this.#agentDir = options.agentDir;
     this.#agentProfileStore = options.agentProfileStore;
+    this.#subagentTranscriptStore = options.subagentTranscriptStore;
   }
 
   private requireCapabilitiesService(): Effect.Effect<
@@ -660,19 +677,45 @@ export class OmpAdapter {
     });
   }
 
-  public fetchSubagentTranscript(threadId: ThreadId, subagentId: string, fromByte?: number) {
+  public fetchSubagentTranscript(
+    threadId: ThreadId,
+    subagentId: string,
+    fromByte?: number,
+  ): Effect.Effect<
+    OmpSubagentTranscriptPage,
+    ProviderAdapterProcessError | ProviderAdapterRequestError | ProviderAdapterSessionNotFoundError
+  > {
     return Effect.gen({ self: this }, function* () {
-      if (!this.#sessions.has(threadId)) {
+      const session = this.#sessions.get(threadId);
+      if (!session) {
         return yield* new ProviderAdapterSessionNotFoundError({
           provider: PROVIDER,
           threadId,
         });
       }
-      const response = yield* this.#send(threadId, {
-        type: "get_subagent_messages",
-        subagentId,
-        ...(fromByte === undefined ? {} : { fromByte }),
-      });
+      const nativeExit = yield* Effect.exit(
+        this.#send(threadId, {
+          type: "get_subagent_messages",
+          subagentId,
+          ...(fromByte === undefined ? {} : { fromByte }),
+        }),
+      );
+      if (Exit.isFailure(nativeExit)) {
+        if (
+          this.#subagentTranscriptStore !== undefined &&
+          isUnknownSubagentTranscriptCause(nativeExit.cause)
+        ) {
+          const fallback = yield* this.#subagentTranscriptStore.readPage({
+            threadId,
+            subagentId,
+            rootSessionFile: session.sessionFile,
+            ...(fromByte === undefined ? {} : { fromByte }),
+          });
+          if (fallback !== undefined) return fallback;
+        }
+        return yield* Effect.failCause(nativeExit.cause);
+      }
+      const response = nativeExit.value;
       if (!isRecord(response) || !isRecord(response.data)) {
         return yield* new ProviderAdapterRequestError({
           provider: PROVIDER,
@@ -1148,6 +1191,11 @@ export class OmpAdapter {
       state.effort = effort;
     }
     const taskId = RuntimeTaskId.make(payload.id);
+    const rememberTranscript = this.#rememberSubagentTranscript(
+      session,
+      payload.id,
+      payload.sessionFile,
+    );
     const linkage = {
       ...(state.role === undefined ? {} : { role: state.role }),
       ...(state.description.length === 0 ? {} : { title: state.description }),
@@ -1157,16 +1205,20 @@ export class OmpAdapter {
       ...(state.effort === undefined ? {} : { effort: state.effort }),
     };
     if (payload.status === "started") {
-      return this.#emit({
-        type: "task.started",
-        threadId: session.threadId,
-        turnId: session.turnId,
-        payload: {
-          taskId,
-          description: state.description,
-          ...linkage,
-        },
-      });
+      return rememberTranscript.pipe(
+        Effect.andThen(
+          this.#emit({
+            type: "task.started",
+            threadId: session.threadId,
+            turnId: session.turnId,
+            payload: {
+              taskId,
+              description: state.description,
+              ...linkage,
+            },
+          }),
+        ),
+      );
     }
     const status =
       payload.status === "completed"
@@ -1177,7 +1229,7 @@ export class OmpAdapter {
             ? ("stopped" as const)
             : undefined;
     if (status === undefined) {
-      return Effect.void;
+      return rememberTranscript;
     }
     const summary = status === "failed" ? (state.error ?? state.summary) : state.summary;
     const completed = this.#emit({
@@ -1194,7 +1246,7 @@ export class OmpAdapter {
       },
     });
     session.subagentStates.delete(payload.id);
-    return completed;
+    return rememberTranscript.pipe(Effect.andThen(completed));
   }
 
   #onSubagentProgress(
@@ -1287,15 +1339,43 @@ export class OmpAdapter {
     }
     const summary = readOmpRecentOutput(progress.recentOutput) ?? lastIntent;
     const error = readOmpErrorText(progress.retryFailure);
-    return this.#emitSubagentTaskProgress(session, state, {
-      ...(status === undefined ? {} : { status }),
-      ...(summary === undefined ? {} : { summary }),
-      ...(error === undefined ? {} : { error }),
-      ...(lastToolName === undefined ? {} : { lastToolName }),
-      ...(lastIntent === undefined ? {} : { lastIntent }),
-      ...(currentToolArgs === undefined ? {} : { currentToolArgs }),
-      ...(currentToolStartMs === undefined ? {} : { currentToolStartMs }),
-    });
+    return this.#rememberSubagentTranscript(
+      session,
+      progress.id,
+      progress.sessionFile ?? payload.sessionFile,
+    ).pipe(
+      Effect.andThen(
+        this.#emitSubagentTaskProgress(session, state, {
+          ...(status === undefined ? {} : { status }),
+          ...(summary === undefined ? {} : { summary }),
+          ...(error === undefined ? {} : { error }),
+          ...(lastToolName === undefined ? {} : { lastToolName }),
+          ...(lastIntent === undefined ? {} : { lastIntent }),
+          ...(currentToolArgs === undefined ? {} : { currentToolArgs }),
+          ...(currentToolStartMs === undefined ? {} : { currentToolStartMs }),
+        }),
+      ),
+    );
+  }
+
+  #rememberSubagentTranscript(
+    session: LiveAdapterSession,
+    subagentId: string,
+    sessionFile: unknown,
+  ): Effect.Effect<void> {
+    const store = this.#subagentTranscriptStore;
+    const childSessionFile = readNonEmptyText(sessionFile);
+    if (store === undefined || childSessionFile === undefined) {
+      return Effect.void;
+    }
+    return store
+      .remember({
+        threadId: session.threadId,
+        subagentId,
+        rootSessionFile: session.sessionFile,
+        sessionFile: childSessionFile,
+      })
+      .pipe(Effect.asVoid, Effect.ignore);
   }
 
   #getOrCreateSubagentState(session: LiveAdapterSession, id: string): OmpSubagentState {

@@ -51,6 +51,7 @@ import {
   OmpCapabilitiesService,
   OmpConfigStore,
   OmpRpcRuntime,
+  OmpSubagentTranscriptStore,
   parseOmpModelRoleSlug,
   syncOmpSettingsToConfigStore,
 } from "../omp/index.ts";
@@ -445,6 +446,11 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
       const agentProfileStore = new OmpAgentProfileStore(fs, pathService, serverConfig.stateDir, {
         instanceId,
       });
+      const subagentTranscriptStore = new OmpSubagentTranscriptStore(
+        fs,
+        pathService,
+        pathService.join(serverConfig.stateDir, "omp-subagent-transcripts", `${instanceId}.json`),
+      );
       // Settings updates recreate the instance via ProviderInstanceRegistryMutator,
       // so create() is the sync point for OmpSettings → omp config.yml.
       yield* syncOmpSettingsToConfigStore(effectiveConfig, ompConfigStore).pipe(
@@ -518,6 +524,7 @@ export const OmpDriver: ProviderDriver<OmpSettings, OmpDriverEnv> = {
         previewMcpInjector,
         agentDir,
         agentProfileStore,
+        subagentTranscriptStore,
       });
       yield* Effect.addFinalizer(() => adapter.stopAll());
 
