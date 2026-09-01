@@ -84,7 +84,8 @@ export function validateOmpSubagentSessionFile(
 
 function isTitleSlot(value: Record<string, unknown>): boolean {
   return (
-    value.type === "session_title" &&
+    // OMP v18 writes `title`; older fixtures/versions used `session_title`.
+    (value.type === "title" || value.type === "session_title") &&
     value.v === 1 &&
     typeof value.title === "string" &&
     typeof value.updatedAt === "string" &&

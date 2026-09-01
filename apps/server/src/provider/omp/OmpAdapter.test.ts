@@ -2613,7 +2613,7 @@ describe("OmpAdapter", () => {
       yield* fs.writeFileString(rootSessionFile, '{"type":"session","id":"root"}\n');
       yield* fs.writeFileString(
         childSessionFile,
-        '{"type":"session","id":"child","cwd":"/proj"}\n{"type":"message","message":{"role":"assistant","content":"after restart"}}\n',
+        '{"type":"title","v":1,"title":"worker","updatedAt":"now","pad":""}\n{"type":"session","id":"child","cwd":"/proj"}\n{"type":"message","message":{"role":"assistant","content":"after restart"}}\n',
       );
 
       const fake = new FakeOmpRpc();
