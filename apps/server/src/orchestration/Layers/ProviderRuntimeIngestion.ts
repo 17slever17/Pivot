@@ -127,7 +127,8 @@ export function interruptionProvenanceForRuntimeEvent(
     case "session.exited": {
       const reason = event.payload.reason;
       const isServerRestart =
-        event.eventId.includes("boot-reconcile") || reason?.toLowerCase().includes("server restart");
+        event.eventId.includes("boot-reconcile") ||
+        reason?.toLowerCase().includes("server restart");
       return {
         kind: isServerRestart ? "server_restart" : "provider_exit",
         actor: isServerRestart ? "server" : "provider",

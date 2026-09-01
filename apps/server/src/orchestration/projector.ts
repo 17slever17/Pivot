@@ -633,7 +633,7 @@ export function projectEvent(
                       ...(session.lastInterruption !== undefined
                         ? { interruption: session.lastInterruption }
                         : {}),
-                  }
+                    }
                   : thread.latestTurn,
             updatedAt: event.occurredAt,
           }),

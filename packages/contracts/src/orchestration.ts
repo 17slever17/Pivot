@@ -311,8 +311,7 @@ export const OrchestrationInterruptionProvenance = Schema.Struct({
   sourceEventId: EventId,
   commandId: Schema.optional(CommandId),
 });
-export type OrchestrationInterruptionProvenance =
-  typeof OrchestrationInterruptionProvenance.Type;
+export type OrchestrationInterruptionProvenance = typeof OrchestrationInterruptionProvenance.Type;
 
 export const OrchestrationSession = Schema.Struct({
   threadId: ThreadId,
