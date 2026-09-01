@@ -646,6 +646,46 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("Work Log");
   });
 
+  it("keeps long reasoning observations in the readable markdown flow", () => {
+    const observation = [
+      "Готов. Все проверки завершены.",
+      "",
+      "В основной ветке `feat/aic` обновлены `CPULive corpus` и hold deterministic v3 builds.",
+      "",
+      "Последний commit reuse теперь записан с рассчитанным исполнением и сохранённым fingerprint.",
+      "",
+      "- `train-79` завершён",
+      "- Все manifest changes проверены",
+    ].join("\\n");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...buildProps()}
+        timelineEntries={[
+          {
+            id: "entry-reasoning",
+            kind: "work",
+            createdAt: MESSAGE_CREATED_AT,
+            entry: {
+              id: "work-reasoning",
+              createdAt: MESSAGE_CREATED_AT,
+              label: "Thinking",
+              detail: observation,
+              tone: "thinking",
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain("chat-markdown");
+    expect(markup).toContain("Готов. Все проверки завершены.");
+    expect(markup).toContain("CPULive corpus");
+    expect(markup).toContain("Work Log");
+    expect(markup).not.toContain("1 tool call");
+    expect(markup).not.toContain("<pre");
+    expect(markup).not.toContain('aria-expanded="false"');
+  });
+
   it("formats changed file paths from the workspace root", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline

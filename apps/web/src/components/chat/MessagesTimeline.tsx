@@ -1403,7 +1403,9 @@ const WorkGroupSection = memo(function WorkGroupSection({
     () => groupedEntries.filter((entry) => !workEntryIndicatesToolNeutralStatus(entry)),
     [groupedEntries],
   );
-  const onlyToolEntries = nonEmptyEntries.every((entry) => workLogEntryIsToolLike(entry));
+  const onlyToolEntries = nonEmptyEntries.every(
+    (entry) => workLogEntryIsToolLike(entry) && !isReadableNarrationWorkEntry(entry),
+  );
   const groupLabel = onlyToolEntries
     ? nonEmptyEntries.length === 1
       ? "1 tool call"
@@ -2254,7 +2256,47 @@ const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: {
   if (workEntry.agentSpawn) {
     return <AgentSpawnCtaRow workEntry={workEntry} />;
   }
+  // OMP publishes reasoning/progress as work-log activities. They carry the
+  // thinking tone, but are prose rather than tool output. Keep them in the
+  // normal markdown flow so a long observation is not forced into the
+  // monospace, disclosure-only tool detail panel.
+  if (isReadableNarrationWorkEntry(workEntry)) {
+    return <ReadableNarrationWorkEntryRow workEntry={workEntry} />;
+  }
   return <PlainWorkEntryRow workEntry={workEntry} workspaceRoot={workspaceRoot} />;
+});
+
+function isReadableNarrationWorkEntry(entry: TimelineWorkEntry): boolean {
+  const itemType = entry.itemType as string | undefined;
+  return (
+    entry.tone === "thinking" &&
+    entry.taskId === undefined &&
+    (itemType === undefined || itemType === "reasoning") &&
+    entry.command === undefined &&
+    (entry.changedFiles?.length ?? 0) === 0 &&
+    Boolean(entry.detail?.trim() || entry.label.trim())
+  );
+}
+
+const ReadableNarrationWorkEntryRow = memo(function ReadableNarrationWorkEntryRow({
+  workEntry,
+}: {
+  workEntry: TimelineWorkEntry;
+}) {
+  const ctx = use(TimelineRowCtx);
+  const text = workEntry.detail?.trim() || workEntry.label.trim();
+
+  return (
+    <div className="min-w-0 px-0.5 py-1 text-sm leading-relaxed text-foreground/85">
+      <ChatMarkdown
+        text={text}
+        cwd={ctx.markdownCwd}
+        threadRef={ctx.threadRef ?? undefined}
+        isStreaming={workEntry.toolLifecycleStatus === "inProgress"}
+        skills={ctx.skills}
+      />
+    </div>
+  );
 });
 
 const PlainWorkEntryRow = memo(function PlainWorkEntryRow(props: {
