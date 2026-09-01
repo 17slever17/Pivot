@@ -293,6 +293,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
           runtimeMode: "approval-required",
+          agentMode: "orchestrator",
           branch: null,
           worktreePath: null,
           createdAt: now,
@@ -339,6 +340,7 @@ it.layer(NodeServices.layer)("decider project scripts", (it) => {
           { id: "reasoningEffort", value: "high" },
           { id: "fastMode", value: true },
         ]),
+        agentMode: "orchestrator",
         runtimeMode: "approval-required",
       });
     }),

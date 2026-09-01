@@ -9,6 +9,7 @@ import {
   type OrchestrationSession,
   ThreadId,
   type ProviderSession,
+  type ThreadAgentMode,
   type RuntimeMode,
   type TurnId,
   TextGenerationError,
@@ -495,6 +496,13 @@ const make = Effect.gen(function* () {
     createdAt: string,
     options?: {
       readonly modelSelection?: ModelSelection;
+      /**
+       * The event's mode is authoritative while the projection catches up.
+       * This is especially important for the first turn and mode-change
+       * restart, where a stale read model would otherwise silently select
+       * single mode.
+       */
+      readonly agentMode?: ThreadAgentMode;
       readonly pendingTurnStart?: boolean;
       readonly resumeCursor?: unknown;
     },
@@ -505,6 +513,7 @@ const make = Effect.gen(function* () {
     }
 
     const desiredRuntimeMode = thread.runtimeMode;
+    const desiredAgentMode = options?.agentMode ?? thread.agentMode ?? "single";
     const requestedModelSelection = options?.modelSelection;
     const resolveActiveSession = (threadId: ThreadId) =>
       providerService
@@ -642,7 +651,7 @@ const make = Effect.gen(function* () {
         modelSelection: desiredModelSelection,
         ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         runtimeMode: desiredRuntimeMode,
-        agentMode: thread.agentMode ?? "single",
+        agentMode: desiredAgentMode,
       });
 
     const bindSessionToThread = (session: ProviderSession) =>
@@ -684,6 +693,13 @@ const make = Effect.gen(function* () {
       const modelChanged =
         requestedModelSelection !== undefined &&
         requestedModelSelection.model !== activeSession?.model;
+      // Legacy bindings may not have recorded a mode. Treat that as unknown
+      // only for orchestrator, whose append prompt and managed extension are
+      // not safe to assume from an older root process.
+      const agentModeChanged =
+        activeSession?.agentMode !== undefined
+          ? activeSession.agentMode !== desiredAgentMode
+          : desiredAgentMode === "orchestrator";
       const instanceChanged =
         requestedModelSelection !== undefined &&
         activeSession?.providerInstanceId !== requestedModelSelection.instanceId;
@@ -698,6 +714,7 @@ const make = Effect.gen(function* () {
         !runtimeModeChanged &&
         !cwdChanged &&
         !instanceChanged &&
+        !agentModeChanged &&
         !shouldRestartForModelChange &&
         !shouldRestartForModelSelectionChange
       ) {
@@ -707,6 +724,12 @@ const make = Effect.gen(function* () {
       const resumeCursor = shouldRestartForModelChange
         ? undefined
         : (activeSession?.resumeCursor ?? undefined);
+      // OMP's ensureSession is keyed by thread and reuses an existing process.
+      // Stop first when the root agent profile changes so the next start can
+      // install the new append prompt and managed extension directory.
+      if (agentModeChanged) {
+        yield* providerService.stopSession({ threadId });
+      }
       yield* Effect.logInfo("provider command reactor restarting provider session", {
         threadId,
         existingSessionThreadId,
@@ -721,6 +744,7 @@ const make = Effect.gen(function* () {
         desiredCwd: effectiveCwd,
         cwdChanged,
         modelChanged,
+        agentModeChanged,
         instanceChanged,
         shouldRestartForModelChange,
         shouldRestartForModelSelectionChange,
@@ -753,6 +777,7 @@ const make = Effect.gen(function* () {
     readonly messageText: string;
     readonly attachments?: ReadonlyArray<ChatAttachment>;
     readonly modelSelection?: ModelSelection;
+    readonly agentMode?: ThreadAgentMode;
     readonly interactionMode?: "default" | "plan";
     readonly createdAt: string;
   }) {
@@ -764,6 +789,7 @@ const make = Effect.gen(function* () {
     }
     yield* ensureSessionForThread(input.threadId, input.createdAt, {
       ...(input.modelSelection !== undefined ? { modelSelection: input.modelSelection } : {}),
+      ...(input.agentMode !== undefined ? { agentMode: input.agentMode } : {}),
       pendingTurnStart: true,
     });
     if (input.modelSelection !== undefined) {
@@ -1229,6 +1255,7 @@ const make = Effect.gen(function* () {
       ...(event.payload.modelSelection !== undefined
         ? { modelSelection: event.payload.modelSelection }
         : {}),
+      ...(event.payload.agentMode !== undefined ? { agentMode: event.payload.agentMode } : {}),
       interactionMode: event.payload.interactionMode,
       createdAt: event.payload.createdAt,
     }).pipe(
@@ -1435,8 +1462,8 @@ const make = Effect.gen(function* () {
           event.payload.threadId,
           event.occurredAt,
           activeSession?.resumeCursor !== undefined
-            ? { resumeCursor: activeSession.resumeCursor }
-            : undefined,
+            ? { resumeCursor: activeSession.resumeCursor, agentMode: event.payload.agentMode }
+            : { agentMode: event.payload.agentMode },
         );
         return;
       }

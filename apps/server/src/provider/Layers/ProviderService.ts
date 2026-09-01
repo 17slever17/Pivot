@@ -146,7 +146,11 @@ function toRuntimePayloadFromSession(
     activeTurnId: session.activeTurnId ?? null,
     lastError: session.lastError ?? null,
     ...(extra?.modelSelection !== undefined ? { modelSelection: extra.modelSelection } : {}),
-    ...(extra?.agentMode !== undefined ? { agentMode: extra.agentMode } : {}),
+    ...(extra?.agentMode !== undefined
+      ? { agentMode: extra.agentMode }
+      : session.agentMode !== undefined
+        ? { agentMode: session.agentMode }
+        : {}),
     ...(extra?.lastRuntimeEvent !== undefined ? { lastRuntimeEvent: extra.lastRuntimeEvent } : {}),
     ...(extra?.lastRuntimeEventAt !== undefined
       ? { lastRuntimeEventAt: extra.lastRuntimeEventAt }
@@ -736,6 +740,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         const sessionWithInstance = {
           ...session,
           providerInstanceId: resolvedInstanceId,
+          ...(input.agentMode !== undefined ? { agentMode: input.agentMode } : {}),
         };
 
         yield* stopStaleSessionsForThread({
@@ -1118,6 +1123,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
           resumeCursor?: ProviderSession["resumeCursor"];
           runtimeMode?: ProviderSession["runtimeMode"];
           providerInstanceId?: ProviderSession["providerInstanceId"];
+          agentMode?: ProviderSession["agentMode"];
         } = {};
         overrides.providerInstanceId = dieOnMissingBindingInstanceId(
           "ProviderService.listSessions",
@@ -1142,6 +1148,10 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
         }
         if (binding.runtimeMode !== undefined) {
           overrides.runtimeMode = binding.runtimeMode;
+        }
+        const persistedAgentMode = readPersistedAgentMode(binding.runtimePayload);
+        if (persistedAgentMode !== undefined) {
+          overrides.agentMode = persistedAgentMode;
         }
         sessions.push(Object.assign({}, session, overrides));
       }

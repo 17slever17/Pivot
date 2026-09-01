@@ -39,6 +39,10 @@ export const ProviderSession = Schema.Struct({
   providerInstanceId: Schema.optional(ProviderInstanceId),
   status: ProviderSessionStatus,
   runtimeMode: RuntimeMode,
+  // The root agent profile is part of the provider session identity. Keeping
+  // it on the live snapshot lets orchestration detect a recovered session
+  // whose persisted mode differs from the thread projection.
+  agentMode: Schema.optional(ThreadAgentMode),
   cwd: Schema.optional(TrimmedNonEmptyString),
   model: Schema.optional(TrimmedNonEmptyString),
   threadId: ThreadId,

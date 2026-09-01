@@ -1140,6 +1140,12 @@ routing.layer("ProviderServiceLive routing", (it) => {
         agentMode: "orchestrator",
       });
 
+      const listed = yield* provider.listSessions();
+      assert.equal(
+        listed.find((session) => session.threadId === initial.threadId)?.agentMode,
+        "orchestrator",
+      );
+
       yield* provider.stopSession({ threadId: initial.threadId });
 
       const persistedAfterStop = yield* runtimeRepository.getByThreadId({
