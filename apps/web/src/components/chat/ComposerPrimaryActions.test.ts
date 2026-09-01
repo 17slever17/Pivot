@@ -44,7 +44,7 @@ function renderPendingActions(isRunning: boolean) {
   );
 }
 
-function renderStandaloneStop(hasSendableContent = false) {
+function renderStandaloneStop(hasSendableContent = false, canSteer = false) {
   return renderToStaticMarkup(
     createElement(ComposerPrimaryActions, {
       compact: true,
@@ -58,8 +58,10 @@ function renderStandaloneStop(hasSendableContent = false) {
       isEnvironmentUnavailable: false,
       isPreparingWorktree: false,
       hasSendableContent,
+      canSteer,
       onPreviousPendingQuestion: () => {},
       onInterrupt: () => {},
+      onSteer: () => {},
       onImplementPlanInNewThread: () => {},
     }),
   );
@@ -79,8 +81,10 @@ function renderSendButton() {
       isEnvironmentUnavailable: false,
       isPreparingWorktree: false,
       hasSendableContent: true,
+      canSteer: false,
       onPreviousPendingQuestion: () => {},
       onInterrupt: () => {},
+      onSteer: () => {},
       onImplementPlanInNewThread: () => {},
     }),
   );
@@ -205,6 +209,17 @@ describe("ComposerPrimaryActions", () => {
 
   it("hides Queue while running when the composer is empty", () => {
     expect(renderStandaloneStop(false)).not.toContain('aria-label="Queue follow-up message"');
+  });
+
+  it("offers an explicit immediate steer beside Queue for an active OMP turn", () => {
+    const markup = renderStandaloneStop(true, true);
+    expect(markup).toContain('aria-label="Steer current turn"');
+    expect(markup).toContain("Steer now");
+    expect(markup).toContain('aria-label="Queue follow-up message"');
+  });
+
+  it("does not offer steer when the active provider cannot steer", () => {
+    expect(renderStandaloneStop(true, false)).not.toContain('aria-label="Steer current turn"');
   });
 
   it("renders stage artwork inside the send button when artwork identification is active", () => {

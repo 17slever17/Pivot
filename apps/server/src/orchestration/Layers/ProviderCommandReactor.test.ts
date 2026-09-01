@@ -244,6 +244,7 @@ describe("ProviderCommandReactor", () => {
       }),
     );
     const interruptTurn = vi.fn((_: unknown) => Effect.void);
+    const ompSteer = vi.fn<ProviderServiceShape["ompSteer"]>(() => Effect.void);
     const respondToRequest = vi.fn<ProviderServiceShape["respondToRequest"]>(() => Effect.void);
     const respondToUserInput = vi.fn<ProviderServiceShape["respondToUserInput"]>(() => Effect.void);
     const stopSession = vi.fn((input: unknown) =>
@@ -349,7 +350,7 @@ describe("ProviderCommandReactor", () => {
       },
       rollbackConversation: () => unsupported(),
       ompGetSubagentMessages: () => unsupported(),
-      ompSteer: () => unsupported(),
+      ompSteer,
       ompSetSubagentSubscription: () => unsupported(),
       reconcileStaleSessions: () => unsupported(),
       get streamEvents() {
@@ -508,6 +509,7 @@ describe("ProviderCommandReactor", () => {
       startSession,
       sendTurn,
       interruptTurn,
+      ompSteer,
       respondToRequest,
       respondToUserInput,
       stopSession,
@@ -2736,6 +2738,66 @@ describe("ProviderCommandReactor", () => {
     expect(harness.interruptTurn.mock.calls[0]?.[0]).toEqual({
       threadId: "thread-1",
     });
+  });
+
+  it("steers the active OMP turn without starting a new provider turn", async () => {
+    const harness = await createHarness();
+    const now = "2026-01-01T00:00:00.000Z";
+    const turnId = asTurnId("turn-omp-steer");
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.make("cmd-session-set-omp-steer"),
+        threadId: ThreadId.make("thread-1"),
+        session: {
+          threadId: ThreadId.make("thread-1"),
+          status: "running",
+          providerName: "omp",
+          runtimeMode: "approval-required",
+          activeTurnId: turnId,
+          lastError: null,
+          updatedAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+
+    await harness.runEffect(
+      harness.engine.dispatch({
+        type: "thread.turn.steer",
+        commandId: CommandId.make("cmd-turn-steer"),
+        threadId: ThreadId.make("thread-1"),
+        turnId,
+        message: {
+          messageId: asMessageId("user-message-steer"),
+          role: "user",
+          text: "focus on the failing test",
+          attachments: [],
+        },
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.ompSteer.mock.calls.length === 1);
+    expect(harness.ompSteer.mock.calls[0]?.[0]).toEqual({
+      threadId: ThreadId.make("thread-1"),
+      message: "focus on the failing test",
+      allowRecovery: false,
+    });
+    expect(harness.startSession.mock.calls.length).toBe(0);
+    expect(harness.sendTurn.mock.calls.length).toBe(0);
+
+    const readModel = await harness.readModel();
+    const thread = readModel.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
+    expect(thread?.messages).toContainEqual(
+      expect.objectContaining({
+        id: asMessageId("user-message-steer"),
+        role: "user",
+        text: "focus on the failing test",
+        turnId,
+      }),
+    );
   });
 
   it("starts a fresh session when only projected session state exists", async () => {

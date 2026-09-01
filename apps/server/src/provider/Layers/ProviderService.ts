@@ -1233,7 +1233,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
     const routed = yield* resolveRoutableSession({
       threadId: input.threadId,
       operation: "ProviderService.ompSteer",
-      allowRecovery: true,
+      allowRecovery: input.allowRecovery ?? true,
     });
     const omp = yield* requireOmpAdapter(routed.adapter, "ProviderService.ompSteer");
     yield* omp.steerSession(routed.threadId, input.message);

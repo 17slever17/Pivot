@@ -118,6 +118,8 @@ export interface ThreadDetailScreenProps {
   readonly onStopThread: () => void;
   readonly isStoppingTurn?: boolean;
   readonly onSendMessage: () => Promise<MessageId | null>;
+  readonly canSteer: boolean;
+  readonly onSteerMessage: () => Promise<MessageId | null>;
   readonly onReconnectEnvironment: () => void;
   readonly onUpdateThreadModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateThreadRuntimeMode: (runtimeMode: RuntimeMode) => void;
@@ -740,6 +742,8 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
                 onStopThread={props.onStopThread}
                 isStoppingTurn={props.isStoppingTurn}
                 onSendMessage={handleSendMessage}
+                canSteer={props.canSteer}
+                onSteerMessage={props.onSteerMessage}
                 onReconnectEnvironment={props.onReconnectEnvironment}
                 onUpdateModelSelection={props.onUpdateThreadModelSelection}
                 onUpdateRuntimeMode={props.onUpdateThreadRuntimeMode}

@@ -116,6 +116,9 @@ export interface ThreadComposerProps {
   /** Stop requested; waiting for the provider to confirm the turn ended. */
   readonly isStoppingTurn?: boolean;
   readonly onSendMessage: () => Promise<MessageId | null>;
+  /** Native OMP steer is available for the currently running plain-text turn. */
+  readonly canSteer: boolean;
+  readonly onSteerMessage: () => Promise<MessageId | null>;
   readonly onUpdateModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateRuntimeMode: (runtimeMode: RuntimeMode) => void;
   readonly onUpdateInteractionMode: (interactionMode: ProviderInteractionMode) => void;
@@ -290,11 +293,14 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
   const { onExpandedChange } = props;
 
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
+  const [isSteering, setIsSteering] = useState(false);
   const hasContent = props.draftMessage.trim().length > 0 || props.draftAttachments.length > 0;
   // Opening and closing count as active so the composer stays expanded while
   // focus moves between its native editor and the settings modal.
   const isExpanded = isFocused || settingsSheetPresentation.isActive;
   const canSend = hasContent;
+  const canSteer =
+    props.canSteer && props.draftMessage.trim().length > 0 && props.draftAttachments.length === 0;
 
   // Notify the parent from the derived value, not focus events: the parent
   // sizes the feed inset from this, and blur-during-sheet would otherwise
@@ -564,6 +570,15 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
     props.selectedThread.id,
     props.selectedThread.title,
   ]);
+  const handleSteer = useCallback(async () => {
+    if (!canSteer || isSteering) return;
+    setIsSteering(true);
+    try {
+      await props.onSteerMessage();
+    } finally {
+      setIsSteering(false);
+    }
+  }, [canSteer, isSteering, props.onSteerMessage]);
   const handleCommandSelect = useCallback(
     (item: ComposerCommandItem) => {
       if (!composerTrigger) return;
@@ -896,6 +911,14 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                     onPress={settingsSheetPresentation.open}
                   />
                 )}
+                {canSteer ? (
+                  <ControlPill
+                    accessibilityLabel={isSteering ? "Steering current turn" : "Steer current turn"}
+                    label={isSteering ? "Steering…" : "Steer"}
+                    disabled={isSteering}
+                    onPress={() => void handleSteer()}
+                  />
+                ) : null}
                 {showStopAction ? (
                   <ComposerToolbarButton
                     accessibilityLabel={stopLabel}

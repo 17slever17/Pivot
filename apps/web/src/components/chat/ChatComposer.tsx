@@ -459,9 +459,11 @@ const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryActions(
   isConnecting: boolean;
   isEnvironmentUnavailable: boolean;
   hasSendableContent: boolean;
+  canSteer: boolean;
   preserveComposerFocusOnPointerDown?: boolean;
   onPreviousPendingQuestion: () => void;
   onInterrupt: () => void;
+  onSteer: () => void;
   onImplementPlanInNewThread: () => void;
 }) {
   return (
@@ -489,9 +491,11 @@ const ComposerFooterPrimaryActions = memo(function ComposerFooterPrimaryActions(
         isEnvironmentUnavailable={props.isEnvironmentUnavailable}
         isPreparingWorktree={props.isPreparingWorktree}
         hasSendableContent={props.hasSendableContent}
+        canSteer={props.canSteer}
         preserveComposerFocusOnPointerDown={props.preserveComposerFocusOnPointerDown ?? false}
         onPreviousPendingQuestion={props.onPreviousPendingQuestion}
         onInterrupt={props.onInterrupt}
+        onSteer={props.onSteer}
         onImplementPlanInNewThread={props.onImplementPlanInNewThread}
       />
     </>
@@ -569,6 +573,8 @@ export interface ChatComposerProps {
   isSendBusy: boolean;
   sendDisabledReason: string | null;
   isPreparingWorktree: boolean;
+  /** The active session can accept an immediate OMP clarification. */
+  canSteer: boolean;
   environmentUnavailable: {
     readonly label: string;
     readonly connection: EnvironmentConnectionPresentation;
@@ -626,6 +632,7 @@ export interface ChatComposerProps {
 
   // Callbacks
   onSend: (e?: { preventDefault: () => void }) => void;
+  onSteer: () => void;
   onInterrupt: () => void;
   onImplementPlanInNewThread: () => void;
   onRespondToApproval: (
@@ -680,6 +687,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     isSendBusy,
     sendDisabledReason,
     isPreparingWorktree,
+    canSteer,
     environmentUnavailable,
     activePendingApproval,
     pendingApprovals,
@@ -712,6 +720,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     composerTerminalContextsRef,
     composerElementContextsRef,
     onSend,
+    onSteer,
     onInterrupt,
     onImplementPlanInNewThread,
     onRespondToApproval,
@@ -3282,9 +3291,19 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   }
                   isPreparingWorktree={isPreparingWorktree}
                   hasSendableContent={composerSendState.hasSendableContent}
+                  canSteer={
+                    canSteer &&
+                    prompt.trim().length > 0 &&
+                    composerImages.length === 0 &&
+                    composerTerminalContexts.length === 0 &&
+                    composerElementContexts.length === 0 &&
+                    composerPreviewAnnotations.length === 0 &&
+                    composerReviewComments.length === 0
+                  }
                   preserveComposerFocusOnPointerDown={isMobileViewport}
                   onPreviousPendingQuestion={onPreviousActivePendingUserInputQuestion}
                   onInterrupt={handleInterruptPrimaryAction}
+                  onSteer={onSteer}
                   onImplementPlanInNewThread={handleImplementPlanInNewThreadPrimaryAction}
                 />
               </div>

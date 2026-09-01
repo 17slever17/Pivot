@@ -29,9 +29,12 @@ interface ComposerPrimaryActionsProps {
   isEnvironmentUnavailable: boolean;
   isPreparingWorktree: boolean;
   hasSendableContent: boolean;
+  /** Native immediate clarification is available for the active OMP turn. */
+  canSteer?: boolean;
   preserveComposerFocusOnPointerDown?: boolean;
   onPreviousPendingQuestion: () => void;
   onInterrupt: () => void;
+  onSteer?: () => void;
   onImplementPlanInNewThread: () => void;
 }
 
@@ -56,6 +59,7 @@ export const formatPendingPrimaryActionLabel = (input: {
 const preventPointerFocus: PointerEventHandler<HTMLElement> = (event) => {
   event.preventDefault();
 };
+const noopSteer = () => undefined;
 
 export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   compact,
@@ -70,9 +74,11 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   isEnvironmentUnavailable,
   isPreparingWorktree,
   hasSendableContent,
+  canSteer = false,
   preserveComposerFocusOnPointerDown = false,
   onPreviousPendingQuestion,
   onInterrupt,
+  onSteer = noopSteer,
   onImplementPlanInNewThread,
 }: ComposerPrimaryActionsProps) {
   const pointerFocusProps = preserveComposerFocusOnPointerDown
@@ -167,6 +173,20 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
     return (
       <div className={cn("flex items-center justify-end", compact ? "gap-1.5" : "gap-2")}>
         {renderStopGenerationButton(false)}
+        {canSteer && promptHasText && !isStopping ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={cn("rounded-full", compact ? "h-9 px-3 sm:h-8" : "h-9 px-4 sm:h-8")}
+            {...pointerFocusProps}
+            onClick={onSteer}
+            disabled={isSendBusy || isConnecting || isEnvironmentUnavailable}
+            aria-label="Steer current turn"
+          >
+            Steer now
+          </Button>
+        ) : null}
         {hasSendableContent && !isStopping ? (
           <Button
             type="submit"

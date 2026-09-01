@@ -1252,6 +1252,7 @@ function ChatViewContent(props: ChatViewProps) {
     reportFailure: false,
   });
   const startThreadTurn = useAtomCommand(threadEnvironment.startTurn, { reportFailure: false });
+  const steerThreadTurn = useAtomCommand(threadEnvironment.steerTurn, { reportFailure: false });
   const interruptThreadTurn = useAtomCommand(threadEnvironment.interruptTurn, {
     reportFailure: false,
   });
@@ -5542,6 +5543,123 @@ function ChatViewContent(props: ChatViewProps) {
     }
   };
 
+  const onSteer = useCallback(async () => {
+    const thread = activeThread;
+    const activeTurnId = thread?.session?.activeTurnId ?? null;
+    const text = promptRef.current.trim();
+    if (!thread || activeTurnId === null) {
+      return;
+    }
+    const canSteer =
+      routeKind === "server" &&
+      isServerThread &&
+      phase === "running" &&
+      !isStoppingTurn &&
+      thread?.session?.status === "running" &&
+      thread.session?.providerName === "omp" &&
+      text.length > 0 &&
+      composerImagesRef.current.length === 0 &&
+      composerTerminalContextsRef.current.length === 0 &&
+      composerElementContextsRef.current.length === 0 &&
+      (useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.previewAnnotations
+        .length ?? 0) === 0 &&
+      (useComposerDraftStore.getState().getComposerDraft(composerDraftTarget)?.reviewComments
+        .length ?? 0) === 0;
+    if (!canSteer || isSendBusy || isConnecting || sendInFlightRef.current) {
+      return;
+    }
+
+    const threadIdForSend = thread.id;
+    const messageIdForSend = newMessageId();
+    const messageCreatedAt = new Date().toISOString();
+    sendInFlightRef.current = true;
+    setThreadError(threadIdForSend, null);
+    addOptimisticUserMessage(routeThreadKey, {
+      id: messageIdForSend,
+      role: "user",
+      text,
+      turnId: activeTurnId,
+      createdAt: messageCreatedAt,
+      updatedAt: messageCreatedAt,
+      streaming: false,
+    });
+
+    try {
+      const result = await steerThreadTurn({
+        environmentId,
+        input: {
+          threadId: threadIdForSend,
+          turnId: activeTurnId,
+          message: {
+            messageId: messageIdForSend,
+            role: "user",
+            text,
+            attachments: [],
+          },
+          createdAt: messageCreatedAt,
+        },
+      });
+      if (result._tag === "Success") {
+        promptRef.current = "";
+        clearComposerDraftContent(composerDraftTarget);
+        composerRef.current?.resetCursorState();
+      } else {
+        removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
+        if (promptRef.current.trim().length === 0) {
+          promptRef.current = text;
+          setComposerDraftPrompt(composerDraftTarget, text);
+          composerRef.current?.resetCursorState({
+            cursor: collapseExpandedComposerCursor(text, text.length),
+            prompt: text,
+            detectTrigger: true,
+          });
+        }
+        if (!isAtomCommandInterrupted(result)) {
+          const error = squashAtomCommandFailure(result);
+          setThreadError(
+            threadIdForSend,
+            error instanceof Error ? error.message : "Failed to steer the current turn.",
+          );
+        }
+      }
+    } catch (error) {
+      removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
+      if (promptRef.current.trim().length === 0) {
+        promptRef.current = text;
+        setComposerDraftPrompt(composerDraftTarget, text);
+        composerRef.current?.resetCursorState({
+          cursor: collapseExpandedComposerCursor(text, text.length),
+          prompt: text,
+          detectTrigger: true,
+        });
+      }
+      setThreadError(
+        threadIdForSend,
+        error instanceof Error ? error.message : "Failed to steer the current turn.",
+      );
+    } finally {
+      sendInFlightRef.current = false;
+    }
+  }, [
+    activeThread,
+    addOptimisticUserMessage,
+    clearComposerDraftContent,
+    composerDraftTarget,
+    composerRef,
+    environmentId,
+    isConnecting,
+    isSendBusy,
+    isServerThread,
+    isStoppingTurn,
+    phase,
+    removeOptimisticUserMessages,
+    routeKind,
+    routeThreadKey,
+    setComposerDraftPrompt,
+    setThreadError,
+    steerThreadTurn,
+  ]);
+
   const sendQueuedFollowUp = useCallback(
     async (text: string) => {
       if (
@@ -6817,6 +6935,14 @@ function ChatViewContent(props: ChatViewProps) {
                             isSendBusy={isSendBusy}
                             sendDisabledReason={threadDetailLoading ? "Messages loading" : null}
                             isPreparingWorktree={isPreparingWorktree}
+                            canSteer={
+                              isServerThread &&
+                              phase === "running" &&
+                              !isStoppingTurn &&
+                              activeThread.session?.status === "running" &&
+                              activeThread.session.providerName === "omp" &&
+                              activeThread.session.activeTurnId !== null
+                            }
                             environmentUnavailable={activeEnvironmentUnavailableState}
                             activePendingApproval={activePendingApproval}
                             pendingApprovals={pendingApprovals}
@@ -6850,6 +6976,7 @@ function ChatViewContent(props: ChatViewProps) {
                             composerTerminalContextsRef={composerTerminalContextsRef}
                             composerElementContextsRef={composerElementContextsRef}
                             onSend={onSend}
+                            onSteer={onSteer}
                             onInterrupt={onInterrupt}
                             onImplementPlanInNewThread={onImplementPlanInNewThread}
                             onRespondToApproval={onRespondToApproval}

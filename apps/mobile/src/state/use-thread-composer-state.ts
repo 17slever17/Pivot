@@ -1,3 +1,4 @@
+import { useAtomCommand } from "./use-atom-command";
 import { useAtomValue } from "@effect/atom-react";
 import { useCallback, useEffect, useMemo } from "react";
 
@@ -44,6 +45,7 @@ import { useThreadSelection } from "../state/use-thread-selection";
 import { enqueueThreadOutboxMessage } from "./thread-outbox";
 import { releaseThreadOutboxDrain } from "./thread-outbox-interrupt-hold";
 import { useThreadOutboxMessages } from "./use-thread-outbox";
+import { threadEnvironment } from "./threads";
 
 export function appendReviewCommentToDraft(input: {
   readonly environmentId: EnvironmentId;
@@ -81,6 +83,7 @@ export function useThreadComposerState() {
   const selectedThreadDetail = useSelectedThreadDetail();
   const composerDrafts = useAtomValue(composerDraftsAtom);
   const queuedMessagesByThreadKey = useThreadOutboxMessages();
+  const steerThreadTurn = useAtomCommand(threadEnvironment.steerTurn, { reportFailure: false });
 
   useEffect(() => {
     ensureComposerDraftsLoaded();
@@ -137,6 +140,65 @@ export function useThreadComposerState() {
   const activeThreadBusy =
     !!selectedThread &&
     (selectedThread.session?.status === "running" || selectedThread.session?.status === "starting");
+
+  const onSteerMessage = useCallback(async () => {
+    if (!selectedThreadShell) {
+      return null;
+    }
+
+    const threadKey = scopedThreadKey(selectedThreadShell.environmentId, selectedThreadShell.id);
+    const draft = getComposerDraftSnapshot(threadKey);
+    const thread = selectedThreadDetail ?? selectedThreadShell;
+    const turnId = thread.session?.activeTurnId;
+    const text = draft.text.trim();
+    if (
+      thread.session?.status !== "running" ||
+      thread.session.providerName !== "omp" ||
+      turnId === undefined ||
+      turnId === null ||
+      text.length === 0 ||
+      draft.attachments.length > 0
+    ) {
+      return null;
+    }
+
+    const metadata = makeQueuedMessageMetadata();
+    const messageId = MessageId.make(metadata.messageId);
+    try {
+      const result = await steerThreadTurn({
+        environmentId: selectedThreadShell.environmentId,
+        input: {
+          threadId: selectedThreadShell.id,
+          turnId,
+          message: {
+            messageId,
+            role: "user",
+            text,
+            attachments: [],
+          },
+          createdAt: metadata.createdAt,
+        },
+      });
+      if (result._tag === "Failure") {
+        if (getComposerDraftSnapshot(threadKey).text.trim().length === 0) {
+          setComposerDraftText(threadKey, text);
+        }
+        setPendingConnectionError("Failed to steer the current turn.");
+        return null;
+      }
+
+      clearComposerDraftContent(threadKey);
+      return messageId;
+    } catch (error) {
+      if (getComposerDraftSnapshot(threadKey).text.trim().length === 0) {
+        setComposerDraftText(threadKey, text);
+      }
+      setPendingConnectionError(
+        error instanceof Error ? error.message : "Failed to steer the current turn.",
+      );
+      return null;
+    }
+  }, [selectedThreadDetail, selectedThreadShell, steerThreadTurn]);
 
   const onSendMessage = useCallback(async () => {
     if (!selectedThreadShell) {
@@ -330,6 +392,7 @@ export function useThreadComposerState() {
     interactionMode,
     agentMode,
     activeThreadBusy,
+    onSteerMessage,
     onChangeDraftMessage,
     onPickDraftImages,
     onPasteIntoDraft,

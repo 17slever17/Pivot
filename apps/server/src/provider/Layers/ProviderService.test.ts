@@ -2284,4 +2284,31 @@ ompHub.layer("ProviderService omp hub", (it) => {
       assert.equal(sentAfter.at(-1)?.message, "after recovery");
     }),
   );
+
+  it.effect("does not recover a missing session for active-turn steering", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService.ProviderService;
+      const threadId = asThreadId("thread-omp-steer-no-recovery");
+
+      yield* provider.startSession(threadId, {
+        provider: OMP_DRIVER,
+        providerInstanceId: ompInstanceId,
+        threadId,
+        cwd: "/tmp/omp-steer-no-recovery",
+        runtimeMode: "full-access",
+      });
+      yield* ompHub.ompAdapter.stopSession(threadId);
+      assert.equal(yield* ompHub.ompAdapter.hasSession(threadId), false);
+
+      const failure = yield* Effect.result(
+        provider.ompSteer({
+          threadId,
+          message: "must not create a replacement session",
+          allowRecovery: false,
+        }),
+      );
+      assert.equal(failure._tag, "Failure");
+      assert.equal(yield* ompHub.ompAdapter.hasSession(threadId), false);
+    }),
+  );
 });

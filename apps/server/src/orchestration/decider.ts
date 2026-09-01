@@ -1065,6 +1065,70 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       return [...lifecycleResetEvents, userMessageEvent, turnStartRequestedEvent];
     }
 
+    case "thread.turn.steer": {
+      const targetThread = yield* requireThread({
+        readModel,
+        command,
+        threadId: command.threadId,
+      });
+      const session = targetThread.session;
+      if (
+        session === null ||
+        session.status !== "running" ||
+        session.providerName !== "omp" ||
+        session.activeTurnId !== command.turnId
+      ) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: `Thread '${command.threadId}' does not have the requested active OMP turn.`,
+        });
+      }
+      if (command.message.attachments.length > 0) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "OMP steering accepts text only while a turn is running.",
+        });
+      }
+
+      const userMessageEvent: Omit<OrchestrationEvent, "sequence"> = {
+        ...(yield* withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: command.createdAt,
+          commandId: command.commandId,
+        })),
+        type: "thread.message-sent",
+        payload: {
+          threadId: command.threadId,
+          messageId: command.message.messageId,
+          role: "user",
+          text: command.message.text,
+          attachments: [],
+          turnId: command.turnId,
+          streaming: false,
+          createdAt: command.createdAt,
+          updatedAt: command.createdAt,
+        },
+      };
+      const steerRequestedEvent: Omit<OrchestrationEvent, "sequence"> = {
+        ...(yield* withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: command.createdAt,
+          commandId: command.commandId,
+        })),
+        causationEventId: userMessageEvent.eventId,
+        type: "thread.turn-steer-requested",
+        payload: {
+          threadId: command.threadId,
+          turnId: command.turnId,
+          messageId: command.message.messageId,
+          createdAt: command.createdAt,
+        },
+      };
+      return [userMessageEvent, steerRequestedEvent];
+    }
+
     case "thread.turn.interrupt": {
       yield* requireThread({
         readModel,

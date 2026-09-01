@@ -129,6 +129,8 @@ export interface ProviderServiceShape {
   readonly ompSteer: (input: {
     readonly threadId: ThreadId;
     readonly message: string;
+    /** Active-turn steering must not create a replacement root session. */
+    readonly allowRecovery?: boolean;
   }) => Effect.Effect<void, ProviderServiceError>;
 
   /**

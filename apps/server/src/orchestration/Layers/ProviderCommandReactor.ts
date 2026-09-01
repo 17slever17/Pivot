@@ -61,6 +61,7 @@ type ProviderIntentEvent = Extract<
       | "thread.runtime-mode-set"
       | "thread.agent-mode-set"
       | "thread.turn-start-requested"
+      | "thread.turn-steer-requested"
       | "thread.turn-interrupt-requested"
       | "thread.approval-response-requested"
       | "thread.user-input-response-requested"
@@ -348,6 +349,7 @@ const make = Effect.gen(function* () {
     readonly threadId: ThreadId;
     readonly kind:
       | "provider.turn.start.failed"
+      | "provider.turn.steer.failed"
       | "provider.turn.interrupt.failed"
       | "provider.approval.respond.failed"
       | "provider.user-input.respond.failed"
@@ -1295,6 +1297,62 @@ const make = Effect.gen(function* () {
     yield* providerService.interruptTurn({ threadId: event.payload.threadId });
   });
 
+  const processTurnSteerRequested = Effect.fn("processTurnSteerRequested")(function* (
+    event: Extract<ProviderIntentEvent, { type: "thread.turn-steer-requested" }>,
+  ) {
+    const thread = yield* resolveThread(event.payload.threadId);
+    if (!thread) {
+      return;
+    }
+    const session = thread.session;
+    if (
+      session === null ||
+      session.status !== "running" ||
+      session.providerName !== "omp" ||
+      session.activeTurnId !== event.payload.turnId
+    ) {
+      return yield* appendProviderFailureActivity({
+        threadId: event.payload.threadId,
+        kind: "provider.turn.steer.failed",
+        summary: "Provider turn steer failed",
+        detail: "The requested OMP turn is no longer active.",
+        turnId: event.payload.turnId,
+        createdAt: event.payload.createdAt,
+      });
+    }
+
+    const message = thread.messages.find((entry) => entry.id === event.payload.messageId);
+    if (!message || message.role !== "user") {
+      return yield* appendProviderFailureActivity({
+        threadId: event.payload.threadId,
+        kind: "provider.turn.steer.failed",
+        summary: "Provider turn steer failed",
+        detail: `User message '${event.payload.messageId}' was not found for steering.`,
+        turnId: event.payload.turnId,
+        createdAt: event.payload.createdAt,
+      });
+    }
+
+    yield* providerService
+      .ompSteer({
+        threadId: event.payload.threadId,
+        message: message.text,
+        allowRecovery: false,
+      })
+      .pipe(
+        Effect.catchCause((cause) =>
+          appendProviderFailureActivity({
+            threadId: event.payload.threadId,
+            kind: "provider.turn.steer.failed",
+            summary: "Provider turn steer failed",
+            detail: formatFailureDetail(cause),
+            turnId: event.payload.turnId,
+            createdAt: event.payload.createdAt,
+          }),
+        ),
+      );
+  });
+
   const processApprovalResponseRequested = Effect.fn("processApprovalResponseRequested")(function* (
     event: Extract<ProviderIntentEvent, { type: "thread.approval-response-requested" }>,
   ) {
@@ -1470,6 +1528,9 @@ const make = Effect.gen(function* () {
       case "thread.turn-start-requested":
         yield* processTurnStartRequested(event);
         return;
+      case "thread.turn-steer-requested":
+        yield* processTurnSteerRequested(event);
+        return;
       case "thread.turn-interrupt-requested":
         yield* processTurnInterruptRequested(event);
         return;
@@ -1518,6 +1579,7 @@ const make = Effect.gen(function* () {
         event.type === "thread.runtime-mode-set" ||
         event.type === "thread.agent-mode-set" ||
         event.type === "thread.turn-start-requested" ||
+        event.type === "thread.turn-steer-requested" ||
         event.type === "thread.turn-interrupt-requested" ||
         event.type === "thread.approval-response-requested" ||
         event.type === "thread.user-input-response-requested" ||

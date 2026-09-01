@@ -887,6 +887,21 @@ export const ThreadTurnStartCommand = Schema.Struct({
   createdAt: IsoDateTime,
 });
 
+/** Immediate clarification for a currently running OMP turn. */
+export const ThreadTurnSteerCommand = Schema.Struct({
+  type: Schema.Literal("thread.turn.steer"),
+  commandId: CommandId,
+  threadId: ThreadId,
+  turnId: TurnId,
+  message: Schema.Struct({
+    messageId: MessageId,
+    role: Schema.Literal("user"),
+    text: TrimmedNonEmptyString,
+    attachments: Schema.Array(ChatAttachment),
+  }),
+  createdAt: IsoDateTime,
+});
+
 const ClientThreadTurnStartCommand = Schema.Struct({
   type: Schema.Literal("thread.turn.start"),
   commandId: CommandId,
@@ -1021,6 +1036,7 @@ const DispatchableClientOrchestrationCommand = Schema.Union([
   ThreadAgentModeSetCommand,
   ThreadInteractionModeSetCommand,
   ThreadTurnStartCommand,
+  ThreadTurnSteerCommand,
   ThreadTurnInterruptCommand,
   ThreadApprovalRespondCommand,
   ThreadUserInputRespondCommand,
@@ -1051,6 +1067,7 @@ export const ClientOrchestrationCommand = Schema.Union([
   ThreadAgentModeSetCommand,
   ThreadInteractionModeSetCommand,
   ClientThreadTurnStartCommand,
+  ThreadTurnSteerCommand,
   ThreadTurnInterruptCommand,
   ThreadApprovalRespondCommand,
   ThreadUserInputRespondCommand,
@@ -1177,6 +1194,7 @@ export const OrchestrationEventType = Schema.Literals([
   "thread.interaction-mode-set",
   "thread.message-sent",
   "thread.turn-start-requested",
+  "thread.turn-steer-requested",
   "thread.turn-interrupt-requested",
   "thread.approval-response-requested",
   "thread.user-input-response-requested",
@@ -1375,6 +1393,13 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROVIDER_INTERACTION_MODE)),
   ),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
+  createdAt: IsoDateTime,
+});
+
+export const ThreadTurnSteerRequestedPayload = Schema.Struct({
+  threadId: ThreadId,
+  turnId: TurnId,
+  messageId: MessageId,
   createdAt: IsoDateTime,
 });
 
@@ -1601,6 +1626,11 @@ export const OrchestrationEvent = Schema.Union([
     ...EventBaseFields,
     type: Schema.Literal("thread.turn-start-requested"),
     payload: ThreadTurnStartRequestedPayload,
+  }),
+  Schema.Struct({
+    ...EventBaseFields,
+    type: Schema.Literal("thread.turn-steer-requested"),
+    payload: ThreadTurnSteerRequestedPayload,
   }),
   Schema.Struct({
     ...EventBaseFields,

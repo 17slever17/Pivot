@@ -21,6 +21,7 @@ import {
   ProjectCreateCommand,
   ThreadMetaUpdatedPayload,
   ThreadTurnStartCommand,
+  ThreadTurnSteerCommand,
   ThreadCreatedPayload,
   ThreadTurnDiff,
   ThreadTurnStartRequestedPayload,
@@ -34,6 +35,7 @@ const decodeProjectCreateCommand = Schema.decodeUnknownEffect(ProjectCreateComma
 const decodeProjectCreatedPayload = Schema.decodeUnknownEffect(ProjectCreatedPayload);
 const decodeProjectMetaUpdatedPayload = Schema.decodeUnknownEffect(ProjectMetaUpdatedPayload);
 const decodeThreadTurnStartCommand = Schema.decodeUnknownEffect(ThreadTurnStartCommand);
+const decodeThreadTurnSteerCommand = Schema.decodeUnknownEffect(ThreadTurnSteerCommand);
 const decodeThreadTurnStartRequestedPayload = Schema.decodeUnknownEffect(
   ThreadTurnStartRequestedPayload,
 );
@@ -249,6 +251,26 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
     assert.strictEqual(parsed.modelSelection?.instanceId, "codex");
     assert.strictEqual(parsed.runtimeMode, "full-access");
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+  }),
+);
+
+it.effect("decodes an immediate clarification for an active OMP turn", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadTurnSteerCommand({
+      type: "thread.turn.steer",
+      commandId: "cmd-turn-steer",
+      threadId: "thread-1",
+      turnId: "turn-1",
+      message: {
+        messageId: "msg-steer",
+        role: "user",
+        text: "focus on the failing test",
+        attachments: [],
+      },
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.strictEqual(parsed.turnId, "turn-1");
+    assert.strictEqual(parsed.message.text, "focus on the failing test");
   }),
 );
 

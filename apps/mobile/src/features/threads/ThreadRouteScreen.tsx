@@ -490,6 +490,11 @@ function ThreadRouteContent(
   }, [navigation]);
   const activeThreadBusy =
     selectedThread?.session?.status === "running" || selectedThread?.session?.status === "starting";
+  const canSteer =
+    selectedThread?.session?.status === "running" &&
+    selectedThread.session.providerName === "omp" &&
+    selectedThread.session.activeTurnId !== null &&
+    selectedThread.session.activeTurnId !== undefined;
   useEffect(() => {
     if (!activeThreadBusy) {
       setIsStoppingTurn(false);
@@ -843,6 +848,8 @@ function ThreadRouteContent(
           onStopThread={handleStopThread}
           isStoppingTurn={isStoppingTurn}
           onSendMessage={composer.onSendMessage}
+          canSteer={canSteer}
+          onSteerMessage={composer.onSteerMessage}
           onReconnectEnvironment={handleReconnectEnvironment}
           onUpdateThreadModelSelection={composer.onUpdateModelSelection}
           onUpdateThreadRuntimeMode={composer.onUpdateRuntimeMode}
