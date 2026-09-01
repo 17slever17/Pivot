@@ -1,6 +1,6 @@
 import { useAtomCommand } from "./use-atom-command";
 import { useAtomValue } from "@effect/atom-react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import {
   CommandId,
@@ -14,6 +14,10 @@ import {
   type ThreadAgentMode,
 } from "@t3tools/contracts";
 import { safeErrorLogAttributes } from "@t3tools/client-runtime/errors";
+import {
+  makeThreadTurnActionGate,
+  matchesThreadComposerDraftSnapshot,
+} from "@t3tools/client-runtime/state/thread-turn-action";
 import { deriveActiveWorkStartedAt } from "@t3tools/shared/orchestrationTiming";
 
 import { makeQueuedMessageMetadata } from "../lib/commandMetadata";
@@ -84,6 +88,7 @@ export function useThreadComposerState() {
   const composerDrafts = useAtomValue(composerDraftsAtom);
   const queuedMessagesByThreadKey = useThreadOutboxMessages();
   const steerThreadTurn = useAtomCommand(threadEnvironment.steerTurn, { reportFailure: false });
+  const turnActionGateRef = useRef(makeThreadTurnActionGate());
 
   useEffect(() => {
     ensureComposerDraftsLoaded();
@@ -151,6 +156,11 @@ export function useThreadComposerState() {
     const thread = selectedThreadDetail ?? selectedThreadShell;
     const turnId = thread.session?.activeTurnId;
     const text = draft.text.trim();
+    const submittedDraft = {
+      text: draft.text,
+      attachmentCount: draft.attachments.length,
+      contextCount: 0,
+    };
     if (
       thread.session?.status !== "running" ||
       thread.session.providerName !== "omp" ||
@@ -159,6 +169,10 @@ export function useThreadComposerState() {
       text.length === 0 ||
       draft.attachments.length > 0
     ) {
+      return null;
+    }
+
+    if (!turnActionGateRef.current.tryAcquire("steer")) {
       return null;
     }
 
@@ -187,7 +201,19 @@ export function useThreadComposerState() {
         return null;
       }
 
-      clearComposerDraftContent(threadKey);
+      const currentDraft = getComposerDraftSnapshot(threadKey);
+      if (
+        matchesThreadComposerDraftSnapshot(
+          {
+            text: currentDraft.text,
+            attachmentCount: currentDraft.attachments.length,
+            contextCount: 0,
+          },
+          submittedDraft,
+        )
+      ) {
+        clearComposerDraftContent(threadKey);
+      }
       return messageId;
     } catch (error) {
       if (getComposerDraftSnapshot(threadKey).text.trim().length === 0) {
@@ -197,6 +223,8 @@ export function useThreadComposerState() {
         error instanceof Error ? error.message : "Не удалось отправить уточнение в текущую задачу.",
       );
       return null;
+    } finally {
+      turnActionGateRef.current.release("steer");
     }
   }, [selectedThreadDetail, selectedThreadShell, steerThreadTurn]);
 
@@ -214,6 +242,10 @@ export function useThreadComposerState() {
       return null;
     }
 
+    if (!turnActionGateRef.current.tryAcquire("send")) {
+      return null;
+    }
+
     const metadata = makeQueuedMessageMetadata();
     const messageId = MessageId.make(metadata.messageId);
     // Enqueue publishes the queued atom synchronously (the durable write
@@ -221,35 +253,50 @@ export function useThreadComposerState() {
     // the tap frame instead of after file I/O. If the write fails the message
     // is rolled out of the queue and the content is merged back into the
     // draft, preserving anything typed since.
-    const enqueuePromise = enqueueThreadOutboxMessage({
-      environmentId: selectedThreadShell.environmentId,
-      threadId: selectedThreadShell.id,
-      messageId,
-      commandId: CommandId.make(metadata.commandId),
-      text,
-      attachments,
-      modelSelection: draft.modelSelection ?? thread.modelSelection,
-      runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
-      interactionMode: draft.interactionMode ?? thread.interactionMode,
-      agentMode: draft.agentMode ?? thread.agentMode,
-      createdAt: metadata.createdAt,
-    });
+    let enqueuePromise: Promise<void>;
+    try {
+      enqueuePromise = enqueueThreadOutboxMessage({
+        environmentId: selectedThreadShell.environmentId,
+        threadId: selectedThreadShell.id,
+        messageId,
+        commandId: CommandId.make(metadata.commandId),
+        text,
+        attachments,
+        modelSelection: draft.modelSelection ?? thread.modelSelection,
+        runtimeMode: draft.runtimeMode ?? thread.runtimeMode,
+        interactionMode: draft.interactionMode ?? thread.interactionMode,
+        agentMode: draft.agentMode ?? thread.agentMode,
+        createdAt: metadata.createdAt,
+      });
+    } catch (error) {
+      turnActionGateRef.current.release("send");
+      throw error;
+    }
     // A confirmed stop holds auto-drain; the next explicit send releases it.
     if (!activeThreadBusy) {
       releaseThreadOutboxDrain(threadKey);
     }
     clearComposerDraftContent(threadKey);
-    enqueuePromise.catch((error: unknown) => {
-      // Restore text via merge (idempotent) but attachments via the uncapped
-      // append: the merge path slots existing attachments first and truncates
-      // at the send limit, which would silently drop this message's images if
-      // the user attached new ones while the write was in flight.
-      void mergeComposerDraftContent(threadKey, { text, attachments: [] });
-      appendComposerDraftAttachments(threadKey, attachments);
-      setPendingConnectionError(
-        error instanceof Error ? error.message : "Failed to save the queued message.",
-      );
-    });
+    void enqueuePromise.then(
+      () => {
+        turnActionGateRef.current.release("send");
+      },
+      (error: unknown) => {
+        try {
+          // Restore text via merge (idempotent) but attachments via the uncapped
+          // append: the merge path slots existing attachments first and truncates
+          // at the send limit, which would silently drop this message's images if
+          // the user attached new ones while the write was in flight.
+          void mergeComposerDraftContent(threadKey, { text, attachments: [] });
+          appendComposerDraftAttachments(threadKey, attachments);
+          setPendingConnectionError(
+            error instanceof Error ? error.message : "Failed to save the queued message.",
+          );
+        } finally {
+          turnActionGateRef.current.release("send");
+        }
+      },
+    );
     return messageId;
   }, [activeThreadBusy, selectedThreadDetail, selectedThreadShell]);
 

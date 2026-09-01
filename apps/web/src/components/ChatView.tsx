@@ -32,6 +32,7 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t3tools/client-runtime/state/thread-settled";
+import { matchesThreadComposerDraftSnapshot } from "@t3tools/client-runtime/state/thread-turn-action";
 import {
   parseScopedThreadKey,
   scopedThreadKey,
@@ -1428,6 +1429,8 @@ function ChatViewContent(props: ChatViewProps) {
   const isAtEndRef = useRef(true);
   const attachmentPreviewHandoffByMessageIdRef = useRef<Record<string, string[]>>({});
   const attachmentPreviewPromotionInFlightByMessageIdRef = useRef<Record<string, true>>({});
+  // Shared synchronous gate for Queue, Steer, and other sends. Keep this as a
+  // ref so a second composer action cannot pass the guard before React renders.
   const sendInFlightRef = useRef(false);
   const terminalUiOpenByThreadRef = useRef<Record<string, boolean>>({});
 
@@ -5546,10 +5549,21 @@ function ChatViewContent(props: ChatViewProps) {
   const onSteer = useCallback(async () => {
     const thread = activeThread;
     const activeTurnId = thread?.session?.activeTurnId ?? null;
-    const text = promptRef.current.trim();
+    const submittedPrompt = promptRef.current;
+    const text = submittedPrompt.trim();
     if (!thread || activeTurnId === null) {
       return;
     }
+    const submittedDraft = useComposerDraftStore.getState().getComposerDraft(composerDraftTarget);
+    const submittedSteerSnapshot = {
+      text: submittedPrompt,
+      attachmentCount: composerImagesRef.current.length,
+      contextCount:
+        composerTerminalContextsRef.current.length +
+        composerElementContextsRef.current.length +
+        (submittedDraft?.previewAnnotations.length ?? 0) +
+        (submittedDraft?.reviewComments.length ?? 0),
+    };
     const canSteer =
       routeKind === "server" &&
       isServerThread &&
@@ -5600,9 +5614,21 @@ function ChatViewContent(props: ChatViewProps) {
         },
       });
       if (result._tag === "Success") {
-        promptRef.current = "";
-        clearComposerDraftContent(composerDraftTarget);
-        composerRef.current?.resetCursorState();
+        const currentDraft = useComposerDraftStore.getState().getComposerDraft(composerDraftTarget);
+        const currentSteerSnapshot = {
+          text: promptRef.current,
+          attachmentCount: composerImagesRef.current.length,
+          contextCount:
+            composerTerminalContextsRef.current.length +
+            composerElementContextsRef.current.length +
+            (currentDraft?.previewAnnotations.length ?? 0) +
+            (currentDraft?.reviewComments.length ?? 0),
+        };
+        if (matchesThreadComposerDraftSnapshot(currentSteerSnapshot, submittedSteerSnapshot)) {
+          promptRef.current = "";
+          clearComposerDraftContent(composerDraftTarget);
+          composerRef.current?.resetCursorState();
+        }
       } else {
         removeOptimisticUserMessages(routeThreadKey, new Set([messageIdForSend]));
         if (promptRef.current.trim().length === 0) {

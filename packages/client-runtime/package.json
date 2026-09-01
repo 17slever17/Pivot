@@ -155,6 +155,10 @@
       "types": "./src/state/threadSettled.ts",
       "default": "./src/state/threadSettled.ts"
     },
+    "./state/thread-turn-action": {
+      "types": "./src/state/thread-turn-action.ts",
+      "default": "./src/state/thread-turn-action.ts"
+    },
     "./state/thread-search": {
       "types": "./src/state/threadSearch.ts",
       "default": "./src/state/threadSearch.ts"
