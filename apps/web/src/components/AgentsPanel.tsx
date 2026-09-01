@@ -42,67 +42,323 @@ import { threadEnvironment } from "~/state/threads";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { ScrollArea } from "~/components/ui/scroll-area";
 
-/** Extract plain text from an omp transcript message for the nested pane. */
-export function formatOmpTranscriptMessage(message: unknown): string {
-  if (typeof message === "string") {
-    return message;
+type OmpTranscriptRecord = Record<string, unknown>;
+
+export type OmpTranscriptTool = {
+  readonly id: string | null;
+  readonly label: string;
+  readonly detail: string;
+  readonly isError: boolean;
+};
+
+export type OmpTranscriptView =
+  | {
+      readonly kind: "message";
+      readonly role: "user" | "assistant";
+      readonly text: string;
+      readonly reasoning: string;
+      readonly tools: ReadonlyArray<OmpTranscriptTool>;
+    }
+  | {
+      readonly kind: "tool";
+      readonly id: string | null;
+      readonly label: string;
+      readonly detail: string;
+      readonly isError: boolean;
+    }
+  | {
+      readonly kind: "compaction";
+      readonly summary: string;
+      readonly detail: string;
+    }
+  | {
+      readonly kind: "session";
+      readonly summary: string;
+    }
+  | {
+      readonly kind: "status";
+      readonly label: string;
+      readonly detail: string;
+    }
+  | {
+      readonly kind: "unknown";
+      readonly label: string;
+      readonly detail: string;
+    }
+  | { readonly kind: "hidden" };
+
+function isOmpTranscriptRecord(value: unknown): value is OmpTranscriptRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringifyTranscriptValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
   }
-  if (typeof message !== "object" || message === null) {
-    return String(message);
+  try {
+    return JSON.stringify(value, null, 2) ?? "";
+  } catch {
+    return String(value);
   }
-  const record = message as Record<string, unknown>;
-  if (typeof record.content === "string") {
-    return record.content;
+}
+
+function transcriptTextFromContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => {
+      if (typeof part === "string") return part;
+      if (!isOmpTranscriptRecord(part)) return "";
+      if (typeof part.text === "string") return part.text;
+      return "";
+    })
+    .filter((part) => part.length > 0)
+    .join("");
+}
+
+function transcriptReasoningFromContent(content: unknown): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => {
+      if (!isOmpTranscriptRecord(part)) return "";
+      if (part.type === "thinking" && typeof part.thinking === "string") return part.thinking;
+      if (part.type === "redactedThinking") return "Reasoning unavailable.";
+      return "";
+    })
+    .filter((part) => part.length > 0)
+    .join("\n\n");
+}
+
+function transcriptToolFromRecord(record: OmpTranscriptRecord): OmpTranscriptTool {
+  const name =
+    (typeof record.name === "string" && record.name) ||
+    (typeof record.toolName === "string" && record.toolName) ||
+    (typeof record.tool === "string" && record.tool) ||
+    "unknown";
+  const args = record.arguments ?? record.args ?? record.input;
+  const intent = typeof record.intent === "string" ? record.intent : "";
+  const partialResult = record.partialResult ?? record.result;
+  const detailParts = [
+    intent ? `Intent: ${intent}` : "",
+    args === undefined ? "" : stringifyTranscriptValue(args),
+    partialResult === undefined
+      ? ""
+      : `Partial result:\n${stringifyTranscriptValue(partialResult)}`,
+  ];
+  return {
+    id:
+      typeof record.id === "string"
+        ? record.id
+        : typeof record.toolCallId === "string"
+          ? record.toolCallId
+          : null,
+    label: `Tool: ${name}`,
+    detail: detailParts.filter((part) => part.length > 0).join("\n\n"),
+    isError: record.isError === true,
+  };
+}
+
+function transcriptToolResultFromRecord(record: OmpTranscriptRecord): OmpTranscriptTool {
+  const name =
+    (typeof record.toolName === "string" && record.toolName) ||
+    (typeof record.name === "string" && record.name) ||
+    (typeof record.tool === "string" && record.tool) ||
+    "unknown";
+  const content = transcriptTextFromContent(record.content);
+  const detailSource =
+    content || record.result || record.output || record.details || record.message || record.error;
+  return {
+    id:
+      typeof record.toolCallId === "string"
+        ? record.toolCallId
+        : typeof record.id === "string"
+          ? record.id
+          : null,
+    label: `${record.isError === true ? "Tool error" : "Tool result"}: ${name}`,
+    detail: stringifyTranscriptValue(detailSource),
+    isError: record.isError === true,
+  };
+}
+
+function transcriptMessageView(message: unknown): OmpTranscriptView {
+  if (!isOmpTranscriptRecord(message)) {
+    return {
+      kind: "message",
+      role: "assistant",
+      text: transcriptTextFromContent(message),
+      reasoning: "",
+      tools: [],
+    };
   }
-  if (Array.isArray(record.content)) {
-    return record.content
-      .map((part) => {
-        if (typeof part === "string") {
-          return part;
-        }
-        if (typeof part === "object" && part !== null) {
-          const block = part as { type?: unknown; text?: unknown; thinking?: unknown };
-          if (block.type === "thinking" && typeof block.thinking === "string") {
-            return `Reasoning summary: ${block.thinking}`;
-          }
-          if (typeof block.text === "string") {
-            return block.text;
-          }
-        }
-        return "";
-      })
-      .filter((part) => part.length > 0)
-      .join("");
+  const role = message.role;
+  if (role === "system" || role === "developer") return { kind: "hidden" };
+  if (role === "toolResult" || role === "tool") {
+    return { kind: "tool", ...transcriptToolResultFromRecord(message) };
   }
-  if (typeof record.text === "string") {
-    return record.text;
+  const messageRole = role === "user" || role === "assistant" ? role : "assistant";
+  const content = message.content;
+  const tools = Array.isArray(content)
+    ? content
+        .filter(
+          (part): part is OmpTranscriptRecord =>
+            isOmpTranscriptRecord(part) && (part.type === "toolCall" || part.type === "tool_call"),
+        )
+        .map(transcriptToolFromRecord)
+    : [];
+  return {
+    kind: "message",
+    role: messageRole,
+    text: transcriptTextFromContent(content),
+    reasoning: transcriptReasoningFromContent(content),
+    tools,
+  };
+}
+
+function transcriptStatusDetail(record: OmpTranscriptRecord): string {
+  const values = [record.detail, record.message, record.status, record.text, record.mode];
+  for (const value of values) {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (isOmpTranscriptRecord(value) && typeof value.message === "string") return value.message;
   }
-  return JSON.stringify(record);
+  return "";
+}
+
+function transcriptSessionSummary(record: OmpTranscriptRecord): string {
+  const parts = [
+    typeof record.task === "string" && record.task.length > 0 ? `Task: ${record.task}` : "",
+    typeof record.agent === "string" && record.agent.length > 0 ? `Agent: ${record.agent}` : "",
+    typeof record.modelRole === "string" && record.modelRole.length > 0
+      ? `Role: ${record.modelRole}`
+      : "",
+    typeof record.resolvedModel === "string" && record.resolvedModel.length > 0
+      ? `Model: ${record.resolvedModel}`
+      : "",
+    Array.isArray(record.tools) ? `Tools: ${record.tools.length}` : "",
+  ];
+  return parts.filter((part) => part.length > 0).join(" · ") || "Session initialized";
 }
 
 /**
- * Formats one OMP JSONL entry without throwing away non-message activity.
- * OMP's transcript reader returns status, tool-call/result, compaction and
- * message entries; the old UI rendered only the latter. Reasoning is shown
- * only when OMP supplied it as a visible thinking block.
+ * Converts an OMP JSONL entry into the subset that is safe and useful in a
+ * human-readable child journal. Known protocol entries never fall through to
+ * raw JSON; the unknown branch is intentionally reserved for technical data.
  */
+export function describeOmpTranscriptEntry(entry: unknown): OmpTranscriptView {
+  if (!isOmpTranscriptRecord(entry)) {
+    return { kind: "unknown", label: "Technical entry", detail: stringifyTranscriptValue(entry) };
+  }
+  const type = typeof entry.type === "string" ? entry.type : "";
+  if (type === "message") return transcriptMessageView(entry.message);
+  if (type === "session_init") return { kind: "session", summary: transcriptSessionSummary(entry) };
+  if (
+    type === "session" ||
+    type === "title" ||
+    type === "title_change" ||
+    type === "label" ||
+    type === "custom" ||
+    type === "custom_message"
+  ) {
+    return { kind: "hidden" };
+  }
+  if (
+    type === "model_change" ||
+    type === "thinking_level_change" ||
+    type === "service_tier_change"
+  ) {
+    return { kind: "hidden" };
+  }
+  if (
+    type === "tool_call" ||
+    type === "toolCall" ||
+    type === "tool_execution_start" ||
+    type === "tool_execution_update"
+  ) {
+    return { kind: "tool", ...transcriptToolFromRecord(entry) };
+  }
+  if (type === "tool_result" || type === "toolResult" || type === "tool_execution_end") {
+    return { kind: "tool", ...transcriptToolResultFromRecord(entry) };
+  }
+  if (type === "compaction") {
+    const summary =
+      (typeof entry.shortSummary === "string" && entry.shortSummary) ||
+      (typeof entry.summary === "string" && entry.summary) ||
+      "Context compacted";
+    const metadata = [
+      typeof entry.tokensBefore === "number" ? `Tokens before: ${entry.tokensBefore}` : "",
+      typeof entry.tokensAfter === "number" ? `Tokens after: ${entry.tokensAfter}` : "",
+      typeof entry.method === "string" ? `Method: ${entry.method}` : "",
+      typeof entry.warning === "string" ? `Warning: ${entry.warning}` : "",
+    ];
+    return {
+      kind: "compaction",
+      summary,
+      detail: metadata.filter((part) => part.length > 0).join(" · "),
+    };
+  }
+  if (
+    type === "status" ||
+    type === "agent_status" ||
+    type === "mode_change" ||
+    type === "branch_summary"
+  ) {
+    return {
+      kind: "status",
+      label:
+        type === "mode_change"
+          ? "Mode changed"
+          : type === "branch_summary"
+            ? "Branch summary"
+            : "Status",
+      detail: transcriptStatusDetail(entry),
+    };
+  }
+  return {
+    kind: "unknown",
+    label: type.length > 0 ? `Technical entry: ${type}` : "Technical entry",
+    detail: stringifyTranscriptValue(entry),
+  };
+}
+
+/** Extract plain text from an OMP transcript message for the nested pane. */
+export function formatOmpTranscriptMessage(message: unknown): string {
+  const view = transcriptMessageView(message);
+  if (view.kind === "tool") return view.detail;
+  if (view.kind !== "message") return "";
+  const record = isOmpTranscriptRecord(message) ? message : null;
+  const text = view.text || (typeof record?.text === "string" ? record.text : "");
+  const parts = [text, view.reasoning ? `Reasoning summary: ${view.reasoning}` : ""];
+  return parts.filter((part) => part.length > 0).join("");
+}
+
+/** Formats one OMP entry for callers that need a plain-text representation. */
 export function formatOmpTranscriptEntry(entry: unknown): string {
-  if (typeof entry !== "object" || entry === null) {
-    return formatOmpTranscriptMessage(entry);
+  const view = describeOmpTranscriptEntry(entry);
+  switch (view.kind) {
+    case "message":
+      return [
+        `${view.role}:`,
+        view.text,
+        view.reasoning ? `Reasoning summary: ${view.reasoning}` : "",
+        ...view.tools.map((tool) => `${tool.label}${tool.detail ? `\n${tool.detail}` : ""}`),
+      ]
+        .filter((part) => part.length > 0)
+        .join(" ");
+    case "tool":
+      return `${view.label}${view.detail ? `\n${view.detail}` : ""}`;
+    case "compaction":
+      return `Context compacted: ${view.summary}${view.detail ? `\n${view.detail}` : ""}`;
+    case "session":
+      return `Session details: ${view.summary}`;
+    case "status":
+      return `${view.label}${view.detail ? `: ${view.detail}` : ""}`;
+    case "unknown":
+      return `${view.label}\n${view.detail}`;
+    case "hidden":
+      return "";
   }
-  const record = entry as Record<string, unknown>;
-  if (record.type === "message" && record.message !== undefined) {
-    const messageRecord =
-      typeof record.message === "object" && record.message !== null
-        ? (record.message as Record<string, unknown>)
-        : null;
-    const role = typeof messageRecord?.role === "string" ? messageRecord.role : "message";
-    return `${role}: ${formatOmpTranscriptMessage(record.message)}`;
-  }
-  if (typeof record.type === "string") {
-    return `${record.type}\n${formatOmpTranscriptMessage(record)}`;
-  }
-  return formatOmpTranscriptMessage(entry);
 }
 
 function ompTranscriptEntryKey(entry: unknown, index: number): string {
@@ -116,6 +372,111 @@ function ompTranscriptEntryKey(entry: unknown, index: number): string {
     }
   }
   return `entry:${index}`;
+}
+
+function OmpTranscriptToolDetails({ tool }: { readonly tool: OmpTranscriptTool }) {
+  return (
+    <details
+      className={cn(
+        "rounded-md border border-border/40 bg-background/40 px-2 py-1 text-xs",
+        tool.isError && "border-destructive/50",
+      )}
+    >
+      <summary className="cursor-pointer select-none font-medium text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring">
+        {tool.label}
+      </summary>
+      {tool.detail ? (
+        <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[.7rem] leading-relaxed text-foreground/80">
+          {tool.detail}
+        </pre>
+      ) : (
+        <p className="mt-1 text-[.7rem] text-muted-foreground">No details available.</p>
+      )}
+    </details>
+  );
+}
+
+function OmpTranscriptEntryView({ entry }: { readonly entry: unknown }) {
+  const view = describeOmpTranscriptEntry(entry);
+  switch (view.kind) {
+    case "hidden":
+      return null;
+    case "message": {
+      const roleLabel = view.role === "user" ? "User" : "Assistant";
+      return (
+        <article
+          className={cn(
+            "flex flex-col gap-1 rounded-md border px-2.5 py-2 text-xs",
+            view.role === "user"
+              ? "ml-4 border-border/40 bg-muted/30"
+              : "mr-4 border-border/40 bg-background/50",
+          )}
+        >
+          <div className="text-[.65rem] font-medium text-muted-foreground">{roleLabel}</div>
+          {view.text ? (
+            <p className="whitespace-pre-wrap break-words leading-relaxed">{view.text}</p>
+          ) : null}
+          {view.reasoning ? (
+            <div className="rounded-sm border border-border/40 bg-muted/20 px-2 py-1.5">
+              <div className="mb-0.5 text-[.65rem] font-medium text-muted-foreground">
+                Reasoning
+              </div>
+              <p className="whitespace-pre-wrap break-words text-[.7rem] leading-relaxed text-muted-foreground">
+                {view.reasoning}
+              </p>
+            </div>
+          ) : null}
+          {view.tools.map((tool) => (
+            <OmpTranscriptToolDetails key={tool.id ?? `${tool.label}:${tool.detail}`} tool={tool} />
+          ))}
+        </article>
+      );
+    }
+    case "tool":
+      return <OmpTranscriptToolDetails tool={view} />;
+    case "session":
+      return (
+        <details className="rounded-md border border-border/40 px-2 py-1 text-xs">
+          <summary className="cursor-pointer select-none text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            Session details
+          </summary>
+          <p className="mt-1 whitespace-pre-wrap break-words text-[.7rem] leading-relaxed text-muted-foreground">
+            {view.summary}
+          </p>
+        </details>
+      );
+    case "compaction":
+      return (
+        <details className="rounded-md border border-border/40 px-2 py-1 text-xs">
+          <summary className="cursor-pointer select-none text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            Context compacted: {view.summary}
+          </summary>
+          {view.detail ? (
+            <p className="mt-1 whitespace-pre-wrap break-words text-[.7rem] leading-relaxed text-muted-foreground">
+              {view.detail}
+            </p>
+          ) : null}
+        </details>
+      );
+    case "status":
+      return (
+        <div className="rounded-md border border-border/30 px-2 py-1 text-[.7rem] text-muted-foreground">
+          <span className="font-medium">{view.label}</span>
+          {view.detail ? ` · ${view.detail}` : null}
+        </div>
+      );
+    case "unknown":
+      return (
+        <details className="rounded-md border border-border/40 px-2 py-1 text-xs">
+          <summary className="cursor-pointer select-none text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            {view.label}
+          </summary>
+          <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[.7rem] leading-relaxed text-muted-foreground">
+            {view.detail}
+          </pre>
+        </details>
+      );
+  }
 }
 
 type ParentAction = "steer" | "stop";
@@ -647,12 +1008,7 @@ function NestedSubagentTranscriptPane({
           ) : (
             <>
               {entries.map((entry, index) => (
-                <pre
-                  key={ompTranscriptEntryKey(entry, index)}
-                  className="whitespace-pre-wrap break-words rounded-md border border-border/40 bg-background/50 p-2 font-mono text-[.7rem] leading-relaxed"
-                >
-                  {formatOmpTranscriptEntry(entry)}
-                </pre>
+                <OmpTranscriptEntryView key={ompTranscriptEntryKey(entry, index)} entry={entry} />
               ))}
               {error ? <p className="text-xs text-destructive-foreground">{error}</p> : null}
             </>

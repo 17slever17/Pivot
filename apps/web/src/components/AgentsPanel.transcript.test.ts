@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   closeAgentTranscriptTab,
   createSubagentTranscriptSync,
+  describeOmpTranscriptEntry,
   formatAgentActivityText,
   formatOmpTranscriptEntry,
   formatOmpTranscriptMessage,
@@ -89,13 +90,14 @@ describe("formatOmpTranscriptMessage", () => {
 
 describe("formatOmpTranscriptEntry", () => {
   it("keeps non-message OMP entries in the journal", () => {
-    expect(
-      formatOmpTranscriptEntry({
-        type: "tool_call",
-        name: "read",
-        arguments: { path: "src/index.ts" },
-      }),
-    ).toContain("tool_call");
+    const entry = {
+      type: "tool_call",
+      name: "read",
+      arguments: { path: "src/index.ts" },
+    };
+
+    expect(formatOmpTranscriptEntry(entry)).toContain("Tool: read");
+    expect(formatOmpTranscriptEntry(entry)).not.toContain('"tool_call"');
   });
 
   it("renders provider-supplied reasoning summaries without requiring raw fields", () => {
@@ -108,6 +110,135 @@ describe("formatOmpTranscriptEntry", () => {
         },
       }),
     ).toBe("assistant: Reasoning summary: Checking the dependency graph");
+  });
+});
+
+describe("describeOmpTranscriptEntry", () => {
+  it("separates assistant text, reasoning, and multiple tool calls", () => {
+    const view = describeOmpTranscriptEntry({
+      type: "message",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "thinking", thinking: "Checking the dependency graph" },
+          { type: "text", text: "I found two files." },
+          { type: "toolCall", id: "call-1", name: "read", arguments: { path: "a.ts" } },
+          { type: "toolCall", id: "call-2", name: "grep", arguments: { pattern: "TODO" } },
+        ],
+      },
+    });
+
+    expect(view).toMatchObject({
+      kind: "message",
+      role: "assistant",
+      text: "I found two files.",
+      reasoning: "Checking the dependency graph",
+    });
+    expect(view.kind === "message" ? view.tools.map((tool) => tool.label) : []).toEqual([
+      "Tool: read",
+      "Tool: grep",
+    ]);
+  });
+
+  it("renders user content arrays as a normal user message", () => {
+    expect(
+      describeOmpTranscriptEntry({
+        type: "message",
+        message: {
+          role: "user",
+          content: [{ type: "text", text: "Please inspect the worker." }],
+        },
+      }),
+    ).toEqual({
+      kind: "message",
+      role: "user",
+      text: "Please inspect the worker.",
+      reasoning: "",
+      tools: [],
+    });
+  });
+
+  it("keeps tool results independently expandable and marks errors", () => {
+    expect(
+      describeOmpTranscriptEntry({
+        type: "tool_result",
+        toolName: "read",
+        toolCallId: "call-1",
+        content: [{ type: "text", text: "file body" }],
+        isError: true,
+      }),
+    ).toEqual({
+      kind: "tool",
+      id: "call-1",
+      label: "Tool error: read",
+      detail: "file body",
+      isError: true,
+    });
+  });
+
+  it("summarizes session init without exposing the harness system prompt", () => {
+    const view = describeOmpTranscriptEntry({
+      type: "session_init",
+      systemPrompt: "SECRET ROOT INSTRUCTIONS",
+      task: "Write a harmless PowerShell command",
+      tools: ["read", "bash"],
+      agent: "worker",
+      resolvedModel: "openai-codex/gpt-5.6-luna",
+    });
+
+    expect(view).toEqual({
+      kind: "session",
+      summary:
+        "Task: Write a harmless PowerShell command · Agent: worker · Model: openai-codex/gpt-5.6-luna · Tools: 2",
+    });
+    expect(JSON.stringify(view)).not.toContain("SECRET ROOT INSTRUCTIONS");
+  });
+
+  it("hides service transitions and formats compaction/status entries", () => {
+    expect(
+      describeOmpTranscriptEntry({
+        type: "message",
+        message: { role: "developer", content: "SECRET ROOT INSTRUCTIONS" },
+      }),
+    ).toEqual({ kind: "hidden" });
+    expect(describeOmpTranscriptEntry({ type: "model_change", model: "provider/model" })).toEqual({
+      kind: "hidden",
+    });
+    expect(describeOmpTranscriptEntry({ type: "session", id: "root" })).toEqual({
+      kind: "hidden",
+    });
+    expect(
+      describeOmpTranscriptEntry({ type: "thinking_level_change", thinkingLevel: "high" }),
+    ).toEqual({
+      kind: "hidden",
+    });
+    expect(
+      describeOmpTranscriptEntry({ type: "service_tier_change", serviceTier: "fast" }),
+    ).toEqual({
+      kind: "hidden",
+    });
+    expect(
+      describeOmpTranscriptEntry({
+        type: "compaction",
+        shortSummary: "Kept the active task context",
+        tokensBefore: 1200,
+        tokensAfter: 400,
+      }),
+    ).toEqual({
+      kind: "compaction",
+      summary: "Kept the active task context",
+      detail: "Tokens before: 1200 · Tokens after: 400",
+    });
+    expect(
+      describeOmpTranscriptEntry({ type: "status", status: "waiting for tool result" }),
+    ).toEqual({ kind: "status", label: "Status", detail: "waiting for tool result" });
+  });
+
+  it("puts unknown entries behind a technical disclosure", () => {
+    const view = describeOmpTranscriptEntry({ type: "future_entry", value: 42 });
+    expect(view.kind).toBe("unknown");
+    expect(view.kind === "unknown" ? view.label : "").toBe("Technical entry: future_entry");
+    expect(view.kind === "unknown" ? view.detail : "").toContain('"value": 42');
   });
 });
 
