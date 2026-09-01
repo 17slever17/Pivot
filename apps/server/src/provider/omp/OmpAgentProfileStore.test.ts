@@ -128,12 +128,16 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       const effectiveOrchestratorPrompt = yield* fs.readFileString(orchestratorPath);
       expect(effectiveOrchestratorPrompt).toContain(`${updated.orchestratorPrompt}\n`);
       expect(effectiveOrchestratorPrompt).toContain("## OMP Hub child reuse");
+      expect(effectiveOrchestratorPrompt).toContain("## User-visible progress");
+      expect(effectiveOrchestratorPrompt).toContain("approximately every 30-60 seconds");
+      expect(effectiveOrchestratorPrompt).toContain("Do not narrate every tool call");
       expect(effectiveOrchestratorPrompt).toContain("agent: 'worker'");
       expect(effectiveOrchestratorPrompt).toContain("agent: 'verifier'");
       expect(effectiveOrchestratorPrompt).toContain("Never omit the agent field");
       expect(effectiveOrchestratorPrompt).toContain("never substitute a bundled/default profile");
       expect(effectiveOrchestratorPrompt).toContain("hub op=send");
       expect(yield* fs.readFileString(singlePath)).not.toContain("OMP Hub child reuse");
+      expect(yield* fs.readFileString(singlePath)).not.toContain("User-visible progress");
 
       const tooLong = yield* Effect.exit(
         store.updateRootPromptBundles({
@@ -198,10 +202,16 @@ it.layer(NodeServices.layer)("OmpAgentProfileStore", (it) => {
       expect(imported.profiles[1]?.readOnly).toBe(true);
       expect(imported.profiles[0]?.systemPrompt).toContain("# Common");
       expect(imported.profiles[0]?.systemPrompt).not.toContain("# Orchestrator-only");
+      expect(imported.profiles[0]?.systemPrompt).not.toContain("User-visible progress");
       const verifierDefinition = yield* fs.readFileString(
         path.join(stateDir, "omp-agent-modes", "agents", "verifier.md"),
       );
       expect(verifierDefinition).toContain("thinking-level: 'max'");
+      expect(verifierDefinition).not.toContain("User-visible progress");
+      const workerDefinition = yield* fs.readFileString(
+        path.join(stateDir, "omp-agent-modes", "agents", "worker.md"),
+      );
+      expect(workerDefinition).not.toContain("User-visible progress");
     }),
   );
 });

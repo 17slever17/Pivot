@@ -41,6 +41,12 @@ const OMP_HUB_REUSE_INSTRUCTIONS = `## OMP Hub child reuse
 - Tell the user that the same child's context remains in its OMP JSONL session and can be continued.
 - Honor single mode: do not create worker or verifier children unless the user explicitly switches back to orchestration.
 `;
+const OMP_PROGRESS_INSTRUCTIONS = `## User-visible progress
+- For work expected to take longer than about 30 seconds, send a concise progress update at meaningful milestones and approximately every 30-60 seconds while continuing the work.
+- Each update should state the current stage, an important finding, decision, or blocker, and the immediate next step.
+- Do not narrate every tool call, routine file read, or internal thought; combine updates and keep them brief.
+- Report blockers promptly with what is blocked and what input would unblock it, then continue with any independent work.
+`;
 const isOmpAgentProfileError = Schema.is(OmpAgentProfileError);
 
 const ProfileFileSchema = Schema.Struct({
@@ -521,6 +527,7 @@ export class OmpAgentProfileStore {
       const prompt =
         mode === "orchestrator"
           ? [configuredPrompt, OMP_HUB_REUSE_INSTRUCTIONS]
+              .concat(OMP_PROGRESS_INSTRUCTIONS)
               .filter((part) => part.length > 0)
               .join("\n\n")
           : configuredPrompt;
